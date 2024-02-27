@@ -1,0 +1,20 @@
+[package]
+name = "saleor-app-sdk"
+authors = ["Djkáťo <djkatovfx@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+description = "Unofficial Saleor App SDK like library, made to work with rust."
+keywords = ["saleor", "sdk", "plugin"]
+categories = [ "api-bindings", "web-programming::http-server"]
+homepage = "https://github.com/djkato/saleor-app-rs-template"
+repository = "https://github.com/djkato/saleor-app-rs-template"
+documentation = "https://github.com/djkato/saleor-app-rs-template"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+anyhow.workspace = true
+redis = { workspace=true, features = ["aio", "tokio-comp", "connection-manager"] }
+serde.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde_json.workspace = true

@@ -1,21 +1,18 @@
 use anyhow::Context;
 use axum::{
+    extract::Json,
     extract::State,
     http::{HeaderMap, StatusCode},
-    response::Json,
 };
+use saleor_app_sdk::{apl::APL, AuthData, AuthToken};
 use tracing::{debug, info};
 
-use crate::{
-    app::AppError,
-    saleor::{AuthData, AuthToken, APL},
-    AppState,
-};
+use crate::app::{AppError, AppState};
 
 pub async fn register<A: APL>(
     headers: HeaderMap,
-    Json(auth_token): Json<AuthToken>,
     State(state): State<AppState<A>>,
+    Json(auth_token): Json<AuthToken>,
 ) -> Result<StatusCode, AppError> {
     debug!(
         "/api/register:\nsaleor_api_url:{:?}\nauth_token:{:?}",

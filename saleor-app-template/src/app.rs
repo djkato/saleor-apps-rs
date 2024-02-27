@@ -5,11 +5,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::{
-    config::Config,
-    saleor::{AppManifest, SaleorApp, APL},
-};
-
+use crate::config::Config;
+use saleor_app_sdk::{apl::APL, manifest::AppManifest, SaleorApp};
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(anyhow::Error);
 

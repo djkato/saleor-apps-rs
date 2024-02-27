@@ -1,6 +1,6 @@
+use saleor_app_sdk::apl::AplType;
 use serde::Deserialize;
 
-use crate::saleor::AplType;
 use tracing::{debug, Level};
 
 #[derive(Debug, Deserialize)]
@@ -20,7 +20,6 @@ fn version_default() -> String {
 #[derive(Deserialize, Debug, Clone)]
 //#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub struct Config {
-    pub app_name: String,
     #[serde(default = "version_default")]
     pub required_saleor_version: String,
     pub saleor_app_id: String,
@@ -29,8 +28,6 @@ pub struct Config {
     pub apl_url: String,
     #[serde(with = "LocalTracingLevel")]
     pub log_level: tracing::Level,
-    pub app_description: Option<String>,
-    pub app_author: Option<String>,
 }
 
 impl std::fmt::Display for Config {

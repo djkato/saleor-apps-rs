@@ -959,6 +959,8 @@ name = "saleor-app-sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "dotenvy",
+ "envy",
  "redis",
  "serde",
  "serde_json",

@@ -2,11 +2,11 @@
 
 This repo contains the following main components:
 
-| Crate                                                                                                       | Description                                       |
-| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| [**saleor-app-sdk**](https://crates.io/crates/saleor-app-sdk)                                               | Types and utilities for making Saleor Apps        |
-| [**saleor-app-template**](https://github.com/djkato/saleor-app-template-rs/tree/master/saleor-app-template) | Simple template for making Saleor apps using axum |
-| [**saleor-app-sitemap**](https://crates.io/crates/saleor-app-sitemap)                                       | Saleor App for keeping sitemap.xml uptodate       |
+| Crate                                                                                               | Description                                       |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| [**saleor-app-sdk**](https://crates.io/crates/saleor-app-sdk)                                       | Types and utilities for making Saleor Apps        |
+| [**saleor-app-template**](https://github.com/djkato/saleor-apps-rs/tree/master/saleor-app-template) | Simple template for making Saleor apps using axum |
+| [**saleor-app-sitemap**](https://crates.io/crates/saleor-app-sitemap)                               | Saleor App for keeping sitemap.xml uptodate       |
 
 # Using this repo
 
@@ -27,7 +27,7 @@ If using the `saleor-app-template`, create a new workspace member `cargo new <pr
 
 ## Adding new dependencies
 
-Workspace dependencies need to be managed manually. If you wanna add a new dependency to a single member do `cargo add <dep> <project-name>`.
+Workspace dependencies need to be managed manually. If you wanna add a new dependency to a single member do `cargo add <dep> --package <project-name>`.
 If you want to use a shared dependency, add it to the root level `Cargo.toml`,
 then inside your member `Cargo.toml`add it under depencency like: `<dependency> = { workspace = true, features = [ "..." ] }`.
 
@@ -38,4 +38,4 @@ Each workspace member has it's licensed in it's own directory.
 ### TL;DR:
 
 - saleor-app-sdk, saleor-app-template and the root structure fall under either MIT or Apache 2.0 at your convenience.
-- Any other workspace members fall under `FSL-1.1-MIT.md`. If you want to use my apps in commercial environment, each app costs 10€ (or voluntarily more). Upon payment/donation you can automatically use the given app as if it had MIT-1 or Apache 2.0.
+- Any other workspace members fall under FSL-1.1-MIT. If you want to use my apps in commercial environment, each app costs 10€ (or voluntarily more). Upon payment/donation you can automatically use the given app as if it had MIT-1 or Apache 2.0.

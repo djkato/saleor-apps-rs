@@ -1,10 +1,11 @@
 [workspace]
-members = ["saleor-app-sdk", "saleor-app-template"]
+members = ["sdk", "app-template", "sitemap-generator"]
 resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.79"
-cynic = "3.4.3"
+cynic = {version="3.4.3", features = ["http-surf"]}
+surf = "2.3.2"
 serde = "1.0.196"
 serde_json = "1.0.113"
 tokio = {version = "1.36.0", features = ["full"]}
@@ -15,6 +16,7 @@ tracing-serde = "0.1.3"
 tracing-subscriber = { version = "0.3.18" }
 dotenvy = "0.15.7"
 axum = "0.7.4"
-saleor-app-sdk = {path = "saleor-app-sdk"}
+saleor-app-sdk = {path = "sdk"}
 tower = { version = "0.4.13", features = ["util"] }
 tower-http = { version = "0.5.2", features = ["fs", "trace"] }
+cynic-codegen= "3.4.3"

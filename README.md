@@ -31,6 +31,10 @@ Workspace dependencies need to be managed manually. If you wanna add a new depen
 If you want to use a shared dependency, add it to the root level `Cargo.toml`,
 then inside your member `Cargo.toml`add it under depencency like: `<dependency> = { workspace = true, features = [ "..." ] }`.
 
+## Developing
+
+To have the app rebuild during development, install bacon `cargo install bacon`, then run `bacon run -- <app-name>` to have bacon watch your code and rerun it on save!
+
 ## License
 
 Each workspace member has it's licensed in it's own directory.
@@ -38,4 +42,4 @@ Each workspace member has it's licensed in it's own directory.
 ### TL;DR:
 
 - saleor-app-sdk, saleor-app-template and the root structure fall under either MIT or Apache 2.0 at your convenience.
-- Any other workspace members fall under FSL-1.1-MIT. If you want to use my apps in commercial environment, each app costs 10€ (or voluntarily more). Upon payment/donation you can automatically use the given app as if it had MIT-1 or Apache 2.0.
+- Rest of the apps in this repo fall under `PolyForm-Noncommercial-1.0.md`. If you want to use my apps commercially, each app costs 10€ (or voluntarily more). Upon payment/donation you are allowed to use the given app commercially.

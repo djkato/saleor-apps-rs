@@ -1,0 +1,45 @@
+[package]
+name = "sitemap-generator"
+version = "0.1.0"
+edition = "2021"
+authors = ["Djkáťo <djkatovfx@gmail.com>"]
+description = "Creates and keeps Sitemap.xml uptodate with Saleor."
+homepage = "https://github.com/djkato/saleor-apps-rs"
+repository = "https://github.com/djkato/saleor-apps-rs"
+documentation = "https://github.com/djkato/saleor-apps-rs"
+keywords = ["saleor", "plugin"]
+categories = ["web-programming::http-server"]
+license = "PolyForm Noncommercial License 1.0.0"
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["full"] }
+redis = { workspace = true, features = [
+  "aio",
+  "tokio-comp",
+  "connection-manager",
+] }
+envy.workspace = true
+tracing.workspace = true
+tracing-serde.workspace = true
+tracing-subscriber.workspace = true
+dotenvy.workspace = true
+axum.workspace = true
+saleor-app-sdk.workspace = true
+tower = { workspace = true, features = ["util"] }
+tower-http = { workspace = true, features = ["fs", "trace"] }
+surf.workspace = true
+cynic = { workspace = true, features = ["http-surf"] }
+cynic-codegen.workspace = true
+tera = { version = "1.19.1", default-features = false }
+fd-lock = "4.0.2"
+quick-xml = { version = "0.31.0", features = ["serialize"] }
+flate2 = "1.0.28"
+tinytemplate = "1.2.1"
+sitemap-rs = "0.2.1"
+chrono = "0.4.34"
+
+[build-dependencies]
+cynic-codegen.workspace = true

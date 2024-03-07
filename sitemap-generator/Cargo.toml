@@ -39,7 +39,8 @@ quick-xml = { version = "0.31.0", features = ["serialize"] }
 flate2 = "1.0.28"
 tinytemplate = "1.2.1"
 sitemap-rs = "0.2.1"
-chrono = "0.4.34"
+chrono = { version = "0.4.34", features = ["serde"] }
+serde_cbor = "0.11.2"
 
 [build-dependencies]
 cynic-codegen.workspace = true

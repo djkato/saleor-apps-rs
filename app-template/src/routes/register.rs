@@ -30,7 +30,7 @@ pub async fn register(
         jwks: None,
         token: auth_token.auth_token,
         domain: Some(state.config.app_api_base_url),
-        app_id: state.config.saleor_app_id,
+        app_id: state.manifest.id,
         saleor_api_url: saleor_api_url.clone(),
     };
     app.apl.set(auth_data).await?;

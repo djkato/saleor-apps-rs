@@ -3,10 +3,11 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use chrono::{DateTime, FixedOffset};
 use fd_lock::RwLock;
 use std::{fs::File, sync::Arc, time::Duration};
 
-use redis::{AsyncCommands, Client};
+use redis::{AsyncCommands, Client, RedisError};
 use saleor_app_sdk::{config::Config, manifest::AppManifest, SaleorApp};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
@@ -88,15 +89,16 @@ pub struct XmlCache {
     app_api_base_url: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct XmlData {
     pub id: cynic::Id,
     pub slug: String,
     pub relations: Vec<cynic::Id>,
     pub data_type: XmlDataType,
+    pub last_modified: DateTime<FixedOffset>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum XmlDataType {
     Category,
     Product,
@@ -121,11 +123,24 @@ impl XmlCache {
         }
     }
 
+    /**
+     * ONLY USE IF YOU KNOW WHAT YOU'RE DOING! Will flush entire cache, run regenerate() from
+     * webhooks to renew.
+     */
+    pub async fn delete_all(&self, saleor_api_url: &str) -> anyhow::Result<()> {
+        debug!("xml data delete_cache()");
+        let mut conn = self.client.get_async_connection().await?;
+        conn.del(self.prepare_key(saleor_api_url)).await?;
+
+        info!("sucessful cache wipe");
+        Ok(())
+    }
+
     pub async fn get_all(&self, saleor_api_url: &str) -> anyhow::Result<Vec<XmlData>> {
         debug!("xml data get_all()");
         let mut conn = self.client.get_async_connection().await?;
-        let res: String = conn.get(self.prepare_key(saleor_api_url)).await?;
-        let cache: Vec<XmlData> = serde_json::from_str(&res)?;
+        let res: Vec<u8> = conn.get(self.prepare_key(saleor_api_url)).await?;
+        let cache: Vec<XmlData> = serde_cbor::from_slice(&res)?;
 
         info!("sucessful cache get");
 
@@ -133,13 +148,10 @@ impl XmlCache {
     }
 
     pub async fn set(&self, data: Vec<XmlData>, saleor_api_url: &str) -> anyhow::Result<()> {
-        debug!("xml data set(), {:?}", data);
+        debug!("xml data set()");
         let mut conn = self.client.get_async_connection().await?;
-        conn.set(
-            self.prepare_key(saleor_api_url),
-            serde_json::to_string(&data)?,
-        )
-        .await?;
+        conn.set(self.prepare_key(saleor_api_url), serde_cbor::to_vec(&data)?)
+            .await?;
         info!("sucessful cache set");
         Ok(())
     }

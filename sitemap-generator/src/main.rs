@@ -74,6 +74,11 @@ async fn main() -> anyhow::Result<()> {
         saleor_app: Arc::new(Mutex::new(saleor_app)),
     };
     debug!("Created AppState...");
+    app_state
+        .xml_cache
+        .delete_all("http://localhost:8000/graphpl/")
+        .await?;
+
     let app = create_routes(app_state);
     let listener = tokio::net::TcpListener::bind(
         &config

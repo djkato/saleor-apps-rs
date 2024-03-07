@@ -1,8 +1,6 @@
-/*use http::{Request, Response};
-use std::{
-    str::Bytes,
-    task::{Context, Poll},
-};
+/*
+use http::{Request, Response};
+use std::task::{Context, Poll};
 use tower::Service;
 
 use crate::headers::SALEOR_SIGNATURE_HEADER;
@@ -31,18 +29,20 @@ where
     }
 
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
-        /*
         if let Some(signature_header) = req.headers().get(SALEOR_SIGNATURE_HEADER) {
+            let b = req.body_mut().data();
             if let Ok(saleor_signature) = signature_header.to_str() {
                 let split: Vec<&str> = saleor_signature.split(".").collect();
                 let header = split.get(0);
                 let signature = split.get(2);
                 if let Some(signature) = signature {
+                    /*
                     let jws = jose_jws::Signature {
                         signature: signature.parse().unwrap(),
                         header:,
                         protected: None,
                     };
+                        */
                 }
             }
             /*
@@ -53,7 +53,6 @@ where
             */
         }
         self.inner.call(req)
-            */
-        todo!()
     }
-}*/
+}
+*/

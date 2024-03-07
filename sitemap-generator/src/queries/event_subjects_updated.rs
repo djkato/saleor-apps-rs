@@ -172,7 +172,7 @@ pub struct Collection {
     pub slug: String,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 pub struct CategoryUpdated {
     pub category: Option<Category2>,
 }
@@ -193,7 +193,7 @@ pub struct Category {
     pub id: cynic::Id,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category2 {
     pub id: cynic::Id,
@@ -202,25 +202,25 @@ pub struct Category2 {
     pub products: Option<ProductCountableConnection>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 pub struct ProductCountableConnection {
     pub page_info: PageInfo,
     pub edges: Vec<ProductCountableEdge>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 pub struct ProductCountableEdge {
     pub node: Product2,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 #[cynic(graphql_type = "Product")]
 pub struct Product2 {
     pub id: cynic::Id,
     pub slug: String,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 pub struct PageInfo {
     pub end_cursor: Option<String>,
     pub has_next_page: bool,

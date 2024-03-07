@@ -1,2 +1,7 @@
 /target
 .env
+temp
+temp/**.*
+
+# Allow
+!.env.example

@@ -78,18 +78,6 @@ subscription QueryProductsChanged {
 fragment BaseCategory on Category {
   id
   slug
-  products(first: 100) {
-    pageInfo {
-      endCursor
-      hasNextPage
-    }
-    edges {
-      node {
-        id
-        slug
-      }
-    }
-  }
 }
 
 fragment BaseProduct on Product {
@@ -130,7 +118,7 @@ pub struct Product {
     pub category: Option<Category>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 pub struct PageUpdated {
     pub page: Option<Page>,
 }
@@ -145,13 +133,13 @@ pub struct PageCreated {
     pub page: Option<Page>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 pub struct Page {
     pub slug: String,
     pub id: cynic::Id,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 pub struct CollectionUpdated {
     pub collection: Option<Collection>,
 }
@@ -166,7 +154,7 @@ pub struct CollectionCreated {
     pub collection: Option<Collection>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Serialize)]
 pub struct Collection {
     pub id: cynic::Id,
     pub slug: String,
@@ -196,26 +184,6 @@ pub struct Category {
 #[derive(cynic::QueryFragment, Debug, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category2 {
-    pub id: cynic::Id,
-    pub slug: String,
-    #[arguments(first: 100)]
-    pub products: Option<ProductCountableConnection>,
-}
-
-#[derive(cynic::QueryFragment, Debug, Serialize)]
-pub struct ProductCountableConnection {
-    pub page_info: PageInfo,
-    pub edges: Vec<ProductCountableEdge>,
-}
-
-#[derive(cynic::QueryFragment, Debug, Serialize)]
-pub struct ProductCountableEdge {
-    pub node: Product2,
-}
-
-#[derive(cynic::QueryFragment, Debug, Serialize)]
-#[cynic(graphql_type = "Product")]
-pub struct Product2 {
     pub id: cynic::Id,
     pub slug: String,
 }

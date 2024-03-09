@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Unofficial Saleor App SDK like library, made to work with rust."
 keywords = ["saleor", "sdk", "plugin"]
-categories = [ "api-bindings", "web-programming::http-server"]
+categories = ["api-bindings", "web-programming::http-server"]
 homepage = "https://github.com/djkato/saleor-app-rs-template"
 repository = "https://github.com/djkato/saleor-app-rs-template"
 documentation = "https://github.com/djkato/saleor-app-rs-template"
@@ -13,18 +13,23 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 anyhow.workspace = true
-redis = { workspace=true, features = ["aio", "tokio-comp", "connection-manager"] }
+redis = { workspace = true, features = [
+  "aio",
+  "tokio-comp",
+  "connection-manager",
+] }
 serde.workspace = true
+axum.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 serde_json.workspace = true
 envy.workspace = true
 dotenvy.workspace = true
-async-trait = "0.1.77"
-jose-jwk = "0.1.2"
 tower = { workspace = true }
-jose-jws = "0.1.2"
+reqwest = { version = "0.11.24", features = ["json"] }
+jsonwebtoken = "9.2.0"
+async-trait = "0.1.77"
 http = "1.0.0"
-jose-b64 = {version = "0.1.2", features =["serde"] }
+url = "2.5.0"
 strum = "0.26.0"
 strum_macros = "0.26.1"

@@ -1,5 +1,5 @@
 use axum::{extract::State, Json};
-use saleor_app_sdk::{manifest::AppManifest};
+use saleor_app_sdk::manifest::AppManifest;
 
 use crate::app::{AppError, AppState};
 

@@ -27,8 +27,8 @@ use tracing::{debug, error, info};
 use crate::{
     app::{AppError, AppState, XmlData, XmlDataType},
     queries::event_subjects_updated::{
-        Category, Category2, CategoryUpdated, CollectionUpdated, PageInfo, PageUpdated, Product,
-        Product2, ProductCountableConnection, ProductCountableEdge, ProductUpdated,
+        Category, Category2, CategoryUpdated, Collection, CollectionUpdated, Page, PageInfo,
+        PageUpdated, Product, ProductUpdated,
     },
 };
 
@@ -53,25 +53,41 @@ pub async fn webhooks(
             | AsyncWebhookEventType::ProductCreated
             | AsyncWebhookEventType::ProductDeleted => {
                 let product: ProductUpdated = serde_json::from_str(&data)?;
-                spawn(async move { update_sitemap_product(product, &url, state).await });
+                spawn(async move {
+                    if let Err(e) = update_sitemap_product(product, &url, state).await {
+                        error!("Error processing Product, e: {:?}", e);
+                    }
+                });
             }
             AsyncWebhookEventType::CategoryCreated
             | AsyncWebhookEventType::CategoryUpdated
             | AsyncWebhookEventType::CategoryDeleted => {
                 let category: CategoryUpdated = serde_json::from_str(&data)?;
-                spawn(async move { update_sitemap_category(category, &url, state).await });
+                spawn(async move {
+                    if let Err(e) = update_sitemap_category(category, &url, state).await {
+                        error!("Error processing Category, e: {:?}", e);
+                    }
+                });
             }
             AsyncWebhookEventType::PageCreated
             | AsyncWebhookEventType::PageUpdated
             | AsyncWebhookEventType::PageDeleted => {
                 let page: PageUpdated = serde_json::from_str(&data)?;
-                spawn(async move { update_sitemap_page(page, &url, state).await });
+                spawn(async move {
+                    if let Err(e) = update_sitemap_page(page, &url, state).await {
+                        error!("Error processing Page, e: {:?}", e);
+                    }
+                });
             }
             AsyncWebhookEventType::CollectionCreated
             | AsyncWebhookEventType::CollectionUpdated
             | AsyncWebhookEventType::CollectionDeleted => {
                 let collection: CollectionUpdated = serde_json::from_str(&data)?;
-                spawn(async move { update_sitemap_collection(collection, &url, state).await });
+                spawn(async move {
+                    if let Err(e) = update_sitemap_collection(collection, &url, state).await {
+                        error!("Error processing Collection, e: {:?}", e);
+                    }
+                });
             }
 
             _ => (),
@@ -91,7 +107,8 @@ async fn update_sitemap_product(
     debug!("Product got changed!, {:?}", &product);
     if let Some(product) = product.product {
         // Update or add the product
-        let mut xml_data = match state.xml_cache.get_all(saleor_api_url).await {
+        let xml_cache = state.xml_cache.lock().await;
+        let mut xml_data = match xml_cache.get_all(saleor_api_url).await {
             Ok(d) => d,
             Err(e) => {
                 error!("Error, {:?}. no xml cache present?", e);
@@ -218,13 +235,17 @@ async fn update_sitemap_product(
                         },
                     }),
                 };
-                urls.push(tt.render("product_url", &context)?);
+                urls.push(
+                    Url::builder(tt.render("product_url", &context)?)
+                        .last_modified(x.last_modified)
+                        .build()?,
+                );
             }
         }
         //debug!("new urls:{:?}", &urls);
 
         write_xml(urls, &state, XmlDataType::Product).await?;
-        state.xml_cache.set(xml_data, saleor_api_url).await?;
+        xml_cache.set(xml_data, saleor_api_url).await?;
     } else {
         error!("Failed to update product, e: {:?}", product);
         anyhow::bail!("product not present in in webhook");
@@ -239,7 +260,8 @@ async fn update_sitemap_category(
     state: AppState,
 ) -> anyhow::Result<()> {
     if let Some(category) = category.category {
-        let mut xml_data = state.xml_cache.get_all(saleor_api_url).await?;
+        let xml_cache = state.xml_cache.lock().await;
+        let mut xml_data = xml_cache.get_all(saleor_api_url).await?;
         let mut affected_product_ids = vec![];
         let mut new_xml_data = vec![];
         //check if template of product includes categories in url
@@ -346,7 +368,11 @@ async fn update_sitemap_category(
                         };
                     }
                 }
-                product_urls.push(tt.render("product_url", &context)?);
+                product_urls.push(
+                    Url::builder(tt.render("product_url", &context)?)
+                        .last_modified(x.last_modified)
+                        .build()?,
+                );
             }
             if x.data_type == XmlDataType::Category {
                 tt.add_template("category_url", &state.sitemap_config.category_template)?;
@@ -354,10 +380,13 @@ async fn update_sitemap_category(
                     category: Some(Category2 {
                         id: x.id.clone(),
                         slug: x.slug.clone(),
-                        products: None,
                     }),
                 };
-                category_urls.push(tt.render("category_url", &context)?);
+                category_urls.push(
+                    Url::builder(tt.render("category_url", &context)?)
+                        .last_modified(x.last_modified)
+                        .build()?,
+                );
             }
         }
         //and write
@@ -365,6 +394,7 @@ async fn update_sitemap_category(
             write_xml(product_urls, &state, XmlDataType::Product).await?;
         }
         write_xml(category_urls, &state, XmlDataType::Category).await?;
+        xml_cache.set(xml_data, saleor_api_url).await?;
     } else {
         error!("Failed to update category, e:{:?}", category);
         anyhow::bail!("Category not present in webhook");
@@ -377,20 +407,133 @@ async fn update_sitemap_collection(
     saleor_api_url: &str,
     state: AppState,
 ) -> anyhow::Result<()> {
+    if let Some(collection) = collection.collection {
+        let xml_cache = state.xml_cache.lock().await;
+        let mut xml_data = xml_cache.get_all(saleor_api_url).await?;
+        let mut new_xml_data = vec![];
+
+        match xml_data
+            .iter_mut()
+            .find(|c| c.id == collection.id && c.data_type == XmlDataType::Collection)
+        {
+            Some(xml_col) => {
+                if xml_col.slug == collection.slug {
+                    debug!("Collection url didn't change, skipping");
+                    return Ok(());
+                }
+                xml_col.slug = collection.slug;
+                xml_col.last_modified = chrono::offset::Utc::now().fixed_offset();
+            }
+            None => {
+                debug!("Collection not cached, adding...");
+                new_xml_data.push(XmlData {
+                    slug: collection.slug,
+                    id: collection.id,
+                    last_modified: chrono::offset::Utc::now().fixed_offset(),
+                    relations: vec![],
+                    data_type: XmlDataType::Collection,
+                })
+            }
+        }
+
+        xml_data.append(&mut new_xml_data);
+
+        //create urls
+        let mut collection_urls = vec![];
+        for xml_col in xml_data.iter() {
+            if xml_col.data_type == XmlDataType::Collection {
+                let mut tt = TinyTemplate::new();
+                tt.add_template("collection_url", &state.sitemap_config.collection_template)?;
+                let context = CollectionUpdated {
+                    collection: Some(Collection {
+                        slug: xml_col.slug.clone(),
+                        id: xml_col.id.clone(),
+                    }),
+                };
+                collection_urls.push(
+                    Url::builder(tt.render("collection_url", &context)?)
+                        .last_modified(xml_col.last_modified)
+                        .build()?,
+                );
+            }
+        }
+        write_xml(collection_urls, &state, XmlDataType::Collection).await?;
+        xml_cache.set(xml_data, saleor_api_url).await?;
+    } else {
+        error!("Failed to update collection, e:{:?}", collection);
+        anyhow::bail!("Collection not present in webhook");
+    }
+
     info!("Sitemap updated, cause: collection");
-    todo!()
+    Ok(())
 }
 async fn update_sitemap_page(
     page: PageUpdated,
     saleor_api_url: &str,
     state: AppState,
 ) -> anyhow::Result<()> {
-    info!("Sitemap updated, cause: collection");
-    todo!()
+    if let Some(page) = page.page {
+        let xml_cache = state.xml_cache.lock().await;
+        let mut xml_data = xml_cache.get_all(saleor_api_url).await?;
+        let mut new_xml_data = vec![];
+
+        match xml_data
+            .iter_mut()
+            .find(|p| p.id == page.id && p.data_type == XmlDataType::Page)
+        {
+            Some(xml_page) => {
+                if xml_page.slug == page.slug {
+                    debug!("Page url didn't change, skipping");
+                    return Ok(());
+                }
+                xml_page.slug = page.slug;
+                xml_page.last_modified = chrono::offset::Utc::now().fixed_offset();
+            }
+            None => {
+                debug!("Page not cached, adding...");
+                new_xml_data.push(XmlData {
+                    slug: page.slug,
+                    id: page.id,
+                    last_modified: chrono::offset::Utc::now().fixed_offset(),
+                    relations: vec![],
+                    data_type: XmlDataType::Page,
+                })
+            }
+        }
+
+        xml_data.append(&mut new_xml_data);
+        //create urls
+        let mut page_urls = vec![];
+        for xml_page in xml_data.iter() {
+            if xml_page.data_type == XmlDataType::Page {
+                let mut tt = TinyTemplate::new();
+                tt.add_template("page_url", &state.sitemap_config.pages_template)?;
+                let context = PageUpdated {
+                    page: Some(Page {
+                        slug: xml_page.slug.clone(),
+                        id: xml_page.id.clone(),
+                    }),
+                };
+                page_urls.push(
+                    Url::builder(tt.render("page_url", &context)?)
+                        .last_modified(xml_page.last_modified)
+                        .build()?,
+                );
+            }
+        }
+        write_xml(page_urls, &state, XmlDataType::Page).await?;
+        xml_cache.set(xml_data, saleor_api_url).await?;
+    } else {
+        error!("Failed to update Page, e:{:?}", page);
+        anyhow::bail!("Page not present in webhook");
+    }
+
+    info!("Sitemap updated, cause: Page");
+    Ok(())
 }
 
-async fn write_xml(
-    urls: Vec<String>,
+pub async fn write_xml(
+    urls: Vec<Url>,
     state: &AppState,
     type_group: XmlDataType,
 ) -> anyhow::Result<()> {
@@ -405,12 +548,7 @@ async fn write_xml(
         .await?;
     let mut sitemap_urls: Vec<Url> = vec![];
     for url in urls.clone() {
-        sitemap_urls.push(
-            Url::builder(url)
-                .change_frequency(ChangeFrequency::Weekly)
-                .last_modified(chrono::offset::Utc::now().fixed_offset())
-                .build()?,
-        );
+        sitemap_urls.push(url);
     }
     let url_set: UrlSet = UrlSet::new(sitemap_urls)?;
     debug!("Writing xml into file");
@@ -424,18 +562,13 @@ async fn write_xml(
     let len = buf.len() * std::mem::size_of::<u8>();
     if len > 200000 {
         let file_amount = (len as f32 / 150000 as f32).ceil() as usize;
-        let sliced_urls: Vec<&[String]> = urls.chunks(file_amount).collect();
+        let sliced_urls: Vec<&[Url]> = urls.chunks(file_amount).collect();
 
         let mut sitemaps: Vec<UrlSet> = vec![];
         for urls in sliced_urls {
-            for url in urls {
+            for url in urls.iter().cloned() {
                 let mut sitemap_urls: Vec<Url> = vec![];
-                sitemap_urls.push(
-                    Url::builder(url.to_owned())
-                        .change_frequency(ChangeFrequency::Weekly)
-                        .last_modified(chrono::offset::Utc::now().fixed_offset())
-                        .build()?,
-                );
+                sitemap_urls.push(url);
                 sitemaps.push(UrlSet::new(sitemap_urls)?);
             }
         }
@@ -475,7 +608,7 @@ async fn update_sitemap_index(state: &AppState) -> anyhow::Result<()> {
             if path
                 .extension()
                 .map_or(false, |ext| ext == "xml" || ext == "gz")
-                && !path.to_string_lossy().to_string().contains("sitemap_index")
+                && !path.to_string_lossy().to_string().contains("sitemap-index")
             {
                 Some(path)
             } else {

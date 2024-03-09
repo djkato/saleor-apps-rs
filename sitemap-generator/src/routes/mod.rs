@@ -1,9 +1,11 @@
 use axum::{
     handler::HandlerWithoutStateExt,
     http::StatusCode,
+    middleware,
     routing::{any, get, post},
     Router,
 };
+use saleor_app_sdk::middleware::verify_webhook_signature::webhook_signature_verifier;
 use tower_http::services::ServeDir;
 
 use crate::app::AppState;
@@ -24,6 +26,8 @@ pub fn create_routes(state: AppState) -> Router {
     let serve_dir = ServeDir::new("./sitemap-generator/public").not_found_service(service);
 
     Router::new()
+        .route("/api/webhooks", any(webhooks))
+        .layer(middleware::from_fn(webhook_signature_verifier))
         //handles just path, eg. localhost:3000/
         .route(
             "/",
@@ -33,6 +37,5 @@ pub fn create_routes(state: AppState) -> Router {
         .fallback_service(serve_dir)
         .route("/api/manifest", get(manifest))
         .route("/api/register", post(register))
-        .route("/api/webhooks", any(webhooks))
         .with_state(state)
 }

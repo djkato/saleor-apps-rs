@@ -6,11 +6,12 @@ use axum::{
 use chrono::{DateTime, FixedOffset};
 use fd_lock::RwLock;
 use std::{fs::File, sync::Arc, time::Duration};
+use tracing_subscriber::EnvFilter;
 
 use redis::{AsyncCommands, Client, RedisError};
 use saleor_app_sdk::{config::Config, manifest::AppManifest, SaleorApp};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info};
+use tracing::{debug, info, level_filters::LevelFilter};
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(anyhow::Error);
 
@@ -37,9 +38,20 @@ where
 }
 
 pub fn trace_to_std(config: &Config) {
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::DEBUG.into())
+        .from_env()
+        .unwrap()
+        .add_directive(
+            format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level)
+                .parse()
+                .unwrap(),
+        );
     tracing_subscriber::fmt()
         .with_max_level(config.log_level)
-        .with_target(false)
+        .with_env_filter(filter)
+        .with_target(true)
+        .compact()
         .init();
 }
 
@@ -49,12 +61,7 @@ pub fn trace_to_std(config: &Config) {
  */
 #[derive(Debug, Clone)]
 pub struct AppState {
-    pub sitemap_file_products: Vec<Arc<RwLock<File>>>,
-    pub sitemap_file_categories: Vec<Arc<RwLock<File>>>,
-    pub sitemap_file_collections: Vec<Arc<RwLock<File>>>,
-    pub sitemap_file_pages: Vec<Arc<RwLock<File>>>,
-    pub sitemap_file_index: Arc<RwLock<File>>,
-    pub xml_cache: XmlCache,
+    pub xml_cache: Arc<tokio::sync::Mutex<XmlCache>>,
     pub saleor_app: Arc<tokio::sync::Mutex<SaleorApp>>,
     pub config: Config,
     pub sitemap_config: SitemapConfig,
@@ -71,6 +78,8 @@ pub struct SitemapConfig {
     pub category_template: String,
     #[serde(rename = "sitemap_pages_template")]
     pub pages_template: String,
+    #[serde(rename = "sitemap_collection_template")]
+    pub collection_template: String,
     #[serde(rename = "sitemap_index_hostname")]
     pub index_hostname: String,
 }
@@ -83,7 +92,7 @@ impl SitemapConfig {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct XmlCache {
     client: Client,
     app_api_base_url: String,

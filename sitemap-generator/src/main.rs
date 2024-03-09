@@ -1,18 +1,19 @@
+#![feature(let_chains)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 mod app;
 mod queries;
 mod routes;
 
 use anyhow::Context;
-use fd_lock::RwLock;
 use saleor_app_sdk::{
     config::Config,
     manifest::{AppManifest, AppPermission},
     webhooks::{AsyncWebhookEventType, WebhookManifest},
     SaleorApp,
 };
-use std::{fs::File, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     app::{trace_to_std, AppState, SitemapConfig, XmlCache},
@@ -57,27 +58,24 @@ async fn main() -> anyhow::Result<()> {
         )
         .build();
     debug!("Created AppManifest...");
-
-    debug!("{}/sitemap_index.xml.gz", sitemap_config.target_folder);
     let app_state = AppState {
-        sitemap_file_index: Arc::new(RwLock::new(File::options().write(true).create(true).open(
-            format!("{}/sitemap_index.xml", sitemap_config.target_folder),
-        )?)),
-        sitemap_file_products: vec![],
-        sitemap_file_categories: vec![],
-        sitemap_file_collections: vec![],
-        sitemap_file_pages: vec![],
         sitemap_config,
-        xml_cache: XmlCache::new(&config.apl_url, &config.app_api_base_url)?,
+        xml_cache: Arc::new(Mutex::new(XmlCache::new(
+            &config.apl_url,
+            &config.app_api_base_url,
+        )?)),
         manifest: app_manifest,
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),
     };
     debug!("Created AppState...");
-    app_state
-        .xml_cache
-        .delete_all("http://localhost:8000/graphpl/")
-        .await?;
+    {
+        let xml_cache = app_state.xml_cache.lock().await;
+        xml_cache
+            .delete_all("http://localhost:8000/graphpl/")
+            .await?;
+        debug!("Cleared Xml Cache");
+    }
 
     let app = create_routes(app_state);
     let listener = tokio::net::TcpListener::bind(
@@ -89,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
             .context("APP_API_BASE_URL invalid format")?,
     )
     .await?;
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
+    info!("listening on {}", listener.local_addr().unwrap());
     match axum::serve(listener, app).await {
         Ok(o) => Ok(o),
         Err(e) => anyhow::bail!(e),

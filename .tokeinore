@@ -1,0 +1,6 @@
+/target
+temp
+**/*.graphql
+app-template/src/schema.graphql
+PolyForm-Noncommercial-1.0.0.md
+app logo template.xcf

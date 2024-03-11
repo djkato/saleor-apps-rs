@@ -6,10 +6,10 @@ This repo is very likely to introduce breaking changes as it's very early in dev
 
 Current Coverage: ~10%
 
-- [x] Base Types (Manifest, Webhooks, SaleorApp etc.)
+- [x] Base Types (Manifest, Webhooks, SaleorApp, Auth etc.)
 - [x] APLs (Only redis currently implemented)
+- [x] Webhook utilities (Axum middleware for payload signature verification)
 - [ ] JWT Management
-- [ ] Webhook utilities
 - [ ] Settings Manager
 - [ ] App Bridge
 - [ ] Handlers

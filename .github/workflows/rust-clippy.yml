@@ -2,9 +2,9 @@ name: rust-clippy analyze
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 jobs:
   rust-clippy-analyze:
     name: Run rust-clippy analyzing
@@ -28,10 +28,10 @@ jobs:
         run: cargo install clippy-sarif sarif-fmt
 
       - name: Run rust-clippy
-        run:
-          cargo clippy
+        run: cargo clippy
           --all-features
           --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+          -D warnings
         continue-on-error: true
 
       - name: Upload analysis results to GitHub

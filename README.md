@@ -23,7 +23,7 @@ to use in your project inside this repo, create a new workspace member and add `
 
 ## Creating a new Saleor App from template
 
-If using the `saleor-app-template`, create a new workspace member `cargo new <project-name>`, then `cp saleor-app-template/* <project-name>`.
+If using the `saleor-app-template`, create a new workspace member `cargo new <project-name>`,`rm -rf <project-name>/*` then `cp -r app-template/* <project-name>/`.
 
 ## Adding new dependencies
 

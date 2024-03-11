@@ -25,27 +25,3 @@ pub struct SaleorHeaders<'a> {
     #[serde(rename = "content-length")]
     content_length: u16,
 }
-
-/* TODO!
-impl SaleorHeaders {
-    pub fn verify(&self, payload: &str) -> anyhow::Result<()> {
-        /*
-        if let Some(saleor_signature) = self.signature {
-            let split: Vec<String> = saleor_signature.split(".").collect();
-            let header = split.get(0);
-            let signature = split.get(2);
-            if let Some(header) = header {
-                if let Some(signature) = signature {
-                    let jws = jose_jws::Signature {
-                        signature: signature.into(),
-                        header,
-                        protected: None,
-                    };
-                }
-            }
-        }
-        */
-        todo!()
-    }
-}
-*/

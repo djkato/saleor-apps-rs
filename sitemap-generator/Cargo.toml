@@ -9,7 +9,7 @@ repository = "https://github.com/djkato/saleor-apps-rs"
 documentation = "https://github.com/djkato/saleor-apps-rs"
 keywords = ["saleor", "plugin"]
 categories = ["web-programming::http-server"]
-license = "PolyForm Noncommercial License 1.0.0"
+license = "PolyForm-Noncommercial-1.0.0"
 
 [dependencies]
 anyhow.workspace = true

@@ -18,6 +18,7 @@ pub enum AppPermission {
     ManageGiftCard,
     ManageMenus,
     ManageOrders,
+    ManageOrdersImport,
     ManagePages,
     ManagePageTypesAndAttributes,
     HandlePayments,

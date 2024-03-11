@@ -11,7 +11,9 @@ This repo contains the following main components:
 
 # Using the apps
 
-Pick the apps you wanna use from this repo. You can find prebuilt docker images on the right sidebar next to the code tree under "Packages".
+To use on bare-metal, clone this repo and just run build and run the apps.
+
+To use with Docker/k8s, you can find prebuilt docker images on the right sidebar next to the code tree under "Packages".
 Simply add the package to your `docker-compose.yml`, for example like so:
 
 ```yml
@@ -47,6 +49,8 @@ networks:
     driver: bridge
 ```
 
+and set all necessary env variables in `app-simple-gateway.env` according to the `env.example` file.
+
 # Using this repo
 
 To use, you need to have [Rust environment prepared](https://rustup.rs/).
@@ -76,12 +80,12 @@ To have the app rebuild during development, install bacon `cargo install bacon`,
 
 ## License
 
-Each workspace member has it's licensed in it's own directory.
+Each workspace member has it's license in it's own directory, mentioned in `Cargo.toml`.
 
 ### TL;DR:
 
 - saleor-app-sdk, saleor-app-template and the root structure fall under either MIT or Apache 2.0 at your convenience.
-- Rest of the apps in this repo fall under `PolyForm-Noncommercial-1.0.md`. If you want to use my apps commercially, each app costs 10€ (or voluntarily more). Upon payment/donation you are allowed to use the given app commercially.
+- Rest of the apps in this repo fall under `PolyForm-Noncommercial-1.0`. If you want to use my apps commercially, each app costs 10€ (or voluntarily more). Upon payment/donation you are allowed to use the given app commercially.
 
 ## Docker images
 

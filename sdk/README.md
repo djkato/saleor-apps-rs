@@ -4,7 +4,7 @@ SDK for building [Saleor Apps](https://github.com/saleor/apps), inspired by The 
 
 This repo is very likely to introduce breaking changes as it's very early in development. Made specifically for the [Saleor App Template for Rust](https://github.com/djkato/saleor-apps-rs)
 
-Current Coverage: ~10%
+Current Coverage: ~20%
 
 - [x] Base Types (Manifest, Webhooks, SaleorApp, Auth etc.)
 - [x] APLs (Only redis currently implemented)

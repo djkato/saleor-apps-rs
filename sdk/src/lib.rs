@@ -1,6 +1,7 @@
 pub mod apl;
 pub mod config;
 pub mod headers;
+pub mod locales;
 pub mod manifest;
 pub mod middleware;
 pub mod webhooks;
@@ -25,6 +26,7 @@ pub struct AuthData {
     pub app_id: String,
     pub jwks: Option<String>,
 }
+
 impl std::fmt::Display for AuthData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

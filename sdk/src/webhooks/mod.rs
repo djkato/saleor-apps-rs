@@ -1,3 +1,4 @@
+pub mod sync_response;
 pub mod utils;
 
 use serde::{Deserialize, Serialize};

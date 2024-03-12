@@ -34,6 +34,7 @@ surf.workspace = true
 cynic = { workspace = true, features = ["http-surf"] }
 cynic-codegen.workspace = true
 const_format = "0.2.32"
+enum-iterator = "2.0.0"
 
 [build-dependencies]
 cynic-codegen.workspace = true

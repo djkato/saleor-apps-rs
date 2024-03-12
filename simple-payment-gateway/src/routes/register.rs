@@ -5,7 +5,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
 };
 use saleor_app_sdk::{AuthData, AuthToken};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::app::{AppError, AppState};
 
@@ -29,12 +29,25 @@ pub async fn register(
     let auth_data = AuthData {
         jwks: None,
         token: auth_token.auth_token,
-        domain: Some(state.config.app_api_base_url),
-        app_id: state.manifest.id,
+        domain: Some(state.config.app_api_base_url.clone()),
+        app_id: state.manifest.id.clone(),
         saleor_api_url: saleor_api_url.clone(),
     };
-    app.apl.set(auth_data).await?;
-
+    app.apl.set(auth_data.clone()).await?;
+    //unlock the mutex guard so state isn't borrowed anymore and it can move
+    std::mem::drop(app);
     info!("registered app for{:?}", &saleor_api_url);
+    tokio::spawn(async move {
+        match register_active_gateways(&state, auth_data).await {
+            Ok(_) => info!("Payment gateways registered"),
+            Err(e) => error!("Failed registering gateways, {e}"),
+        };
+    });
     Ok(StatusCode::OK)
+}
+
+pub async fn register_active_gateways(state: &AppState, auth_data: AuthData) -> anyhow::Result<()> {
+    // Maybe AppFetch manifest? Tho I might not need to since I already have it
+    // AppsInstallations to see if it's still installing
+    todo!()
 }

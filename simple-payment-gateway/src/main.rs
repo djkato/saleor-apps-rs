@@ -16,11 +16,11 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::{
-    app::{trace_to_std, AppState},
+    app::{get_active_gateways_from_env, trace_to_std, AppState},
     queries::event_transactions::{
-        sub_payment_gateway_initialize_session, sub_transaction_charge_requested,
-        sub_transaction_initialize_session, sub_transaction_process_session,
-        sub_transaction_refund_requested,
+        sub_list_payment_gateways, sub_payment_gateway_initialize_session,
+        sub_transaction_charge_requested, sub_transaction_initialize_session,
+        sub_transaction_process_session, sub_transaction_refund_requested,
     },
     routes::create_routes,
 };
@@ -63,6 +63,12 @@ async fn main() -> anyhow::Result<()> {
                 .add_sync_event(SyncWebhookEventType::PaymentGatewayInitializeSession)
                 .build(),
         )
+        .add_webhook(
+            WebhookManifest::new(&config)
+                .set_query(sub_list_payment_gateways)
+                .add_sync_event(SyncWebhookEventType::PaymentListGateways)
+                .build(),
+        )
         .add_permissions(vec![
             AppPermission::HandlePayments,
             AppPermission::ManageOrders,
@@ -70,7 +76,9 @@ async fn main() -> anyhow::Result<()> {
             AppPermission::HandleCheckouts,
         ])
         .build();
+
     let app_state = AppState {
+        active_gateways: get_active_gateways_from_env()?,
         manifest: app_manifest,
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),

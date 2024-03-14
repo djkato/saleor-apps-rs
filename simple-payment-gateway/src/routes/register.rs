@@ -5,7 +5,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
 };
 use saleor_app_sdk::{AuthData, AuthToken};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 use crate::app::{AppError, AppState};
 

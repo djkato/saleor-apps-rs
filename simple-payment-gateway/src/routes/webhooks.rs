@@ -6,10 +6,11 @@ use saleor_app_sdk::{
     headers::SALEOR_API_URL_HEADER,
     webhooks::{
         sync_response::{
-            ChargeRequestedResult, PaymentGatewayInitializeSessionResponse, RefundRequestedResult,
-            TransactionChargeRequestedResponse, TransactionInitializeSessionResponse,
-            TransactionProcessSessionResponse, TransactionRefundRequestedResponse,
-            TransactionSessionResult,
+            CancelationRequestedResult, ChargeRequestedResult,
+            PaymentGatewayInitializeSessionResponse, RefundRequestedResult,
+            TransactionCancelationRequestedResponse, TransactionChargeRequestedResponse,
+            TransactionInitializeSessionResponse, TransactionProcessSessionResponse,
+            TransactionRefundRequestedResponse, TransactionSessionResult,
         },
         utils::{get_webhook_event_type, EitherWebhookType},
         SyncWebhookEventType,
@@ -24,8 +25,9 @@ use crate::{
     app::{ActiveGateway, AppError, AppState, GatewayType},
     queries::{
         event_transactions::{
-            TransactionChargeRequested2, TransactionFlowStrategyEnum,
-            TransactionInitializeSession2, TransactionProcessSession2, TransactionRefundRequested2,
+            TransactionCancelationRequested, TransactionChargeRequested2,
+            TransactionFlowStrategyEnum, TransactionInitializeSession2, TransactionProcessSession2,
+            TransactionRefundRequested2,
         },
         mutation_transaction_update::{
             TransactionUpdate, TransactionUpdateInput, TransactionUpdateVariables,
@@ -50,6 +52,22 @@ pub async fn webhooks(
     let event_type = get_webhook_event_type(&headers)?;
     let res: Json<Value> = match event_type {
         EitherWebhookType::Sync(a) => match a {
+            SyncWebhookEventType::TransactionCancelationRequested => {
+                let data = serde_json::from_str::<TransactionChargeRequested2>(&body)?;
+                Json::from(serde_json::to_value(
+                    TransactionCancelationRequestedResponse {
+                        time: None,
+                        psp_reference: "".to_owned(),
+                        external_url: None,
+                        message: None,
+                        amount: data
+                            .action
+                            .amount
+                            .and_then(|a| Decimal::from_str(&a.0).ok()),
+                        result: Some(CancelationRequestedResult::CancelSuccess),
+                    },
+                )?)
+            }
             SyncWebhookEventType::PaymentGatewayInitializeSession => Json::from(
                 serde_json::to_value(PaymentGatewayInitializeSessionResponse::<u8> { data: None })?,
             ),

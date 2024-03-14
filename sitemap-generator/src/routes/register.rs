@@ -76,18 +76,21 @@ pub async fn register(
 pub async fn regenerate(state: AppState, saleor_api_url: String) -> anyhow::Result<()> {
     info!("regeneration: fetching all categories, products, collections, pages");
     let xml_cache = state.xml_cache.lock().await;
+    let apl = state.saleor_app.lock().await;
+    let token = token.apl.get(&saleor_api_url).await?;
+
     let mut categories: Vec<(Category3, Vec<Arc<CategorisedProduct>>)> =
-        get_all_categories(&saleor_api_url)
+        get_all_categories(&saleor_api_url, token)
             .await?
             .into_iter()
             .map(|c| (c, vec![]))
             .collect();
     let mut products = vec![];
     for category in categories.iter_mut() {
-        products.append(&mut get_all_products(&saleor_api_url, category).await?);
+        products.append(&mut get_all_products(&saleor_api_url, token, category).await?);
     }
-    let pages = get_all_pages(&saleor_api_url).await?;
-    let collections = get_all_collections(&saleor_api_url).await?;
+    let pages = get_all_pages(&saleor_api_url, token).await?;
+    let collections = get_all_collections(&saleor_api_url, token).await?;
     info!(
         "regeneration: found {} products, {} categories, {} pages, {} collections",
         products.len(),
@@ -259,10 +262,16 @@ pub async fn regenerate(state: AppState, saleor_api_url: String) -> anyhow::Resu
     Ok(())
 }
 
-async fn get_all_pages(saleor_api_url: &str) -> anyhow::Result<Vec<get_all_pages::Page>> {
+async fn get_all_pages(
+    saleor_api_url: &str,
+    token: &str,
+) -> anyhow::Result<Vec<get_all_pages::Page>> {
     let operation = GetPagesInitial::build(());
     let mut all_pages = vec![];
-    let res = surf::post(saleor_api_url).run_graphql(operation).await;
+    let res = surf::post(saleor_api_url)
+        .header("authorization-bearer", token)
+        .run_graphql(operation)
+        .await;
     if let Ok(query) = &res
         && let Some(data) = &query.data
         && let Some(pages) = &data.pages
@@ -280,9 +289,8 @@ async fn get_all_pages(saleor_api_url: &str) -> anyhow::Result<Vec<get_all_pages
         loop {
             if let Some(cursor) = &mut next_cursor {
                 let res = surf::post(saleor_api_url)
-                    .run_graphql(GetPagesNext::build(GetPagesNextVariables {
-                        after: cursor,
-                    }))
+                    .header("authorization-bearer", token)
+                    .run_graphql(GetPagesNext::build(GetPagesNextVariables { after: cursor }))
                     .await;
                 if let Ok(query) = &res
                     && let Some(data) = &query.data
@@ -316,11 +324,14 @@ async fn get_all_pages(saleor_api_url: &str) -> anyhow::Result<Vec<get_all_pages
     Ok(all_pages)
 }
 
-async fn get_all_categories(saleor_api_url: &str) -> anyhow::Result<Vec<Category3>> {
+async fn get_all_categories(saleor_api_url: &str, token: &str) -> anyhow::Result<Vec<Category3>> {
     debug!("Collecting all categories...");
     let operation = GetCategoriesInitial::build(());
     let mut all_categories = vec![];
-    let res = surf::post(saleor_api_url).run_graphql(operation).await;
+    let res = surf::post(saleor_api_url)
+        .header("authorization-bearer", token)
+        .run_graphql(operation)
+        .await;
     if let Ok(query) = &res
         && let Some(data) = &query.data
         && let Some(categories) = &data.categories
@@ -341,6 +352,7 @@ async fn get_all_categories(saleor_api_url: &str) -> anyhow::Result<Vec<Category
         loop {
             if let Some(cursor) = &mut next_cursor {
                 let res = surf::post(saleor_api_url)
+                    .header("authorization-bearer", token)
                     .run_graphql(GetCategoriesNext::build(GetCategoriesNextVariables {
                         after: Some(cursor),
                     }))
@@ -380,11 +392,14 @@ async fn get_all_categories(saleor_api_url: &str) -> anyhow::Result<Vec<Category
     Ok(all_categories)
 }
 
-async fn get_all_collections(saleor_api_url: &str) -> anyhow::Result<Vec<Collection>> {
+async fn get_all_collections(saleor_api_url: &str, token: &str) -> anyhow::Result<Vec<Collection>> {
     debug!("Collecting all Collections...");
     let operation = GetCollectionsInitial::build(());
     let mut all_collections = vec![];
-    let res = surf::post(saleor_api_url).run_graphql(operation).await;
+    let res = surf::post(saleor_api_url)
+        .header("authorization-bearer", token)
+        .run_graphql(operation)
+        .await;
     if let Ok(query) = &res
         && let Some(data) = &query.data
         && let Some(collections) = &data.collections
@@ -406,6 +421,7 @@ async fn get_all_collections(saleor_api_url: &str) -> anyhow::Result<Vec<Collect
         loop {
             if let Some(cursor) = &mut next_cursor {
                 let res = surf::post(saleor_api_url)
+                    .header("authorization-bearer", token)
                     .run_graphql(GetCollectionsNext::build(GetCollectionsNextVariables {
                         after: Some(cursor),
                     }))
@@ -449,6 +465,7 @@ async fn get_all_collections(saleor_api_url: &str) -> anyhow::Result<Vec<Collect
  */
 async fn get_all_products(
     saleor_api_url: &str,
+    token: &str,
     main_category: &mut (Category3, Vec<Arc<CategorisedProduct>>),
 ) -> anyhow::Result<Vec<Arc<CategorisedProduct>>> {
     debug!("Collecting all products...");
@@ -456,7 +473,10 @@ async fn get_all_products(
         id: &main_category.0.id,
     });
     let mut all_categorised_products: Vec<Arc<CategorisedProduct>> = vec![];
-    let res = surf::post(saleor_api_url).run_graphql(operation).await;
+    let res = surf::post(saleor_api_url)
+        .header("authorization-bearer", token)
+        .run_graphql(operation)
+        .await;
     if let Ok(query) = &res
         && let Some(data) = &query.data
         && let Some(category) = &data.category
@@ -480,6 +500,7 @@ async fn get_all_products(
         loop {
             if let Some(cursor) = &mut next_cursor {
                 let res = surf::post(saleor_api_url)
+                    .header("authorization-bearer", token)
                     .run_graphql(GetCategoryProductsNext::build(
                         GetCategoryProductsNextVariables {
                             id: &main_category.0.id,

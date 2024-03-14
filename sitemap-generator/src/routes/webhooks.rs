@@ -6,7 +6,6 @@ use axum::{
     http::{HeaderMap, StatusCode},
 };
 use chrono::{DateTime, Utc};
-use flate2::{write::GzEncoder, Compression};
 use saleor_app_sdk::{
     headers::SALEOR_API_URL_HEADER,
     webhooks::{
@@ -17,7 +16,7 @@ use saleor_app_sdk::{
 use sitemap_rs::{
     sitemap::Sitemap,
     sitemap_index::SitemapIndex,
-    url::{ChangeFrequency, Url},
+    url::{Url},
     url_set::UrlSet,
 };
 use tinytemplate::TinyTemplate;
@@ -27,7 +26,7 @@ use tracing::{debug, error, info};
 use crate::{
     app::{AppError, AppState, XmlData, XmlDataType},
     queries::event_subjects_updated::{
-        Category, Category2, CategoryUpdated, Collection, CollectionUpdated, Page, PageInfo,
+        Category, Category2, CategoryUpdated, Collection, CollectionUpdated, Page,
         PageUpdated, Product, ProductUpdated,
     },
 };
@@ -150,7 +149,7 @@ async fn update_sitemap_product(
                     "changed product {} found in xml_data, updating...",
                     product.slug
                 );
-                x.slug = product.slug.clone();
+                x.slug.clone_from(&product.slug);
                 x.relations = match &product.category {
                     Some(c) => vec![c.id.clone()],
                     None => vec![],
@@ -182,15 +181,13 @@ async fn update_sitemap_product(
                 .iter_mut()
                 .find(|x| x.id == c.id && x.data_type == XmlDataType::Category)
             {
-                xml_cat.slug = c.slug.clone();
+                xml_cat.slug.clone_from(&c.slug);
                 xml_cat.last_modified = chrono::offset::Utc::now().fixed_offset();
                 // If the category exists but product isn't in relation to it yet,
                 // add it
-                if xml_cat
+                if !xml_cat
                     .relations
-                    .iter()
-                    .find(|c| **c == product.id)
-                    .is_none()
+                    .iter().any(|c| *c == product.id)
                 {
                     xml_cat.relations.push(product.id.clone());
                 }
@@ -277,7 +274,7 @@ async fn update_sitemap_category(
                     return Ok(());
                 }
                 debug!("Category url changed, updating...");
-                xml_c.slug = category.slug.clone();
+                xml_c.slug.clone_from(&category.slug);
                 xml_c.last_modified = chrono::offset::Utc::now().fixed_offset();
                 if is_category_in_product_url {
                     debug!("{} products affected by change", affected_product_ids.len());
@@ -561,7 +558,7 @@ pub async fn write_xml(
     //now check if buffer's over limit, else slice em up into multiple sitemaps
     let len = buf.len() * std::mem::size_of::<u8>();
     if len > 200000 {
-        let file_amount = (len as f32 / 150000 as f32).ceil() as usize;
+        let file_amount = (len as f32 / 150000_f32).ceil() as usize;
         let sliced_urls: Vec<&[Url]> = urls.chunks(file_amount).collect();
 
         let mut sitemaps: Vec<UrlSet> = vec![];
@@ -627,7 +624,6 @@ async fn update_sitemap_index(state: &AppState) -> anyhow::Result<()> {
                     p.file_name()
                         .expect("file dissapeared or broke during sitemap-index construction")
                         .to_string_lossy()
-                        .to_string()
                 ),
                 p.metadata().map_or(None, |meta| {
                     meta.modified().map_or(None, |modified| {

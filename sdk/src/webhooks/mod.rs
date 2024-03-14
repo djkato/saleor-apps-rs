@@ -217,11 +217,11 @@ pub struct WebhookManifestBuilder {
 
 impl WebhookManifestBuilder {
     pub fn set_name(mut self, name: &str) -> Self {
-        self.webhook_manifest.name = name.to_owned();
+        name.clone_into(&mut self.webhook_manifest.name);
         self
     }
     pub fn set_query(mut self, query: &str) -> Self {
-        self.webhook_manifest.query = query.to_owned();
+        query.clone_into(&mut self.webhook_manifest.query);
         self
     }
     pub fn add_async_event(mut self, async_event: AsyncWebhookEventType) -> Self {
@@ -257,7 +257,7 @@ impl WebhookManifestBuilder {
         self
     }
     pub fn set_target_url(mut self, url: &str) -> Self {
-        self.webhook_manifest.target_url = url.to_owned();
+        url.clone_into(&mut self.webhook_manifest.target_url);
         self
     }
     pub fn set_is_active(mut self, active: bool) -> Self {

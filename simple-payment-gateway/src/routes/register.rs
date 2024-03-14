@@ -34,20 +34,7 @@ pub async fn register(
         saleor_api_url: saleor_api_url.clone(),
     };
     app.apl.set(auth_data.clone()).await?;
-    //unlock the mutex guard so state isn't borrowed anymore and it can move
-    std::mem::drop(app);
-    info!("registered app for{:?}", &saleor_api_url);
-    tokio::spawn(async move {
-        match register_active_gateways(&state, auth_data).await {
-            Ok(_) => info!("Payment gateways registered"),
-            Err(e) => error!("Failed registering gateways, {e}"),
-        };
-    });
-    Ok(StatusCode::OK)
-}
+    info!("registered app for: {:?}", &saleor_api_url);
 
-pub async fn register_active_gateways(state: &AppState, auth_data: AuthData) -> anyhow::Result<()> {
-    // Maybe AppFetch manifest? Tho I might not need to since I already have it
-    // AppsInstallations to see if it's still installing
-    todo!()
+    Ok(StatusCode::OK)
 }

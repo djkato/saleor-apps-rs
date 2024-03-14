@@ -4,11 +4,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, FixedOffset};
-use fd_lock::RwLock;
-use std::{fs::File, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tracing_subscriber::EnvFilter;
 
-use redis::{AsyncCommands, Client, RedisError};
+use redis::{AsyncCommands, Client};
 use saleor_app_sdk::{config::Config, manifest::AppManifest, SaleorApp};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, level_filters::LevelFilter};
@@ -87,8 +86,8 @@ pub struct SitemapConfig {
 impl SitemapConfig {
     pub fn load() -> Result<Self, envy::Error> {
         dotenvy::dotenv().unwrap();
-        let env = envy::from_env::<SitemapConfig>();
-        env
+        
+        envy::from_env::<SitemapConfig>()
     }
 }
 

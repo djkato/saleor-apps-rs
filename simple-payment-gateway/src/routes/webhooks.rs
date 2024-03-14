@@ -1,11 +1,5 @@
 use anyhow::Context;
-use axum::{
-    body::Body,
-    extract::State,
-    http::{HeaderMap, StatusCode},
-    response::Response,
-    Json,
-};
+use axum::{extract::State, http::HeaderMap, Json};
 use cynic::{http::SurfExt, MutationBuilder};
 use rust_decimal::Decimal;
 use saleor_app_sdk::{
@@ -21,7 +15,7 @@ use saleor_app_sdk::{
         SyncWebhookEventType,
     },
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::Value;
 use std::str::FromStr;
 use tracing::{debug, error, info};
@@ -30,9 +24,8 @@ use crate::{
     app::{ActiveGateway, AppError, AppState, GatewayType},
     queries::{
         event_transactions::{
-            PaymentGatewayInitializeSession, TransactionActionEnum, TransactionChargeRequested2,
-            TransactionFlowStrategyEnum, TransactionInitializeSession2, TransactionProcessSession,
-            TransactionProcessSession2, TransactionRefundRequested2,
+            TransactionChargeRequested2, TransactionFlowStrategyEnum,
+            TransactionInitializeSession2, TransactionProcessSession2, TransactionRefundRequested2,
         },
         mutation_transaction_update::{
             TransactionUpdate, TransactionUpdateInput, TransactionUpdateVariables,
@@ -120,7 +113,10 @@ pub async fn webhooks(
                         ..Default::default()
                     }),
                 });
-                let mut res = surf::post(&saleor_api_url).run_graphql(operation).await;
+                let mut res = surf::post(&saleor_api_url)
+                    .header("authorization-bearer", auth_data.token)
+                    .run_graphql(operation)
+                    .await;
 
                 let mut webhook_result = WebhookResult::Failiure;
                 if let Ok(r) = &mut res
@@ -132,13 +128,11 @@ pub async fn webhooks(
                             .errors
                             .iter()
                             .for_each(|e| error!("failed update transaction, {:?}", e));
-                    } else {
-                        if let Some(tr) = &mut q_res.transaction {
-                            tr.message = serde_json::to_string(&PaymentMethod {
-                                payment_method: GatewayType::COD,
-                            })?;
-                            webhook_result = WebhookResult::Success;
-                        }
+                    } else if let Some(tr) = &mut q_res.transaction {
+                        tr.message = serde_json::to_string(&PaymentMethod {
+                            payment_method: GatewayType::COD,
+                        })?;
+                        webhook_result = WebhookResult::Success;
                     }
                 }
 

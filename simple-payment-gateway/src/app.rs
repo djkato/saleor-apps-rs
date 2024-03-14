@@ -3,12 +3,11 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use enum_iterator::{all, Sequence};
-use std::{fmt::Display, str::FromStr, sync::Arc};
+use std::{sync::Arc};
 
 use saleor_app_sdk::{config::Config, locales::LocaleCode, manifest::AppManifest, SaleorApp};
 use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
+    Serialize,
 };
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(anyhow::Error);
@@ -75,7 +74,7 @@ pub fn get_active_gateways_from_env() -> anyhow::Result<Vec<ActiveGateway>> {
         l => unimplemented!("Locale {l} not implemented"),
     };
 
-    let str_types: Vec<_> = env_types.split(",").collect();
+    let str_types: Vec<_> = env_types.split(',').collect();
     let gateway_types = str_types
         .iter()
         .zip(all::<GatewayType>())

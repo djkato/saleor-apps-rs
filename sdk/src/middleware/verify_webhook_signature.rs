@@ -14,10 +14,9 @@ pub async fn webhook_signature_verifier(request: Request, next: Next) -> Respons
 
     let jwks_url = request
         .headers()
-        .get(SALEOR_API_URL_HEADER)
-        .map_or(None, |h| {
+        .get(SALEOR_API_URL_HEADER).and_then(|h| {
             h.to_str()
-                .map_or(None, |h| url::Url::parse(h).map_or(None, |h| Some(h)))
+                .map_or(None, |h| url::Url::parse(h).ok())
         });
 
     //get jwk from saleor api
@@ -36,7 +35,7 @@ pub async fn webhook_signature_verifier(request: Request, next: Next) -> Respons
     let nstr = jwks["keys"][0]["n"].as_str().unwrap();
     let estr = jwks["keys"][0]["e"].as_str().unwrap();
 
-    let pubkey = DecodingKey::from_rsa_components(&nstr, &estr).unwrap();
+    let pubkey = DecodingKey::from_rsa_components(nstr, estr).unwrap();
 
     let (parts, body) = request.into_parts();
     let payload = body::to_bytes(body, usize::MAX).await.unwrap();

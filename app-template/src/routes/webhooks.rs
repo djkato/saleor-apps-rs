@@ -11,14 +11,14 @@ use saleor_app_sdk::{
         AsyncWebhookEventType,
     },
 };
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 use crate::{
     app::{AppError, AppState},
     queries::{
         event_products_updated::ProductUpdated,
         product_metadata_update::{
-            MetadataInput, MetadataItem, UpdateProductMetadata, UpdateProductMetadataVariables,
+            MetadataInput, UpdateProductMetadata, UpdateProductMetadataVariables,
         },
     },
 };

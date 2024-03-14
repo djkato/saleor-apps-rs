@@ -70,7 +70,7 @@ pub enum TransactionUpdateErrorCode {
     Unique,
 }
 
-#[derive(cynic::InputObject, Debug)]
+#[derive(cynic::InputObject, Debug, Default)]
 pub struct TransactionUpdateInput<'a> {
     pub name: Option<&'a str>,
     pub message: Option<&'a str>,

@@ -26,6 +26,7 @@ serde_json.workspace = true
 envy.workspace = true
 dotenvy.workspace = true
 tower = { workspace = true }
+rust_decimal = { workspace = true, features = ["serde-float"] }
 reqwest = { version = "0.11.24", features = ["json"] }
 jsonwebtoken = "9.2.0"
 async-trait = "0.1.77"

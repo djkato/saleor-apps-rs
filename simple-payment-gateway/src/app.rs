@@ -43,6 +43,7 @@ pub fn trace_to_std(config: &Config) {
 }
 
 #[derive(Debug, Clone, Sequence, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum GatewayType {
     Accreditation,
     Cash,
@@ -82,10 +83,30 @@ pub fn get_active_gateways_from_env() -> anyhow::Result<Vec<ActiveGateway>> {
             true => Some(g),
             false => None,
         })
-        .map(|g| )
+        .map(|g| ActiveGateway {
+            gateway_type: g.clone(),
+            currencies: vec!["EUR".to_owned()],
+            id: format!("{:?}", &g).to_lowercase(),
+            config: [],
+            name: match (g, &locale) {
+                (GatewayType::COD, LocaleCode::Sk) => "Dobierka".to_owned(),
+                (GatewayType::Cash, LocaleCode::Sk) => "Hotovosť".to_owned(),
+                (GatewayType::Transfer, LocaleCode::Sk) => "Bankový prevod".to_owned(),
+                (GatewayType::Inkaso, LocaleCode::Sk) => "Inkaso".to_owned(),
+                (GatewayType::Accreditation, LocaleCode::Sk) => "Vzajomný zápočet".to_owned(),
+                (GatewayType::Other, LocaleCode::Sk) => "Iné".to_owned(),
+                (GatewayType::COD, LocaleCode::En) => "Cash on delivery".to_owned(),
+                (GatewayType::Cash, LocaleCode::En) => "Cash".to_owned(),
+                (GatewayType::Transfer, LocaleCode::En) => "Bank transfer".to_owned(),
+                (GatewayType::Inkaso, LocaleCode::En) => "Encashment".to_owned(),
+                (GatewayType::Accreditation, LocaleCode::En) => "Mutual credit".to_owned(),
+                (GatewayType::Other, LocaleCode::En) => "Other".to_owned(),
+                (g, l) => unimplemented!("Gateway {:?} in locale {:?} not implemented", g, l),
+            },
+        })
         .collect::<Vec<_>>();
 
-    todo!()
+    Ok(gateway_types)
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -96,12 +117,4 @@ pub struct ActiveGateway {
     pub currencies: Vec<String>,
     //don't need this one yet
     pub config: [(); 0],
-}
-impl ActiveGateway{
-    fn from_gateway_type(ty: &GatewayType) -> Self {
-        all_currencies = 
-        match type {
-            
-        }
-    }
 }

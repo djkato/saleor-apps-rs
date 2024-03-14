@@ -1,19 +1,26 @@
+use rust_decimal::Decimal;
 use serde::Serialize;
 
 //Why are these few in snake_case but rest is camelCase?
 #[derive(Serialize, Debug, Clone)]
 pub struct CheckoutCalculateTaxesResponse {
-    pub shipping_price_gross_amount: f32,
-    pub shipping_price_net_amount: f32,
-    pub shipping_tax_rate: f32,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub shipping_price_gross_amount: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub shipping_price_net_amount: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub shipping_tax_rate: Decimal,
     pub lines: Vec<LinesResponse>,
 }
 
 #[derive(Serialize, Debug, Clone)]
 pub struct LinesResponse {
-    pub total_gross_amount: f32,
-    pub total_net_amount: f32,
-    pub tax_rate: f32,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_gross_amount: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_net_amount: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub tax_rate: Decimal,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -40,7 +47,8 @@ pub struct ShippingListMethodsForCheckout(Vec<ShippingListMethodsForCheckoutVec>
 struct ShippingListMethodsForCheckoutVec {
     pub id: String,
     pub name: Option<String>,
-    pub amount: f32,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub amount: Decimal,
     pub currency: String,
     pub maximum_delivery_days: Option<i32>,
 }
@@ -56,7 +64,8 @@ pub enum ChargeRequestedResult {
 pub struct TransactionChargeRequestedResponse {
     pub psp_reference: String,
     pub result: Option<ChargeRequestedResult>,
-    pub amount: Option<f32>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub amount: Option<Decimal>,
     pub time: Option<String>,
     pub external_url: Option<String>,
     pub message: Option<String>,
@@ -74,7 +83,8 @@ pub enum RefundRequestedResult {
 pub struct TransactionRefundRequestedResponse {
     pub psp_reference: String,
     pub result: Option<RefundRequestedResult>,
-    pub amount: Option<f32>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub amount: Option<Decimal>,
     pub time: Option<String>,
     pub external_url: Option<String>,
     pub message: Option<String>,
@@ -92,7 +102,8 @@ pub enum CancelationRequestedResult {
 pub struct TransactionCancelationRequestedResponse {
     pub psp_reference: String,
     pub result: Option<CancelationRequestedResult>,
-    pub amount: Option<f32>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub amount: Option<Decimal>,
     pub time: Option<String>,
     pub external_url: Option<String>,
     pub message: Option<String>,
@@ -100,7 +111,7 @@ pub struct TransactionCancelationRequestedResponse {
 
 #[derive(Serialize, Debug, Clone)]
 pub struct PaymentGatewayInitializeSessionResponse<T: Serialize> {
-    pub data: T,
+    pub data: Option<T>,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -122,7 +133,8 @@ pub struct TransactionInitializeSessionResponse<T: Serialize> {
     pub psp_reference: Option<String>,
     pub data: Option<T>,
     pub result: TransactionSessionResult,
-    pub amount: f32,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub amount: Decimal,
     pub time: Option<String>,
     pub external_url: Option<String>,
     pub message: Option<String>,
@@ -134,7 +146,8 @@ pub struct TransactionProcessSessionResponse<T: Serialize> {
     pub psp_reference: Option<String>,
     pub data: Option<T>,
     pub result: TransactionSessionResult,
-    pub amount: f32,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub amount: Decimal,
     pub time: Option<String>,
     pub external_url: Option<String>,
     pub message: Option<String>,

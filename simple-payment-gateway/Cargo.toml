@@ -33,6 +33,7 @@ tower-http = { workspace = true, features = ["fs", "trace"] }
 surf.workspace = true
 cynic = { workspace = true, features = ["http-surf"] }
 cynic-codegen.workspace = true
+rust_decimal = { workspace = true, features = ["serde-float"] }
 const_format = "0.2.32"
 enum-iterator = "2.0.0"
 

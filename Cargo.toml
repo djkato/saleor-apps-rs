@@ -24,3 +24,4 @@ saleor-app-sdk = { path = "sdk" }
 tower = { version = "0.4.13", features = ["util"] }
 tower-http = { version = "0.5.2", features = ["fs", "trace"] }
 cynic-codegen = "3.4.3"
+rust_decimal = { version = "1.34.3", features = ["serde-float"] }

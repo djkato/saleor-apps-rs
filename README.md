@@ -17,32 +17,56 @@ To use with Docker/k8s, you can find prebuilt docker images on the right sidebar
 Simply add the package to your `docker-compose.yml`, for example like so:
 
 ```yml
-version: "3.4"
-
 services:
-  redisapl:
-    image: bitnami/redis:latest
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-    ports:
-      - 6380:6379
-    restart: unless-stopped
-    networks:
-      - saleor-app-tier
-    volumes:
-      - saleor-redis:/bitnami/redis/data
-
-  saleor-app-simple-gateway:
+  app-payment-gateway:
     image: ghcr.io/djkato/saleor-simple-payment-gateway:latest
-    restart: unless-stopped
     env_file:
-      - ./app-simple-gateway.env
-    ports:
-      - "3030:3030"
+      - docker-gateway.env
     networks:
       - saleor-app-tier
     depends_on:
-      - redisapl
+      - redis-apl
+    ports:
+      - 3001:3001
+
+  app-sitemap-generator:
+    image: ghcr.io/djkato/saleor-sitemap-generator:latest
+    env_file:
+      - docker-sitemap.env
+    networks:
+      - saleor-app-tier
+    depends_on:
+      - redis-apl
+    ports:
+      - 3002:3002
+    volumes:
+      - sitemaps:/sitemaps
+
+  redis-apl:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - DISABLE_COMMANDS=FLUSHDB,FLUSHALL,CONFIG
+    ports:
+      - 6380:6379
+    networks:
+      - saleor-app-tier
+    volumes:
+      - redis-apl:/bitnami/redis/data
+
+volumes:
+  redis-apl:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./temp/volumes/redis/
+      o: bind
+  sitemaps:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./temp/docker-sitemaps/
+      o: bind
 
 networks:
   saleor-app-tier:

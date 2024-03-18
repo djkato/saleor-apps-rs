@@ -76,21 +76,21 @@ pub async fn register(
 pub async fn regenerate(state: AppState, saleor_api_url: String) -> anyhow::Result<()> {
     info!("regeneration: fetching all categories, products, collections, pages");
     let xml_cache = state.xml_cache.lock().await;
-    let apl = state.saleor_app.lock().await;
-    let token = token.apl.get(&saleor_api_url).await?;
+    let app = state.saleor_app.lock().await;
+    let auth_data = app.apl.get(&saleor_api_url).await?;
 
     let mut categories: Vec<(Category3, Vec<Arc<CategorisedProduct>>)> =
-        get_all_categories(&saleor_api_url, token)
+        get_all_categories(&saleor_api_url, &auth_data.token)
             .await?
             .into_iter()
             .map(|c| (c, vec![]))
             .collect();
     let mut products = vec![];
     for category in categories.iter_mut() {
-        products.append(&mut get_all_products(&saleor_api_url, token, category).await?);
+        products.append(&mut get_all_products(&saleor_api_url, &auth_data.token, category).await?);
     }
-    let pages = get_all_pages(&saleor_api_url, token).await?;
-    let collections = get_all_collections(&saleor_api_url, token).await?;
+    let pages = get_all_pages(&saleor_api_url, &auth_data.token).await?;
+    let collections = get_all_collections(&saleor_api_url, &auth_data.token).await?;
     info!(
         "regeneration: found {} products, {} categories, {} pages, {} collections",
         products.len(),

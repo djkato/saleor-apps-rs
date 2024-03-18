@@ -25,7 +25,7 @@ use crate::{
     app::{ActiveGateway, AppError, AppState, GatewayType},
     queries::{
         event_transactions::{
-            TransactionCancelationRequested, TransactionChargeRequested2,
+            TransactionCancelationRequested2, TransactionChargeRequested2,
             TransactionFlowStrategyEnum, TransactionInitializeSession2, TransactionProcessSession2,
             TransactionRefundRequested2,
         },
@@ -53,7 +53,7 @@ pub async fn webhooks(
     let res: Json<Value> = match event_type {
         EitherWebhookType::Sync(a) => match a {
             SyncWebhookEventType::TransactionCancelationRequested => {
-                let data = serde_json::from_str::<TransactionChargeRequested2>(&body)?;
+                let data = serde_json::from_str::<TransactionCancelationRequested2>(&body)?;
                 Json::from(serde_json::to_value(
                     TransactionCancelationRequestedResponse {
                         time: None,

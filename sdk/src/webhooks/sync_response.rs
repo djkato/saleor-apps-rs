@@ -220,17 +220,17 @@ pub struct PaymentMethod<T: Serialize> {
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreditCardInfo {
-    brand: String,
-    last_digits: String,
-    exp_month: String,
-    exp_year: String,
-    first_digits: Option<String>,
+    pub brand: String,
+    pub last_digits: String,
+    pub exp_month: String,
+    pub exp_year: String,
+    pub first_digits: Option<String>,
 }
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ListStoredPaymentMethodsResponse<T: Serialize, C: Serialize> {
-    payment_methods: Vec<PaymentMethod<C>>,
-    name: Option<String>,
-    data: Option<T>,
+    pub payment_methods: Vec<PaymentMethod<C>>,
+    pub name: Option<String>,
+    pub data: Option<T>,
 }

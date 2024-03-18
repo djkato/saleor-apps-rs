@@ -2,6 +2,7 @@
 .env
 temp
 temp/**.*
+volumes/
 
 # Allow
 !.env.example

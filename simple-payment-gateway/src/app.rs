@@ -3,12 +3,12 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use enum_iterator::{all, Sequence};
-use std::{sync::Arc};
+use std::sync::Arc;
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::EnvFilter;
 
 use saleor_app_sdk::{config::Config, locales::LocaleCode, manifest::AppManifest, SaleorApp};
-use serde::{
-    Serialize,
-};
+use serde::Serialize;
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(anyhow::Error);
 
@@ -35,9 +35,20 @@ where
 }
 
 pub fn trace_to_std(config: &Config) {
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::DEBUG.into())
+        .from_env()
+        .unwrap()
+        .add_directive(
+            format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level)
+                .parse()
+                .unwrap(),
+        );
     tracing_subscriber::fmt()
         .with_max_level(config.log_level)
-        .with_target(false)
+        .with_env_filter(filter)
+        .with_target(true)
+        .compact()
         .init();
 }
 
@@ -64,7 +75,7 @@ pub struct AppState {
 }
 
 pub fn get_active_gateways_from_env() -> anyhow::Result<Vec<ActiveGateway>> {
-    dotenvy::dotenv()?;
+    _ = dotenvy::dotenv();
     //eg: "accreditation,cod,other,transfer"
     let env_types = std::env::var("ACTIVE_GATEWAYS")?;
     let locale = std::env::var("LOCALE")?;

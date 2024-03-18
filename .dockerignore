@@ -1,6 +1,11 @@
 target/
 tmp/
+.git
+.github
+volumes/
+temp/
 
 Cargo.lock
 Dockerfile
 Makefile.toml
+rust-toolchain.toml

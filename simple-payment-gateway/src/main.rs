@@ -19,8 +19,9 @@ use crate::{
     app::{get_active_gateways_from_env, trace_to_std, AppState},
     queries::event_transactions::{
         sub_list_payment_gateways, sub_payment_gateway_initialize_session,
-        sub_transaction_charge_requested, sub_transaction_initialize_session,
-        sub_transaction_process_session, sub_transaction_refund_requested,
+        sub_transaction_cancelation_requested, sub_transaction_charge_requested,
+        sub_transaction_initialize_session, sub_transaction_process_session,
+        sub_transaction_refund_requested,
     },
     routes::create_routes,
 };
@@ -61,6 +62,12 @@ async fn main() -> anyhow::Result<()> {
             WebhookManifest::new(&config)
                 .set_query(sub_payment_gateway_initialize_session)
                 .add_sync_event(SyncWebhookEventType::PaymentGatewayInitializeSession)
+                .build(),
+        )
+        .add_webhook(
+            WebhookManifest::new(&config)
+                .set_query(sub_transaction_cancelation_requested)
+                .add_sync_event(SyncWebhookEventType::TransactionCancelationRequested)
                 .build(),
         )
         .add_webhook(

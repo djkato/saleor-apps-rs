@@ -38,11 +38,9 @@ impl std::fmt::Display for Config {
 
 impl Config {
     pub fn load() -> Result<Self, envy::Error> {
-        dotenvy::dotenv().unwrap();
+        _ = dotenvy::dotenv();
         let env = envy::from_env::<Config>();
-        if let Ok(e) = &env {
-            debug!("{}", e);
-        }
+        debug!("{:?}", &env);
         env
     }
 }

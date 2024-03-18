@@ -22,7 +22,11 @@ docker tag $(docker image ls -q --filter=label=service=chef-simple-payment-gatew
 
 [tasks.build-containers]
 workspace = false
-dependencies = ["build-sitemap-generator", "build-simple-payment-gateway"]
+dependencies = [
+  "delete-images",
+  "build-sitemap-generator",
+  "build-simple-payment-gateway",
+]
 
 [tasks.push-containers]
 workspace = false
@@ -31,9 +35,9 @@ docker push ghcr.io/djkato/saleor-sitemap-generator:latest
 docker push ghcr.io/djkato/saleor-simple-payment-gateway:latest
 '''
 
-[tasks.delete-containers]
+[tasks.delete-images]
 workspace = false
 script = '''
-docker image rm $(docker image ls -q --filter=label=service=chef-simple-payment-gateway)
-docker image rm $(docker image ls -q --filter=label=service=chef-sitemap-generator)
+docker rmi -f $(docker image ls -q --filter=label=service=chef-sitemap-generator) 2>&1 || true
+docker rmi -f $(docker image ls -q --filter=label=service=chef-simple-payment-gateway) 2>&1 || true
 '''

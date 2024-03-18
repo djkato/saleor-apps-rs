@@ -18,7 +18,7 @@ use tracing::{debug, info};
 use crate::{
     app::{trace_to_std, AppState, SitemapConfig, XmlCache},
     queries::event_subjects_updated::EVENTS_QUERY,
-    routes::create_routes,
+    routes::{create_routes, register::regenerate},
 };
 
 #[tokio::main]
@@ -69,12 +69,23 @@ async fn main() -> anyhow::Result<()> {
         saleor_app: Arc::new(Mutex::new(saleor_app)),
     };
     debug!("Created AppState...");
+
     {
-        let xml_cache = app_state.xml_cache.lock().await;
-        xml_cache
-            .delete_all("http://localhost:8000/graphpl/")
-            .await?;
-        debug!("Cleared Xml Cache");
+        // either clear the cache, regenerate or both from command args
+        let mut pargs = pico_args::Arguments::from_env();
+
+        if let Some(for_url) = pargs.opt_value_from_str::<_, String>("--for-url")? {
+            if pargs.contains("--cache-clear") {
+                let xml_cache = app_state.xml_cache.lock().await;
+                xml_cache.delete_all(&for_url).await?;
+                debug!("Cleared Xml Cache for {for_url}");
+            }
+
+            if pargs.contains("--cache-regenerate") {
+                regenerate(app_state.clone(), for_url).await?;
+            }
+            std::process::exit(0)
+        }
     }
 
     let app = create_routes(app_state);

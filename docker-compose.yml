@@ -1,0 +1,61 @@
+services:
+  app-payment-gateway:
+    image: ghcr.io/djkato/saleor-simple-payment-gateway:latest
+    tty: true
+    restart: unless-stopped
+    stdin_open: true
+    env_file:
+      - docker-gateway.env
+    networks:
+      - saleor-app-tier
+    depends_on:
+      - redis-apl
+    ports:
+      - 3001:3001
+
+  app-sitemap-generator:
+    tty: true
+    restart: unless-stopped
+    stdin_open: true
+    image: ghcr.io/djkato/saleor-sitemap-generator:latest
+    env_file:
+      - docker-sitemap.env
+    networks:
+      - saleor-app-tier
+    depends_on:
+      - redis-apl
+    ports:
+      - 3002:3002
+    volumes:
+      - sitemaps:/sitemaps
+
+  redis-apl:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - DISABLE_COMMANDS=FLUSHDB,FLUSHALL,CONFIG
+    ports:
+      - 6380:6379
+    restart: unless-stopped
+    networks:
+      - saleor-app-tier
+    volumes:
+      - redis-apl:/bitnami/redis/data
+
+volumes:
+  redis-apl:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./temp/volumes/redis/
+      o: bind
+  sitemaps:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./temp/docker-sitemaps/
+      o: bind
+
+networks:
+  saleor-app-tier:
+    driver: bridge

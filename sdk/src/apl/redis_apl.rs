@@ -78,7 +78,7 @@ impl APL for RedisApl {
 
 impl RedisApl {
     pub fn new(redis_url: &str, app_api_base_url: &str) -> Result<Self> {
-        debug!("creating redis apl...");
+        debug!("creating redis apl with {redis_url}...");
         let client = redis::Client::open(redis_url)?;
         let mut conn = client.get_connection_with_timeout(Duration::from_secs(3))?;
         let val: Result<String, redis::RedisError> =

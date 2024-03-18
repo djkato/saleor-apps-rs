@@ -85,8 +85,7 @@ pub struct SitemapConfig {
 
 impl SitemapConfig {
     pub fn load() -> Result<Self, envy::Error> {
-        dotenvy::dotenv().unwrap();
-        
+        _ = dotenvy::dotenv();
         envy::from_env::<SitemapConfig>()
     }
 }

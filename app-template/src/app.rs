@@ -6,6 +6,8 @@ use axum::{
 };
 
 use saleor_app_sdk::{config::Config, manifest::AppManifest, SaleorApp};
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::EnvFilter;
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(anyhow::Error);
 
@@ -32,9 +34,20 @@ where
 }
 
 pub fn trace_to_std(config: &Config) {
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::DEBUG.into())
+        .from_env()
+        .unwrap()
+        .add_directive(
+            format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level)
+                .parse()
+                .unwrap(),
+        );
     tracing_subscriber::fmt()
         .with_max_level(config.log_level)
-        .with_target(false)
+        .with_env_filter(filter)
+        .with_target(true)
+        .compact()
         .init();
 }
 

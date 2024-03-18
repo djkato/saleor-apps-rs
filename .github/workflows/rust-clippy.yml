@@ -13,6 +13,7 @@ jobs:
       contents: read
       security-events: write
     steps:
+      - uses: actions/checkout@v4
       - name: clippy
         run: cargo clippy  -- -Dwarnings
         continue-on-error: false

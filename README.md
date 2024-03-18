@@ -4,7 +4,7 @@ This repo contains the following members:
 
 | Crate                                                                                                                | Description                                                                                         |
 | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [**saleor-app-sdk**](https://crates.io/crates/sdk)                                                                   | Types and utilities for making Saleor Apps                                                          |
+| [**saleor-app-sdk**](https://crates.io/crates/saleor-app-sdk)                                                        | Types and utilities for making Saleor Apps                                                          |
 | [**saleor-app-template**](https://github.com/djkato/saleor-apps-rs/tree/master/app-template)                         | Simple template for making Saleor apps using axum                                                   |
 | [**saleor-app-sitemap**](https://github.com/djkato/saleor-apps-rs/tree/master/sitemap-generator)                     | Saleor App for keeping sitemap.xml uptodate                                                         |
 | [**saleor-app-simple-payment-gateway**](https://github.com/djkato/saleor-apps-rs/tree/master/simple-payment-gateway) | Saleor App that adds payment methods: Cash on delivery, Cash on warehouse pickup, bank tranfer etc. |

@@ -1,3 +1,4 @@
+use iso_currency::Currency;
 use rust_decimal::Decimal;
 use serde::Serialize;
 
@@ -234,3 +235,23 @@ pub struct ListStoredPaymentMethodsResponse<T: Serialize, C: Serialize> {
     pub name: Option<String>,
     pub data: Option<T>,
 }
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentGateway {
+    pub id: String,
+    pub name: String,
+    pub currencies: Vec<Currency>,
+    pub config: Vec<ConfigMap>,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigMap {
+    field: String,
+    value: serde_json::Value,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentListGatewaysResponse(pub Vec<PaymentGateway>);

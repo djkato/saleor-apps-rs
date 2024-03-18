@@ -3,11 +3,15 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use enum_iterator::{all, Sequence};
-use std::sync::Arc;
+use iso_currency::Currency;
+use std::{str::FromStr, sync::Arc};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
-use saleor_app_sdk::{config::Config, locales::LocaleCode, manifest::AppManifest, SaleorApp};
+use saleor_app_sdk::{
+    config::Config, locales::LocaleCode, manifest::AppManifest,
+    webhooks::sync_response::PaymentGateway, SaleorApp,
+};
 use serde::Serialize;
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(anyhow::Error);
@@ -79,11 +83,14 @@ pub fn get_active_gateways_from_env() -> anyhow::Result<Vec<ActiveGateway>> {
     //eg: "accreditation,cod,other,transfer"
     let env_types = std::env::var("ACTIVE_GATEWAYS")?;
     let locale = std::env::var("LOCALE")?;
-    let locale = match locale.as_str() {
-        "SK" => LocaleCode::Sk,
-        "EN" => LocaleCode::En,
-        l => unimplemented!("Locale {l} not implemented"),
-    };
+    let locale = LocaleCode::from_str(&locale)?;
+    let currencies = std::env::var("CURRENCIES")?;
+    let currencies = currencies.split(",").collect::<Vec<_>>();
+    let currencies = currencies
+        .iter()
+        .map(|c| Currency::from_str(*c))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| anyhow::anyhow!(format!("{:?}", e)))?;
 
     let str_types: Vec<_> = env_types.split(',').collect();
     let gateway_types = str_types
@@ -95,23 +102,25 @@ pub fn get_active_gateways_from_env() -> anyhow::Result<Vec<ActiveGateway>> {
         })
         .map(|g| ActiveGateway {
             gateway_type: g.clone(),
-            currencies: vec!["EUR".to_owned()],
-            id: format!("{:?}", &g).to_lowercase(),
-            config: [],
-            name: match (g, &locale) {
-                (GatewayType::COD, LocaleCode::Sk) => "Dobierka".to_owned(),
-                (GatewayType::Cash, LocaleCode::Sk) => "Hotovosť".to_owned(),
-                (GatewayType::Transfer, LocaleCode::Sk) => "Bankový prevod".to_owned(),
-                (GatewayType::Inkaso, LocaleCode::Sk) => "Inkaso".to_owned(),
-                (GatewayType::Accreditation, LocaleCode::Sk) => "Vzajomný zápočet".to_owned(),
-                (GatewayType::Other, LocaleCode::Sk) => "Iné".to_owned(),
-                (GatewayType::COD, LocaleCode::En) => "Cash on delivery".to_owned(),
-                (GatewayType::Cash, LocaleCode::En) => "Cash".to_owned(),
-                (GatewayType::Transfer, LocaleCode::En) => "Bank transfer".to_owned(),
-                (GatewayType::Inkaso, LocaleCode::En) => "Encashment".to_owned(),
-                (GatewayType::Accreditation, LocaleCode::En) => "Mutual credit".to_owned(),
-                (GatewayType::Other, LocaleCode::En) => "Other".to_owned(),
-                (g, l) => unimplemented!("Gateway {:?} in locale {:?} not implemented", g, l),
+            gateway: PaymentGateway {
+                currencies: currencies.clone(),
+                id: format!("{:?}", &g).to_lowercase(),
+                config: vec![],
+                name: match (g, &locale) {
+                    (GatewayType::COD, LocaleCode::Sk) => "Dobierka".to_owned(),
+                    (GatewayType::Cash, LocaleCode::Sk) => "Hotovosť".to_owned(),
+                    (GatewayType::Transfer, LocaleCode::Sk) => "Bankový prevod".to_owned(),
+                    (GatewayType::Inkaso, LocaleCode::Sk) => "Inkaso".to_owned(),
+                    (GatewayType::Accreditation, LocaleCode::Sk) => "Vzajomný zápočet".to_owned(),
+                    (GatewayType::Other, LocaleCode::Sk) => "Iné".to_owned(),
+                    (GatewayType::COD, LocaleCode::En) => "Cash on delivery".to_owned(),
+                    (GatewayType::Cash, LocaleCode::En) => "Cash".to_owned(),
+                    (GatewayType::Transfer, LocaleCode::En) => "Bank transfer".to_owned(),
+                    (GatewayType::Inkaso, LocaleCode::En) => "Encashment".to_owned(),
+                    (GatewayType::Accreditation, LocaleCode::En) => "Mutual credit".to_owned(),
+                    (GatewayType::Other, LocaleCode::En) => "Other".to_owned(),
+                    (g, l) => unimplemented!("Gateway {:?} in locale {:?} not implemented", g, l),
+                },
             },
         })
         .collect::<Vec<_>>();
@@ -122,9 +131,5 @@ pub fn get_active_gateways_from_env() -> anyhow::Result<Vec<ActiveGateway>> {
 #[derive(Debug, Clone, Serialize)]
 pub struct ActiveGateway {
     pub gateway_type: GatewayType,
-    pub id: String,
-    pub name: String,
-    pub currencies: Vec<String>,
-    //don't need this one yet
-    pub config: [(); 0],
+    pub gateway: PaymentGateway,
 }

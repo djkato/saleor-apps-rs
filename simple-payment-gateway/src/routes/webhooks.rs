@@ -7,10 +7,11 @@ use saleor_app_sdk::{
     webhooks::{
         sync_response::{
             CancelationRequestedResult, ChargeRequestedResult,
-            PaymentGatewayInitializeSessionResponse, RefundRequestedResult,
-            TransactionCancelationRequestedResponse, TransactionChargeRequestedResponse,
-            TransactionInitializeSessionResponse, TransactionProcessSessionResponse,
-            TransactionRefundRequestedResponse, TransactionSessionResult,
+            PaymentGatewayInitializeSessionResponse, PaymentListGatewaysResponse,
+            RefundRequestedResult, TransactionCancelationRequestedResponse,
+            TransactionChargeRequestedResponse, TransactionInitializeSessionResponse,
+            TransactionProcessSessionResponse, TransactionRefundRequestedResponse,
+            TransactionSessionResult,
         },
         utils::{get_webhook_event_type, EitherWebhookType},
         SyncWebhookEventType,
@@ -52,6 +53,16 @@ pub async fn webhooks(
     let event_type = get_webhook_event_type(&headers)?;
     let res: Json<Value> = match event_type {
         EitherWebhookType::Sync(a) => match a {
+            SyncWebhookEventType::PaymentListGateways => {
+                let gateways = state
+                    .active_gateways
+                    .iter()
+                    .cloned()
+                    .map(|g| g.gateway)
+                    .collect::<Vec<_>>();
+                Json::from(serde_json::to_value(PaymentListGatewaysResponse(gateways))?)
+            }
+
             SyncWebhookEventType::TransactionCancelationRequested => {
                 let data = serde_json::from_str::<TransactionCancelationRequested2>(&body)?;
                 Json::from(serde_json::to_value(

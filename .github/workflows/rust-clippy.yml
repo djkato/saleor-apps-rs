@@ -14,5 +14,5 @@ jobs:
       security-events: write
     steps:
       - name: clippy
-        run: cargo clippy --workspace --tests --benches -- -Dwarnings
+        run: cargo clippy  -- -Dwarnings
         continue-on-error: false

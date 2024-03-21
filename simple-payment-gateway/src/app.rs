@@ -85,10 +85,10 @@ pub fn get_active_gateways_from_env() -> anyhow::Result<Vec<ActiveGateway>> {
     let locale = std::env::var("LOCALE")?;
     let locale = LocaleCode::from_str(&locale)?;
     let currencies = std::env::var("CURRENCIES")?;
-    let currencies = currencies.split(",").collect::<Vec<_>>();
+    let currencies = currencies.split(',').collect::<Vec<_>>();
     let currencies = currencies
         .iter()
-        .map(|c| Currency::from_str(*c))
+        .map(|c| Currency::from_str(c))
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| anyhow::anyhow!(format!("{:?}", e)))?;
 

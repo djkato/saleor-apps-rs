@@ -5,8 +5,8 @@ mod app;
 mod queries;
 mod routes;
 
-use anyhow::Context;
 use saleor_app_sdk::{
+    cargo_info,
     config::Config,
     manifest::{AppManifest, AppPermission},
     webhooks::{SyncWebhookEventType, WebhookManifest},
@@ -33,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
 
     let saleor_app = SaleorApp::new(&config)?;
 
-    let app_manifest = AppManifest::new(&config)
+    let app_manifest = AppManifest::new(&config, cargo_info!())
         .add_webhook(
             WebhookManifest::new(&config)
                 .set_query(sub_transaction_process_session)
@@ -93,12 +93,13 @@ async fn main() -> anyhow::Result<()> {
     let app = create_routes(app_state);
 
     let listener = tokio::net::TcpListener::bind(
-        &config
-            .app_api_base_url
-            .split("//")
-            .collect::<Vec<_>>()
-            .get(1)
-            .context("APP_API_BASE_URL invalid format")?,
+        "0.0.0.0:".to_owned()
+            + config
+                .app_api_base_url
+                .split(':')
+                .collect::<Vec<_>>()
+                .get(2)
+                .unwrap_or(&"3000"),
     )
     .await?;
     tracing::debug!("listening on {}", listener.local_addr().unwrap());

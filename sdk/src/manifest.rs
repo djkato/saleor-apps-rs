@@ -192,7 +192,28 @@ impl AppManifestBuilder {
         self.manifest
     }
 }
+pub struct CargoInfo {
+    pub name: String,
+    pub description: String,
+    pub authors: String,
+    pub version: String,
+    pub homepage: String,
+}
 
+#[macro_export]
+macro_rules! cargo_info {
+    () => {
+        saleor_app_sdk::manifest::CargoInfo {
+            name: env!("CARGO_PKG_NAME").to_owned(),
+            description: env!("CARGO_PKG_DESCRIPTION").to_owned(),
+            authors: env!("CARGO_PKG_AUTHORS").to_owned(),
+            version: env!("CARGO_PKG_VERSION").to_owned(),
+            homepage: env!("CARGO_PKG_HOMEPAGE").to_owned(),
+        }
+    };
+}
+
+pub use cargo_info;
 impl AppManifest {
     /**
      * Builder for AppManifest
@@ -206,22 +227,22 @@ impl AppManifest {
      * To set webhooks and permissions use the add_webhook() and add_permissions()
      *
      */
-    pub fn new(config: &Config) -> AppManifestBuilder {
+    pub fn new(config: &Config, info: CargoInfo) -> AppManifestBuilder {
         AppManifestBuilder {
             manifest: AppManifest {
-                id: env!("CARGO_PKG_NAME").to_owned(),
+                id: info.name.clone(),
                 required_saleor_version: Some(config.required_saleor_version.clone()),
-                name: env!("CARGO_PKG_NAME").to_owned(),
-                about: Some(env!("CARGO_PKG_DESCRIPTION").to_owned()),
-                author: Some(env!("CARGO_PKG_AUTHORS").to_owned()),
-                version: env!("CARGO_PKG_VERSION").to_owned(),
+                name: info.name,
+                about: Some(info.description),
+                author: Some(info.authors),
+                version: info.version,
                 app_url: config.app_api_base_url.clone(),
                 configuration_url: Some(config.app_api_base_url.clone()),
                 token_target_url: format!("{}/api/register", config.app_api_base_url.clone()),
                 permissions: vec![],
-                homepage_url: Some(env!("CARGO_PKG_HOMEPAGE").to_owned()),
-                data_privacy_url: Some(env!("CARGO_PKG_HOMEPAGE").to_owned()),
-                support_url: Some(env!("CARGO_PKG_HOMEPAGE").to_owned()),
+                homepage_url: Some(info.homepage.clone()),
+                data_privacy_url: Some(info.homepage.clone()),
+                support_url: Some(info.homepage.clone()),
                 brand: Some(SaleorAppBranding {
                     logo: SaleorAppBrandingDefault {
                         default: format!("{}/logo.png", config.app_api_base_url),

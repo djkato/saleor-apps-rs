@@ -1,7 +1,8 @@
 #![allow(
     non_upper_case_globals,
     clippy::large_enum_variant,
-    clippy::upper_case_acronyms
+    clippy::upper_case_acronyms,
+    dead_code
 )]
 #![feature(let_chains)]
 #![deny(clippy::unwrap_used, clippy::expect_used)]

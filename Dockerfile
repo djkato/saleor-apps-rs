@@ -17,8 +17,11 @@ RUN cargo chef cook --release --recipe-path=recipe.json
 COPY . .
 RUN cargo build --release
 
+
 FROM debian:bookworm-slim as chef-sitemap-generator
-COPY --from=builder /apps/target/release/sitemap-generator /sitemap-generator
+WORKDIR /app
+COPY --from=builder /apps/target/release/sitemap-generator .
+COPY ./sitemap-generator/public ./public
 RUN apt-get update -y && \
   apt-get install -y pkg-config libssl-dev curl
 RUN mkdir /sitemaps
@@ -31,8 +34,11 @@ LABEL org.opencontainers.image.title="djkato/saleor-sitemap-generator"\
       org.opencontainers.image.authors="Djkáťo <djkatovfx@gmail.com>"\
       org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
 
+
 FROM debian:bookworm-slim as chef-simple-payment-gateway
-COPY --from=builder /apps/target/release/simple-payment-gateway /simple-payment-gateway
+WORKDIR /app
+COPY --from=builder /apps/target/release/simple-payment-gateway .
+COPY ./simple-payment-gateway/public ./public
 RUN apt-get update -y && \
   apt-get install -y pkg-config libssl-dev curl
 CMD [ "./simple-payment-gateway" ]

@@ -269,15 +269,15 @@ impl WebhookManifestBuilder {
     }
 }
 
-impl WebhookManifest {
+impl WebhookManifestBuilder {
     /**
      * Creates defaults of name(<cargo_app_name> webhook) and target url(/api/webhooks) from config and env.
      */
-    pub fn new(config: &Config) -> WebhookManifestBuilder {
+    pub fn new(config: &Config) -> Self {
         WebhookManifestBuilder {
             webhook_manifest: WebhookManifest {
                 target_url: format!("{}/api/webhooks", config.app_api_base_url),
-                name: env!("CARGO_PKG_NAME").to_owned() + " webhook",
+                name: "webhook".to_owned(),
                 is_active: Some(true),
                 ..Default::default()
             },

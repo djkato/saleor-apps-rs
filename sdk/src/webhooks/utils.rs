@@ -4,6 +4,7 @@ use crate::headers::SALEOR_EVENT_HEADER;
 
 use super::{AsyncWebhookEventType, SyncWebhookEventType};
 
+#[derive(Debug)]
 pub enum EitherWebhookType {
     Sync(SyncWebhookEventType),
     Async(AsyncWebhookEventType),

@@ -13,12 +13,7 @@ use saleor_app_sdk::{
         AsyncWebhookEventType,
     },
 };
-use sitemap_rs::{
-    sitemap::Sitemap,
-    sitemap_index::SitemapIndex,
-    url::{Url},
-    url_set::UrlSet,
-};
+use sitemap_rs::{sitemap::Sitemap, sitemap_index::SitemapIndex, url::Url, url_set::UrlSet};
 use tinytemplate::TinyTemplate;
 use tokio::spawn;
 use tracing::{debug, error, info};
@@ -26,8 +21,8 @@ use tracing::{debug, error, info};
 use crate::{
     app::{AppError, AppState, XmlData, XmlDataType},
     queries::event_subjects_updated::{
-        Category, Category2, CategoryUpdated, Collection, CollectionUpdated, Page,
-        PageUpdated, Product, ProductUpdated,
+        Category, Category2, CategoryUpdated, Collection, CollectionUpdated, Page, PageUpdated,
+        Product, ProductUpdated,
     },
 };
 
@@ -46,8 +41,8 @@ pub async fn webhooks(
         .to_str()?
         .to_owned();
     let event_type = get_webhook_event_type(&headers)?;
-    match event_type {
-        EitherWebhookType::Async(a) => match a {
+    if let EitherWebhookType::Async(a) = event_type {
+        match a {
             AsyncWebhookEventType::ProductUpdated
             | AsyncWebhookEventType::ProductCreated
             | AsyncWebhookEventType::ProductDeleted => {
@@ -90,8 +85,7 @@ pub async fn webhooks(
             }
 
             _ => (),
-        },
-        _ => (),
+        }
     }
 
     info!("webhook proccessed");
@@ -185,10 +179,7 @@ async fn update_sitemap_product(
                 xml_cat.last_modified = chrono::offset::Utc::now().fixed_offset();
                 // If the category exists but product isn't in relation to it yet,
                 // add it
-                if !xml_cat
-                    .relations
-                    .iter().any(|c| *c == product.id)
-                {
+                if !xml_cat.relations.iter().any(|c| *c == product.id) {
                     xml_cat.relations.push(product.id.clone());
                 }
             //if cat isn't in xml data, add it
@@ -216,10 +207,7 @@ async fn update_sitemap_product(
                         category: match xml_data.iter().find(|all| {
                             x.relations
                                 .iter()
-                                .find(|rel| {
-                                    all.id == **rel && all.data_type == XmlDataType::Category
-                                })
-                                .is_some()
+                                .any(|rel| all.id == *rel && all.data_type == XmlDataType::Category)
                         }) {
                             Some(c) => Some(Category {
                                 slug: c.slug.clone(),
@@ -322,49 +310,38 @@ async fn update_sitemap_category(
             let mut tt = TinyTemplate::new();
             if is_category_in_product_url && x.data_type == XmlDataType::Product {
                 tt.add_template("product_url", &state.sitemap_config.product_template)?;
-                let context;
                 //If current xml products category is this changed category, just use that instead
                 //of searching for it again
-                match x.relations.iter().find(|c| *c == &category.id) {
-                    Some(_) => {
-                        context = ProductUpdated {
-                            product: Some(Product {
-                                id: x.id.clone(),
-                                slug: x.slug.clone(),
-                                category: Some(Category {
-                                    slug: category.slug.clone(),
-                                    id: category.id.clone(),
+                let context = ProductUpdated {
+                    product: match x.relations.iter().find(|c| *c == &category.id) {
+                        Some(_) => Some(Product {
+                            id: x.id.clone(),
+                            slug: x.slug.clone(),
+                            category: Some(Category {
+                                slug: category.slug.clone(),
+                                id: category.id.clone(),
+                            }),
+                        }),
+                        None => Some(Product {
+                            id: x.id.clone(),
+                            slug: x.slug.clone(),
+                            category: match xml_data.iter().find(|all| {
+                                x.relations.iter().any(|rel| {
+                                    all.id == *rel && all.data_type == XmlDataType::Category
+                                })
+                            }) {
+                                Some(c) => Some(Category {
+                                    slug: c.slug.clone(),
+                                    id: c.id.clone(),
                                 }),
-                            }),
-                        };
-                    }
-                    None => {
-                        context = ProductUpdated {
-                            product: Some(Product {
-                                id: x.id.clone(),
-                                slug: x.slug.clone(),
-                                category: match xml_data.iter().find(|all| {
-                                    x.relations
-                                        .iter()
-                                        .find(|rel| {
-                                            all.id == **rel
-                                                && all.data_type == XmlDataType::Category
-                                        })
-                                        .is_some()
-                                }) {
-                                    Some(c) => Some(Category {
-                                        slug: c.slug.clone(),
-                                        id: c.id.clone(),
-                                    }),
-                                    None => Some(Category {
-                                        slug: "unknown".to_owned(),
-                                        id: cynic::Id::new("unknown".to_owned()),
-                                    }),
-                                },
-                            }),
-                        };
-                    }
-                }
+                                None => Some(Category {
+                                    slug: "unknown".to_owned(),
+                                    id: cynic::Id::new("unknown".to_owned()),
+                                }),
+                            },
+                        }),
+                    },
+                };
                 product_urls.push(
                     Url::builder(tt.render("product_url", &context)?)
                         .last_modified(x.last_modified)
@@ -564,8 +541,7 @@ pub async fn write_xml(
         let mut sitemaps: Vec<UrlSet> = vec![];
         for urls in sliced_urls {
             for url in urls.iter().cloned() {
-                let mut sitemap_urls: Vec<Url> = vec![];
-                sitemap_urls.push(url);
+                let sitemap_urls = vec![url];
                 sitemaps.push(UrlSet::new(sitemap_urls)?);
             }
         }
@@ -616,22 +592,25 @@ async fn update_sitemap_index(state: &AppState) -> anyhow::Result<()> {
 
     let sitemaps: Vec<Sitemap> = paths
         .into_iter()
-        .map(|p| {
-            Sitemap::new(
-                format!(
-                    "{}/{}",
-                    state.sitemap_config.index_hostname,
-                    p.file_name()
-                        .expect("file dissapeared or broke during sitemap-index construction")
-                        .to_string_lossy()
-                ),
-                p.metadata().map_or(None, |meta| {
-                    meta.modified().map_or(None, |modified| {
-                        let dt_utc: DateTime<Utc> = modified.into();
-                        Some(dt_utc.fixed_offset())
-                    })
-                }),
-            )
+        .filter_map(|p| {
+            if let Some(file_name) = p.file_name() {
+                Some(Sitemap::new(
+                    format!(
+                        "{}/{}",
+                        state.sitemap_config.index_hostname,
+                        file_name.to_string_lossy()
+                    ),
+                    p.metadata().map_or(None, |meta| {
+                        meta.modified().map_or(None, |modified| {
+                            let dt_utc: DateTime<Utc> = modified.into();
+                            Some(dt_utc.fixed_offset())
+                        })
+                    }),
+                ))
+            } else {
+                error!("file dissapeared or broke during sitemap-index construction");
+                None
+            }
         })
         .collect::<Vec<_>>();
     let sitemap_index = SitemapIndex::new(sitemaps)?;
@@ -646,7 +625,7 @@ async fn update_sitemap_index(state: &AppState) -> anyhow::Result<()> {
 
     let mut buf = Vec::<u8>::new();
     sitemap_index.write(&mut buf)?;
-    file.write_all(&mut buf).await?;
+    file.write_all(&buf).await?;
 
     Ok(())
 }

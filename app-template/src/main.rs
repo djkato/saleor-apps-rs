@@ -1,3 +1,11 @@
+#![allow(
+    non_upper_case_globals,
+    clippy::large_enum_variant,
+    clippy::upper_case_acronyms
+)]
+#![feature(let_chains)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
+
 mod app;
 mod queries;
 mod routes;
@@ -5,8 +13,8 @@ mod routes;
 use saleor_app_sdk::{
     cargo_info,
     config::Config,
-    manifest::{AppManifest, AppPermission},
-    webhooks::{AsyncWebhookEventType, WebhookManifest},
+    manifest::{AppManifestBuilder, AppPermission},
+    webhooks::{AsyncWebhookEventType, WebhookManifestBuilder},
     SaleorApp,
 };
 use std::sync::Arc;
@@ -20,13 +28,13 @@ use crate::{
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = Config::load()?;
-    trace_to_std(&config);
+    trace_to_std(&config)?;
 
     let saleor_app = SaleorApp::new(&config)?;
 
-    let app_manifest = AppManifest::new(&config, cargo_info!())
+    let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
         .add_webhook(
-            WebhookManifest::new(&config)
+            WebhookManifestBuilder::new(&config)
                 .set_query(
                     r#"
                     subscription QueryProductsChanged {
@@ -85,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap_or(&"3000"),
     )
     .await?;
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
+    tracing::debug!("listening on {}", listener.local_addr()?);
     match axum::serve(listener, app).await {
         Ok(o) => Ok(o),
         Err(e) => anyhow::bail!(e),

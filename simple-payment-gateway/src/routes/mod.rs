@@ -22,7 +22,7 @@ pub fn create_routes(state: AppState) -> Router {
         (StatusCode::NOT_FOUND, "Not found")
     }
     let service = handle_404.into_service();
-    let serve_dir = ServeDir::new("simple-payment-gateway/public").not_found_service(service);
+    let serve_dir = ServeDir::new("./public").not_found_service(service);
 
     Router::new()
         .layer(middleware::from_fn(webhook_signature_verifier))

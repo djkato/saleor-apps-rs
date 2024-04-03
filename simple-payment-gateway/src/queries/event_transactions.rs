@@ -55,17 +55,17 @@ fragment OrderDetails on Order {
 }
 "#;
 
-pub const sub_list_payment_gateways: &str = r#"
-subscription ListPaymentGateways {
-  event {
-    ... on PaymentListGateways {
-      checkout {
-        id
-      }
-    }
-  }
-}
-"#;
+// pub const sub_list_payment_gateways: &str = r#"
+// subscription ListPaymentGateways {
+//   event {
+//     ... on PaymentListGateways {
+//       checkout {
+//         id
+//       }
+//     }
+//   }
+// }
+// "#;
 
 pub const sub_payment_gateway_initialize_session: &str = concatcp!(
     r#"

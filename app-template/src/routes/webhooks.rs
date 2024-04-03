@@ -37,16 +37,15 @@ pub async fn webhooks(
         .get(SALEOR_API_URL_HEADER)
         .context("missing saleor api url header")?;
     let event_type = get_webhook_event_type(&headers)?;
-    match event_type {
-        EitherWebhookType::Async(a) => match a {
+    if let EitherWebhookType::Async(a) = event_type {
+        match a {
             AsyncWebhookEventType::ProductUpdated
             | AsyncWebhookEventType::ProductCreated
             | AsyncWebhookEventType::ProductDeleted => {
                 update_product(product, url.to_str()?, state).await?
             }
             _ => (),
-        },
-        _ => (),
+        }
     }
 
     info!("got webhooks!");

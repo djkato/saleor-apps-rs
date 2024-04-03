@@ -1,3 +1,8 @@
+#![allow(
+    non_upper_case_globals,
+    clippy::large_enum_variant,
+    clippy::upper_case_acronyms
+)]
 #![feature(let_chains)]
 #![deny(clippy::unwrap_used, clippy::expect_used)]
 mod app;
@@ -6,8 +11,8 @@ mod routes;
 
 use saleor_app_sdk::{
     config::Config,
-    manifest::{cargo_info, AppManifest, AppPermission},
-    webhooks::{AsyncWebhookEventType, WebhookManifest},
+    manifest::{cargo_info, AppManifestBuilder, AppPermission},
+    webhooks::{AsyncWebhookEventType, WebhookManifestBuilder},
     SaleorApp,
 };
 use std::sync::Arc;
@@ -23,7 +28,7 @@ use crate::{
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = Config::load()?;
-    trace_to_std(&config);
+    trace_to_std(&config)?;
     let sitemap_config = SitemapConfig::load()?;
     debug!("Creating configs...");
 
@@ -31,13 +36,13 @@ async fn main() -> anyhow::Result<()> {
 
     debug!("Creating saleor App...");
 
-    let app_manifest = AppManifest::new(&config, cargo_info!())
+    let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
         .add_permissions(vec![
             AppPermission::ManageProducts,
             AppPermission::ManagePages,
         ])
         .add_webhook(
-            WebhookManifest::new(&config)
+            WebhookManifestBuilder::new(&config)
                 .set_query(EVENTS_QUERY)
                 .add_async_events(vec![
                     AsyncWebhookEventType::ProductCreated,
@@ -98,7 +103,7 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap_or(&"3000"),
     )
     .await?;
-    info!("listening on {}", listener.local_addr().unwrap());
+    info!("listening on {}", listener.local_addr()?);
     match axum::serve(listener, app).await {
         Ok(o) => Ok(o),
         Err(e) => anyhow::bail!(e),

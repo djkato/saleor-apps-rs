@@ -23,7 +23,7 @@ pub fn create_routes(state: AppState) -> Router {
     }
     let service = handle_404.into_service();
     //TODO : Fix this relative path issue in workspaces
-    let serve_dir = ServeDir::new("./sitemap-generator/public").not_found_service(service);
+    let serve_dir = ServeDir::new("./public").not_found_service(service);
 
     //TODO Query for everything using the app auth token
     //TODO "Failed fetching initial products: More than one channel exists, please spocify which

@@ -79,6 +79,7 @@ and set all necessary env variables in `app-simple-gateway.env` according to the
 
 To use, you need to have [Rust environment prepared](https://rustup.rs/).
 Every folder represents a different workspace. To add a new lib, do `cargo new <project-name> --lib` or `cargo new <project-name>` for binary apps. It should appear as a new member under root `Cargo.toml`
+To run apps propery, use `cargo run -c <crate name>`
 
 # Unofficial Saleor App SDK
 

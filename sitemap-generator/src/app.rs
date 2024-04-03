@@ -36,22 +36,18 @@ where
     }
 }
 
-pub fn trace_to_std(config: &Config) {
+pub fn trace_to_std(config: &Config) -> anyhow::Result<()> {
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::DEBUG.into())
-        .from_env()
-        .unwrap()
-        .add_directive(
-            format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level)
-                .parse()
-                .unwrap(),
-        );
+        .from_env()?
+        .add_directive(format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level).parse()?);
     tracing_subscriber::fmt()
         .with_max_level(config.log_level)
         .with_env_filter(filter)
         .with_target(true)
         .compact()
         .init();
+    Ok(())
 }
 
 /**

@@ -198,10 +198,7 @@ pub async fn regenerate(state: AppState, saleor_api_url: String) -> anyhow::Resu
                         category: match xml_data.iter().find(|all| {
                             x.relations
                                 .iter()
-                                .find(|rel| {
-                                    all.id == **rel && all.data_type == XmlDataType::Category
-                                })
-                                .is_some()
+                                .any(|rel| all.id == *rel && all.data_type == XmlDataType::Category)
                         }) {
                             Some(c) => Some(event_subjects_updated::Category {
                                 slug: c.slug.clone(),
@@ -286,34 +283,27 @@ async fn get_all_pages(
         );
         //Keep fetching next page
         let mut next_cursor = pages.page_info.end_cursor.clone();
-        loop {
-            if let Some(cursor) = &mut next_cursor {
-                let res = surf::post(saleor_api_url)
-                    .header("authorization-bearer", token)
-                    .run_graphql(GetPagesNext::build(GetPagesNextVariables { after: cursor }))
-                    .await;
-                if let Ok(query) = &res
-                    && let Some(data) = &query.data
-                    && let Some(pages) = &data.pages
-                {
-                    all_pages.append(
-                        &mut pages
-                            .edges
-                            .iter()
-                            .map(|p| p.node.clone())
-                            .collect::<Vec<_>>(),
-                    );
-                    debug!("fetched next pages, eg.:{:?}", &pages.edges.first());
-                    if !pages.page_info.has_next_page {
-                        break;
-                    }
-                    next_cursor.clone_from(&pages.page_info.end_cursor);
-                } else {
-                    error!("Failed fetching initial pages! {:?}", &res);
-                    anyhow::bail!("Failed fetching initial pages! {:?}", res);
-                }
+        while let Some(cursor) = &mut next_cursor {
+            let res = surf::post(saleor_api_url)
+                .header("authorization-bearer", token)
+                .run_graphql(GetPagesNext::build(GetPagesNextVariables { after: cursor }))
+                .await;
+            if let Ok(query) = &res
+                && let Some(data) = &query.data
+                && let Some(pages) = &data.pages
+            {
+                all_pages.append(
+                    &mut pages
+                        .edges
+                        .iter()
+                        .map(|p| p.node.clone())
+                        .collect::<Vec<_>>(),
+                );
+                debug!("fetched next pages, eg.:{:?}", &pages.edges.first());
+                next_cursor.clone_from(&pages.page_info.end_cursor);
             } else {
-                break;
+                error!("Failed fetching next pages! {:?}", &res);
+                anyhow::bail!("Failed fetching next pages! {:?}", res);
             }
         }
     } else {
@@ -349,44 +339,37 @@ async fn get_all_categories(saleor_api_url: &str, token: &str) -> anyhow::Result
         );
         //Keep fetching next page
         let mut next_cursor = categories.page_info.end_cursor.clone();
-        loop {
-            if let Some(cursor) = &mut next_cursor {
-                let res = surf::post(saleor_api_url)
-                    .header("authorization-bearer", token)
-                    .run_graphql(GetCategoriesNext::build(GetCategoriesNextVariables {
-                        after: Some(cursor),
-                    }))
-                    .await;
-                if let Ok(query) = &res
-                    && let Some(data) = &query.data
-                    && let Some(categories) = &data.categories
-                {
-                    all_categories.append(
-                        &mut categories
-                            .edges
-                            .iter()
-                            .map(|p| p.node.clone())
-                            .collect::<Vec<_>>(),
-                    );
-                    debug!(
-                        "fetched first categories, eg.:{:?}",
-                        &categories.edges.first()
-                    );
-                    if !categories.page_info.has_next_page {
-                        break;
-                    }
-                    next_cursor.clone_from(&categories.page_info.end_cursor);
-                } else {
-                    error!("Failed fetching initial pages! {:?}", &res);
-                    anyhow::bail!("Failed fetching initial pages! {:?}", res);
-                }
+        while let Some(cursor) = &mut next_cursor {
+            let res = surf::post(saleor_api_url)
+                .header("authorization-bearer", token)
+                .run_graphql(GetCategoriesNext::build(GetCategoriesNextVariables {
+                    after: Some(cursor),
+                }))
+                .await;
+            if let Ok(query) = &res
+                && let Some(data) = &query.data
+                && let Some(categories) = &data.categories
+            {
+                all_categories.append(
+                    &mut categories
+                        .edges
+                        .iter()
+                        .map(|p| p.node.clone())
+                        .collect::<Vec<_>>(),
+                );
+                debug!(
+                    "fetched first categories, eg.:{:?}",
+                    &categories.edges.first()
+                );
+                next_cursor.clone_from(&categories.page_info.end_cursor);
             } else {
-                break;
+                error!("Failed fetching next categories! {:?}", &res);
+                anyhow::bail!("Failed fetching next categories! {:?}", res);
             }
         }
     } else {
-        error!("Failed fetching initial pages! {:?}", &res);
-        anyhow::bail!("Failed fetching initial pages! {:?}", res);
+        error!("Failed fetching initial Categories! {:?}", &res);
+        anyhow::bail!("Failed fetching initial Categories! {:?}", res);
     };
     info!("All categories collected");
     Ok(all_categories)
@@ -418,39 +401,32 @@ async fn get_all_collections(saleor_api_url: &str, token: &str) -> anyhow::Resul
 
         //Keep fetching next page
         let mut next_cursor = collections.page_info.end_cursor.clone();
-        loop {
-            if let Some(cursor) = &mut next_cursor {
-                let res = surf::post(saleor_api_url)
-                    .header("authorization-bearer", token)
-                    .run_graphql(GetCollectionsNext::build(GetCollectionsNextVariables {
-                        after: Some(cursor),
-                    }))
-                    .await;
-                if let Ok(query) = &res
-                    && let Some(data) = &query.data
-                    && let Some(collections) = &data.collections
-                {
-                    all_collections.append(
-                        &mut collections
-                            .edges
-                            .iter()
-                            .map(|p| p.node.clone())
-                            .collect::<Vec<_>>(),
-                    );
-                    debug!(
-                        "fetched next collections, eg.:{:?}",
-                        &collections.edges.first()
-                    );
-                    if !collections.page_info.has_next_page {
-                        break;
-                    }
-                    next_cursor.clone_from(&collections.page_info.end_cursor);
-                } else {
-                    error!("Failed fetching initial collecnios! {:?}", &res);
-                    anyhow::bail!("Failed fetching initial collections! {:?}", res);
-                }
+        while let Some(cursor) = &mut next_cursor {
+            let res = surf::post(saleor_api_url)
+                .header("authorization-bearer", token)
+                .run_graphql(GetCollectionsNext::build(GetCollectionsNextVariables {
+                    after: Some(cursor),
+                }))
+                .await;
+            if let Ok(query) = &res
+                && let Some(data) = &query.data
+                && let Some(collections) = &data.collections
+            {
+                all_collections.append(
+                    &mut collections
+                        .edges
+                        .iter()
+                        .map(|p| p.node.clone())
+                        .collect::<Vec<_>>(),
+                );
+                debug!(
+                    "fetched next collections, eg.:{:?}",
+                    &collections.edges.first()
+                );
+                next_cursor.clone_from(&collections.page_info.end_cursor);
             } else {
-                break;
+                error!("Failed fetching next collecnios! {:?}", &res);
+                anyhow::bail!("Failed fetching next collections! {:?}", res);
             }
         }
     } else {
@@ -498,7 +474,7 @@ async fn get_all_products(
         debug!("fetched first products, eg: {:?}", products.edges.first());
         let mut next_cursor = products.page_info.end_cursor.clone();
         loop {
-            if let Some(cursor) = &mut next_cursor {
+            while let Some(cursor) = &mut next_cursor {
                 let res = surf::post(saleor_api_url)
                     .header("authorization-bearer", token)
                     .run_graphql(GetCategoryProductsNext::build(
@@ -526,22 +502,14 @@ async fn get_all_products(
                             .collect::<Vec<_>>(),
                     );
                     debug!("fetched next products, eg: {:?}", products.edges.first());
-                    if !products.page_info.has_next_page {
-                        break;
-                    }
                     next_cursor.clone_from(&products.page_info.end_cursor);
                 } else {
                     error!("Failed fetching initial products! {:?}", &res);
                     anyhow::bail!("Failed fetching initial products! {:?}", res);
                 }
-            } else {
-                break;
             }
         }
-    } else {
-        error!("Failed fetching initial products! {:?}", &res);
-        anyhow::bail!("Failed fetching initial products! {:?}", res);
-    };
+    }
     info!("All products collected...");
     Ok(all_categorised_products)
 }

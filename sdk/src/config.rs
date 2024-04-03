@@ -24,6 +24,7 @@ pub struct Config {
     #[serde(default = "version_default")]
     pub required_saleor_version: String,
     pub app_api_base_url: String,
+    pub app_iframe_base_url: String,
     pub apl: AplType,
     pub apl_url: String,
     #[serde(with = "LocalTracingLevel")]

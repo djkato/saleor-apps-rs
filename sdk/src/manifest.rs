@@ -214,7 +214,7 @@ macro_rules! cargo_info {
 }
 
 pub use cargo_info;
-impl AppManifest {
+impl AppManifestBuilder {
     /**
      * Builder for AppManifest
      *
@@ -227,7 +227,7 @@ impl AppManifest {
      * To set webhooks and permissions use the add_webhook() and add_permissions()
      *
      */
-    pub fn new(config: &Config, info: CargoInfo) -> AppManifestBuilder {
+    pub fn new(config: &Config, info: CargoInfo) -> Self {
         AppManifestBuilder {
             manifest: AppManifest {
                 id: info.name.clone(),

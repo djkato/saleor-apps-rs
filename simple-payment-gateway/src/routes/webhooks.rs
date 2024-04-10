@@ -22,10 +22,12 @@ use tracing::{debug, error, info};
 
 use crate::{
     app::{
-        AppError, AppState, PaymentGatewayInitializeSessionData, TransactionInitializeSessionData,
+        AppError, AppState, PaymentGatewayInitializeSessionData, PaymentMethodType,
+        TransactionInitializeSessionData,
     },
     queries::{
         event_transactions::{
+            DeliveryMethod, OrderOrCheckout, PaymentGatewayInitializeSession2,
             TransactionCancelationRequested2, TransactionChargeRequested2,
             TransactionFlowStrategyEnum, TransactionInitializeSession2, TransactionProcessSession2,
             TransactionRefundRequested2,
@@ -63,8 +65,44 @@ pub async fn webhooks(
             //     Json::from(serde_json::to_value(PaymentListGatewaysResponse(gateways))?)
             // }
             SyncWebhookEventType::PaymentGatewayInitializeSession => {
+                let session_data = serde_json::from_str::<PaymentGatewayInitializeSession2>(&body)?;
+                let mut filtered_payment_methods = state.active_payment_methods.clone();
+
+                //If obtainment method is via some sort of shipping, remove PaymentMethodType::Cash
+                //If obtainment method is collection in person at warehouse, remove PaymentMethodType::CODv
+                match session_data.source_object {
+                    OrderOrCheckout::Order(o) => {
+                        if o.shipping_method_name.is_some() {
+                            filtered_payment_methods.retain(|p| p.typ != PaymentMethodType::Cash)
+                        } else if o.collection_point_name.is_some() {
+                            filtered_payment_methods.retain(|p| p.typ != PaymentMethodType::COD)
+                        } else {
+                            error!("Order has neither shipping_method_name or collection_point_name, how is it being payed for?");
+                        }
+                    }
+                    OrderOrCheckout::Checkout(c) => {
+                        if let Some(d) = c.delivery_method {
+                            match d {
+                                DeliveryMethod::Warehouse(_) => {
+                                    filtered_payment_methods
+                                        .retain(|p| p.typ != PaymentMethodType::COD);
+                                }
+                                DeliveryMethod::ShippingMethod(_) => {
+                                    filtered_payment_methods
+                                        .retain(|p| p.typ != PaymentMethodType::Cash);
+                                }
+                                DeliveryMethod::Unknown => {
+                                    error!("DeliveryMethod is neither");
+                                }
+                            }
+                        }
+                    }
+                    OrderOrCheckout::Unknown => {
+                        error!("OrderOrCheckout is neither");
+                    }
+                }
                 let data = serde_json::to_value(PaymentGatewayInitializeSessionData {
-                    payment_methods: state.active_payment_methods,
+                    payment_methods: filtered_payment_methods,
                 })?;
                 Json::from(serde_json::to_value(
                     PaymentGatewayInitializeSessionResponse::<Value> { data: Some(data) },

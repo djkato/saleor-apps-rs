@@ -11,7 +11,7 @@ use tracing_subscriber::EnvFilter;
 use saleor_app_sdk::{config::Config, locales::LocaleCode, manifest::AppManifest, SaleorApp};
 use serde::{Deserialize, Serialize};
 // Make our own error that wraps `anyhow::Error`.
-pub struct AppError(anyhow::Error);
+pub struct AppError(pub anyhow::Error);
 
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for AppError {
@@ -49,7 +49,7 @@ pub fn trace_to_std(config: &Config) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone, Sequence, Serialize, Deserialize)]
+#[derive(Debug, Clone, Sequence, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum PaymentMethodType {
     Accreditation,

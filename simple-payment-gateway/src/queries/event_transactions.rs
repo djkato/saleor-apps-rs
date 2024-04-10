@@ -2,6 +2,23 @@ use const_format::concatcp;
 #[cynic::schema("saleor")]
 mod schema {}
 
+pub const fragment_checkout_details: &str = r#"
+fragment CheckoutDetails on Checkout {
+  id
+  isShippingRequired
+  deliveryMethod {
+    ... on Warehouse {
+      name
+      id
+    }
+    ... on ShippingMethod {
+      id
+      name
+    }
+  }
+}
+"#;
+
 pub const fragment_transaction_details: &str = r#"
 fragment TransactionDetails on TransactionItem {
   id
@@ -48,6 +65,8 @@ fragment OrderDetails on Order {
   paymentStatus
   chargeStatus
   canFinalize
+  shippingMethodName
+  collectionPointName
   totalBalance {
     currency
     amount
@@ -75,14 +94,20 @@ subscription PaymentGatewayInitializeSession {
       data
       amount
       sourceObject {
-        ...OrderDetails
+        ... on Checkout {
+          ...CheckoutDetails
+        }
+        ... on Order {
+          ...OrderDetails
+        }
       }
       amount
     }
   }
 }
 "#,
-    fragment_order_details
+    fragment_order_details,
+    fragment_checkout_details
 );
 
 pub const sub_transaction_initialize_session: &str = concatcp!(
@@ -92,7 +117,12 @@ subscription transactionInitializeSession {
     ... on TransactionInitializeSession {
       data
       sourceObject {
-        ...OrderDetails
+        ... on Checkout {
+          ...CheckoutDetails
+        }
+        ... on Order {
+          ...OrderDetails
+        }
       }
       transaction {
         ...TransactionDetails
@@ -107,7 +137,8 @@ subscription transactionInitializeSession {
 }
 "#,
     fragment_order_details,
-    fragment_transaction_details
+    fragment_transaction_details,
+    fragment_checkout_details
 );
 
 pub const sub_transaction_process_session: &str = concatcp!(
@@ -120,7 +151,12 @@ subscription transactionProcessSession {
         actionType
       }
       sourceObject {
-        ...OrderDetails
+        ... on Checkout {
+          ...CheckoutDetails
+        }
+        ... on Order {
+          ...OrderDetails
+        }
       }
       transaction {
         ...TransactionDetails
@@ -131,7 +167,8 @@ subscription transactionProcessSession {
 }
 "#,
     fragment_order_details,
-    fragment_transaction_details
+    fragment_transaction_details,
+    fragment_checkout_details,
 );
 
 pub const sub_transaction_charge_requested: &str = concatcp!(
@@ -190,6 +227,12 @@ subscription transactionCancelationRequested {
 "#,
     fragment_transaction_details
 );
+
+#[derive(cynic::QueryFragment, Debug)]
+pub struct Warehouse {
+    pub name: String,
+    pub id: cynic::Id,
+}
 
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(graphql_type = "TransactionRefundRequested")]
@@ -302,6 +345,12 @@ pub struct PaymentGatewayInitializeSession {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
+pub struct ShippingMethod {
+    pub id: cynic::Id,
+    pub name: String,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
 #[cynic(graphql_type = "PaymentGatewayInitializeSession")]
 pub struct PaymentGatewayInitializeSession2 {
     pub data: Option<Json>,
@@ -318,6 +367,8 @@ pub struct Order {
     pub payment_status: PaymentChargeStatusEnum,
     pub charge_status: OrderChargeStatusEnum,
     pub can_finalize: bool,
+    pub shipping_method_name: Option<String>,
+    pub collection_point_name: Option<String>,
     pub total_balance: Money,
 }
 
@@ -325,6 +376,13 @@ pub struct Order {
 pub struct Money {
     pub currency: String,
     pub amount: f64,
+}
+
+#[derive(cynic::QueryFragment, Debug)]
+pub struct Checkout {
+    pub id: cynic::Id,
+    pub is_shipping_required: bool,
+    pub delivery_method: Option<DeliveryMethod>,
 }
 
 #[derive(cynic::InlineFragments, Debug)]
@@ -375,7 +433,16 @@ pub enum Event {
 }
 
 #[derive(cynic::InlineFragments, Debug)]
+pub enum DeliveryMethod {
+    Warehouse(Warehouse),
+    ShippingMethod(ShippingMethod),
+    #[cynic(fallback)]
+    Unknown,
+}
+
+#[derive(cynic::InlineFragments, Debug)]
 pub enum OrderOrCheckout {
+    Checkout(Checkout),
     Order(Order),
     #[cynic(fallback)]
     Unknown,

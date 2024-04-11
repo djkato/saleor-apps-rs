@@ -58,7 +58,7 @@ struct ShippingListMethodsForCheckoutVec {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ChargeRequestedResult {
     ChargeSuccess,
-    ChargeFailiure,
+    ChargeFailure,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -76,7 +76,7 @@ pub struct TransactionChargeRequestedResponse {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RefundRequestedResult {
     RefundSuccess,
-    RefundFailiure,
+    RefundFailure,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -95,7 +95,7 @@ pub struct TransactionRefundRequestedResponse {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum CancelationRequestedResult {
     CancelSuccess,
-    CancelFailiure,
+    CancelFailure,
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -119,7 +119,7 @@ pub struct PaymentGatewayInitializeSessionResponse<T: Serialize> {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum TransactionSessionResult {
     ChargeSuccess,
-    ChargeFailiure,
+    ChargeFailure,
     ChargeRequested,
     ChargeActionRequired,
     AuthorizationSuccess,

@@ -17,18 +17,16 @@ pub struct RedisApl {
 #[async_trait]
 impl APL for RedisApl {
     async fn get(&self, saleor_api_url: &str) -> Result<AuthData> {
-        debug!(" get()");
+        debug!("get()");
         let mut conn = self.client.get_async_connection().await?;
         let val: String = conn.get(self.prepare_key(saleor_api_url)).await?;
-        debug!("received {val}");
         let val: AuthData = serde_json::from_str(&val)?;
         info!("sucessful get");
-        debug!("parsed {val}");
 
         Ok(val)
     }
     async fn set(&self, auth_data: AuthData) -> Result<()> {
-        debug!("set(), {}", auth_data);
+        debug!("set()");
         let mut conn = self.client.get_async_connection().await?;
         conn.set(
             self.prepare_key(&auth_data.saleor_api_url),
@@ -94,7 +92,6 @@ impl RedisApl {
     }
     pub fn prepare_key(&self, saleor_api_url: &str) -> String {
         let key = format!("{}:{saleor_api_url}", self.app_api_base_url);
-        debug!("made key:'{}'", key);
         key
     }
 }

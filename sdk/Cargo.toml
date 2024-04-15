@@ -1,7 +1,7 @@
 [package]
 name = "saleor-app-sdk"
 authors = ["Djkáťo <djkatovfx@gmail.com>"]
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Unofficial Saleor App SDK like library, made to for Rust."
 keywords = ["saleor", "sdk", "plugin"]
@@ -28,10 +28,10 @@ dotenvy.workspace = true
 tower = { workspace = true }
 rust_decimal = { workspace = true, features = ["serde-float"] }
 iso_currency = { workspace = true, features = ["with-serde", "iterator"] }
-reqwest = { version = "0.11.24", features = ["json"] }
-jsonwebtoken = "9.2.0"
-async-trait = "0.1.77"
-http = "1.0.0"
+reqwest = { version = "0.12.3", features = ["json"] }
+jsonwebtoken = "9.3.0"
+async-trait = "0.1.80"
+http = "1.1.0"
 url = "2.5.0"
-strum = "0.26.0"
-strum_macros = "0.26.1"
+strum = "0.26.2"
+strum_macros = "0.26.2"

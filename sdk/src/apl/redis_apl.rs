@@ -18,7 +18,7 @@ pub struct RedisApl {
 impl APL for RedisApl {
     async fn get(&self, saleor_api_url: &str) -> Result<AuthData> {
         debug!("get()");
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.client.get_multiplexed_async_connection().await?;
         let val: String = conn.get(self.prepare_key(saleor_api_url)).await?;
         let val: AuthData = serde_json::from_str(&val)?;
         info!("sucessful get");
@@ -27,7 +27,7 @@ impl APL for RedisApl {
     }
     async fn set(&self, auth_data: AuthData) -> Result<()> {
         debug!("set()");
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.client.get_multiplexed_async_connection().await?;
         conn.set(
             self.prepare_key(&auth_data.saleor_api_url),
             serde_json::to_string(&auth_data)?,
@@ -38,7 +38,7 @@ impl APL for RedisApl {
     }
     async fn delete(&self, saleor_api_url: &str) -> Result<()> {
         debug!("delete(), {}", saleor_api_url);
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.client.get_multiplexed_async_connection().await?;
         let val: String = conn.get_del(self.prepare_key(saleor_api_url)).await?;
 
         debug!("sucessful delete(), {}", val);
@@ -47,7 +47,7 @@ impl APL for RedisApl {
     }
     async fn is_ready(&self) -> Result<()> {
         debug!("is_ready()");
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.client.get_multiplexed_async_connection().await?;
         let val: String = redis::cmd("INFO")
             .arg("server")
             .query_async(&mut conn)
@@ -59,7 +59,7 @@ impl APL for RedisApl {
     }
     async fn is_configured(&self) -> Result<()> {
         debug!("is_configured()");
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.client.get_multiplexed_async_connection().await?;
         let val: String = redis::cmd("INFO")
             .arg("server")
             .query_async(&mut conn)

@@ -132,7 +132,7 @@ impl XmlCache {
      */
     pub async fn delete_all(&self, saleor_api_url: &str) -> anyhow::Result<()> {
         debug!("xml data delete_cache()");
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.client.get_multiplexed_async_connection().await?;
         conn.del(self.prepare_key(saleor_api_url)).await?;
 
         info!("sucessful cache wipe");
@@ -141,7 +141,7 @@ impl XmlCache {
 
     pub async fn get_all(&self, saleor_api_url: &str) -> anyhow::Result<Vec<XmlData>> {
         debug!("xml data get_all()");
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.client.get_multiplexed_async_connection().await?;
         let res: Vec<u8> = conn.get(self.prepare_key(saleor_api_url)).await?;
         let cache: Vec<XmlData> = serde_cbor::from_slice(&res)?;
 
@@ -152,7 +152,7 @@ impl XmlCache {
 
     pub async fn set(&self, data: Vec<XmlData>, saleor_api_url: &str) -> anyhow::Result<()> {
         debug!("xml data set()");
-        let mut conn = self.client.get_async_connection().await?;
+        let mut conn = self.client.get_multiplexed_async_connection().await?;
         conn.set(self.prepare_key(saleor_api_url), serde_cbor::to_vec(&data)?)
             .await?;
         info!("sucessful cache set");

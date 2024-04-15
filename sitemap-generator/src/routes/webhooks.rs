@@ -42,6 +42,7 @@ pub async fn webhooks(
         .to_owned();
     let event_type = get_webhook_event_type(&headers)?;
     if let EitherWebhookType::Async(a) = event_type {
+        // TODO: Extract this into a function so You can check what the error was if something fails
         match a {
             AsyncWebhookEventType::ProductUpdated
             | AsyncWebhookEventType::ProductCreated

@@ -1,4 +1,8 @@
 use const_format::concatcp;
+use serde::{Deserialize, Serialize};
+
+use crate::app::PaymentMethodType;
+
 #[cynic::schema("saleor")]
 mod schema {}
 
@@ -7,6 +11,7 @@ fragment CheckoutDetails on Checkout {
   id
   isShippingRequired
   deliveryMethod {
+    __typename
     ... on Warehouse {
       name
       id
@@ -94,6 +99,7 @@ subscription PaymentGatewayInitializeSession {
       data
       amount
       sourceObject {
+        __typename
         ... on Checkout {
           ...CheckoutDetails
         }
@@ -117,6 +123,7 @@ subscription transactionInitializeSession {
     ... on TransactionInitializeSession {
       data
       sourceObject {
+        __typename
         ... on Checkout {
           ...CheckoutDetails
         }
@@ -151,6 +158,7 @@ subscription transactionProcessSession {
         actionType
       }
       sourceObject {
+        __typename
         ... on Checkout {
           ...CheckoutDetails
         }
@@ -247,7 +255,7 @@ pub struct TransactionProcessSession2 {
     pub action: TransactionProcessAction,
     pub source_object: OrderOrCheckout,
     pub transaction: TransactionItem,
-    pub data: Option<Json>,
+    pub data: Option<ChosenPaymentMethodData>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -259,7 +267,7 @@ pub struct TransactionProcessAction {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(graphql_type = "TransactionInitializeSession")]
 pub struct TransactionInitializeSession2 {
-    pub data: Option<Json>,
+    pub data: Option<ChosenPaymentMethodData>,
     pub source_object: OrderOrCheckout,
     pub transaction: TransactionItem,
     pub action: TransactionProcessAction2,
@@ -353,7 +361,7 @@ pub struct ShippingMethod {
 #[derive(cynic::QueryFragment, Debug)]
 #[cynic(graphql_type = "PaymentGatewayInitializeSession")]
 pub struct PaymentGatewayInitializeSession2 {
-    pub data: Option<Json>,
+    pub data: Option<ChosenPaymentMethodData>,
     pub amount: Option<PositiveDecimal>,
     pub source_object: OrderOrCheckout,
 }
@@ -494,9 +502,11 @@ pub enum TransactionFlowStrategyEnum {
     Charge,
 }
 
-#[derive(cynic::Scalar, Debug, Clone)]
-#[cynic(graphql_type = "JSON")]
-pub struct Json(pub String);
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct ChosenPaymentMethodData {
+    pub payment_method: PaymentMethodType,
+}
+cynic::impl_scalar!(ChosenPaymentMethodData, schema::JSON);
 
 #[derive(cynic::Scalar, Debug, Clone)]
-pub struct PositiveDecimal(pub String);
+pub struct PositiveDecimal(pub f32);

@@ -49,7 +49,7 @@ pub fn trace_to_std(config: &Config) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[derive(Debug, Clone, Sequence, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Sequence, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum PaymentMethodType {
     Accreditation,
@@ -94,7 +94,7 @@ pub fn get_active_payment_methods_from_env() -> anyhow::Result<Vec<ActivePayment
             false => None,
         })
         .map(|g| ActivePaymentMethod {
-            typ: g.clone(),
+            typ: g,
             name: match (g, &locale) {
                 (PaymentMethodType::COD, LocaleCode::Sk) => "Dobierka".to_owned(),
                 (PaymentMethodType::Cash, LocaleCode::Sk) => "Hotovosť".to_owned(),

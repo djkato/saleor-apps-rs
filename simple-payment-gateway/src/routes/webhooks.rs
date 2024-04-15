@@ -1,7 +1,7 @@
 use anyhow::Context;
 use axum::{extract::State, http::HeaderMap, Json};
 use cynic::{http::SurfExt, MutationBuilder};
-use rust_decimal::Decimal;
+use rust_decimal::{prelude::FromPrimitive, Decimal};
 use saleor_app_sdk::{
     headers::SALEOR_API_URL_HEADER,
     webhooks::{
@@ -52,8 +52,29 @@ pub async fn webhooks(
         .to_str()?
         .to_owned();
     let event_type = get_webhook_event_type(&headers)?;
+
     debug!("event: {:?}", event_type);
-    let res: Json<Value> = match event_type {
+
+    let res = match create_response(event_type, body, state, &saleor_api_url).await {
+        Ok(r) => r,
+        Err(e) => {
+            error!("Response creation failed: {:?}", e);
+            return Err(AppError(anyhow::anyhow!(e)));
+        }
+    };
+
+    debug!("res: {}", &res.to_string());
+    info!("got webhooks!");
+    Ok(res)
+}
+
+async fn create_response(
+    event_type: EitherWebhookType,
+    body: String,
+    state: AppState,
+    saleor_api_url: &str,
+) -> anyhow::Result<Json<Value>> {
+    Ok(match event_type {
         EitherWebhookType::Sync(a) => match a {
             // SyncWebhookEventType::PaymentListGateways => {
             //     let gateways = state
@@ -110,71 +131,53 @@ pub async fn webhooks(
             }
             SyncWebhookEventType::TransactionInitializeSession => {
                 let session_data = serde_json::from_str::<TransactionInitializeSession2>(&body)?;
-                let payment_method: TransactionInitializeSessionData = serde_json::from_str(
-                    &session_data
-                        .data
-                        .context("Missing data field on TransactionInitializeSession2 body")?
-                        .0,
-                )?;
+
                 debug!(
                     "Transaction session initialised with '{:?}' payment method.",
-                    &payment_method.payment_method
+                    &session_data.data
                 );
-                let str_payment_method = serde_json::to_string(&payment_method)?;
+                let payment_method = session_data
+                    .data
+                    .context("Missing Payment Method in request")?
+                    .payment_method;
 
-                let app = state.saleor_app.lock().await;
-                let auth_data = app.apl.get(&saleor_api_url).await?;
+                let apl_token = state
+                    .saleor_app
+                    .lock()
+                    .await
+                    .apl
+                    .get(saleor_api_url)
+                    .await?
+                    .token;
 
-                let operation = TransactionUpdate::build(TransactionUpdateVariables {
-                    id: &session_data.transaction.id,
-                    transaction: Some(TransactionUpdateInput {
-                        message: Some(&str_payment_method),
-                        ..Default::default()
-                    }),
-                });
-                let mut res = surf::post(&saleor_api_url)
-                    .header("authorization-bearer", auth_data.token)
-                    .run_graphql(operation)
-                    .await;
+                let str_payment_method =
+                    serde_json::to_string(&TransactionInitializeSessionData { payment_method })?;
 
-                let mut webhook_result = WebhookResult::Failiure;
-                if let Ok(r) = &mut res
-                    && let Some(data) = &mut r.data
-                    && let Some(q_res) = &mut data.transaction_update
-                {
-                    if !q_res.errors.is_empty() {
-                        q_res
-                            .errors
-                            .iter()
-                            .for_each(|e| error!("failed update transaction, {:?}", e));
-                    } else if q_res.transaction.is_some() {
-                        webhook_result = WebhookResult::Success;
-                    }
-                }
+                update_transaction_message(
+                    session_data.transaction.id,
+                    str_payment_method.clone(),
+                    apl_token,
+                    saleor_api_url.to_owned(),
+                );
 
                 Json::from(serde_json::to_value(
                     TransactionInitializeSessionResponse::<u8> {
                         data: None,
                         time: None,
-                        psp_reference: None,
+                        psp_reference: Some(
+                            "New transaction from ".to_owned() + &state.manifest.name,
+                        ),
                         external_url: None,
-                        message: None,
-                        amount: Decimal::from_str(&session_data.action.amount.0)?,
-                        result: match (session_data.action.action_type, webhook_result) {
-                            (TransactionFlowStrategyEnum::Charge, WebhookResult::Success) => {
+                        message: Some(str_payment_method),
+                        amount: Decimal::from_f32(session_data.action.amount.0)
+                            .context("failed to convert f32 to dec")?,
+                        result: match session_data.action.action_type {
+                            TransactionFlowStrategyEnum::Charge => {
                                 TransactionSessionResult::ChargeSuccess
                             }
-                            (
-                                TransactionFlowStrategyEnum::Authorization,
-                                WebhookResult::Success,
-                            ) => TransactionSessionResult::AuthorizationSuccess,
-                            (TransactionFlowStrategyEnum::Charge, WebhookResult::Failiure) => {
-                                TransactionSessionResult::ChargeFailiure
+                            TransactionFlowStrategyEnum::Authorization => {
+                                TransactionSessionResult::AuthorizationSuccess
                             }
-                            (
-                                TransactionFlowStrategyEnum::Authorization,
-                                WebhookResult::Failiure,
-                            ) => TransactionSessionResult::AuthorizationFailure,
                         },
                     },
                 )?)
@@ -186,10 +189,7 @@ pub async fn webhooks(
                     psp_reference: "".to_owned(),
                     external_url: None,
                     message: None,
-                    amount: data
-                        .action
-                        .amount
-                        .and_then(|a| Decimal::from_str(&a.0).ok()),
+                    amount: data.action.amount.and_then(|a| Decimal::from_f32(a.0)),
                     result: Some(ChargeRequestedResult::ChargeSuccess),
                 })?)
             }
@@ -200,10 +200,7 @@ pub async fn webhooks(
                     psp_reference: "".to_owned(),
                     external_url: None,
                     message: None,
-                    amount: data
-                        .action
-                        .amount
-                        .and_then(|a| Decimal::from_str(&a.0).ok()),
+                    amount: data.action.amount.and_then(|a| Decimal::from_f32(a.0)),
                     result: Some(RefundRequestedResult::RefundSuccess),
                 })?)
             }
@@ -216,10 +213,7 @@ pub async fn webhooks(
                         psp_reference: "".to_owned(),
                         external_url: None,
                         message: None,
-                        amount: data
-                            .action
-                            .amount
-                            .and_then(|a| Decimal::from_str(&a.0).ok()),
+                        amount: data.action.amount.and_then(|a| Decimal::from_f32(a.0)),
                         result: Some(CancelationRequestedResult::CancelSuccess),
                     },
                 )?)
@@ -234,7 +228,8 @@ pub async fn webhooks(
                     psp_reference: None,
                     external_url: None,
                     message: None,
-                    amount: Decimal::from_str(&data.action.amount.0)?,
+                    amount: Decimal::from_f32(data.action.amount.0)
+                        .context("failed f32 to Decimal")?,
                     result: match data.action.action_type {
                         TransactionFlowStrategyEnum::Charge => {
                             TransactionSessionResult::ChargeSuccess
@@ -248,13 +243,53 @@ pub async fn webhooks(
             _ => Json::from(Value::from_str("")?),
         },
         _ => Json::from(Value::from_str("")?),
-    };
-    debug!("{:?}", res.to_string());
-    info!("got webhooks!");
-    Ok(res)
+    })
+}
+
+fn update_transaction_message(
+    trans_id: cynic::Id,
+    str_payment_method: String,
+    apl_token: String,
+    saleor_api_url: String,
+) {
+    tokio::spawn(async move {
+        let operation = TransactionUpdate::build(TransactionUpdateVariables {
+            id: &trans_id,
+            transaction: Some(TransactionUpdateInput {
+                message: Some(&str_payment_method),
+                ..Default::default()
+            }),
+        });
+
+        debug!("operation: {:?}", serde_json::to_string(&operation));
+
+        let mut res = surf::post(saleor_api_url)
+            .header("authorization-bearer", apl_token)
+            .run_graphql(operation)
+            .await;
+
+        match &mut res {
+            Ok(r) => {
+                if let Some(data) = &mut r.data
+                    && let Some(q_res) = &mut data.transaction_update
+                {
+                    if !q_res.errors.is_empty() {
+                        q_res
+                            .errors
+                            .iter()
+                            .for_each(|e| error!("failed update transaction, {:?}", e));
+                    } else if q_res.transaction.is_some() {
+                        debug!("sucessfully set transactions message to payment method");
+                    }
+                }
+            }
+            Err(e) => error!("Failed updating transaction through gql: {:?}", e),
+        }
+    });
 }
 
 enum WebhookResult {
     Success,
-    Failiure,
+    // NeedsMessageUpdate(&'a str),
+    Failure,
 }

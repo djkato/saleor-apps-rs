@@ -72,16 +72,27 @@ pub enum TransactionUpdateErrorCode {
 
 #[derive(cynic::InputObject, Debug, Default)]
 pub struct TransactionUpdateInput<'a> {
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub name: Option<&'a str>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub message: Option<&'a str>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub psp_reference: Option<&'a str>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub available_actions: Option<Vec<TransactionActionEnum>>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub amount_authorized: Option<MoneyInput<'a>>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub amount_charged: Option<MoneyInput<'a>>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub amount_refunded: Option<MoneyInput<'a>>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub amount_canceled: Option<MoneyInput<'a>>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Vec<MetadataInput<'a>>>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub private_metadata: Option<Vec<MetadataInput<'a>>>,
+    #[cynic(skip_serializing_if = "Option::is_none")]
     pub external_url: Option<&'a str>,
 }
 

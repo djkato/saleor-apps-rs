@@ -1,19 +1,16 @@
 use anyhow::Context;
 use axum::{extract::State, http::HeaderMap, Json};
 use rust_decimal::{prelude::FromPrimitive, Decimal};
-use saleor_app_sdk::{
-    headers::SALEOR_API_URL_HEADER,
-    webhooks::{
-        sync_response::{
-            CancelationRequestedResult, ChargeRequestedResult,
-            PaymentGatewayInitializeSessionResponse, RefundRequestedResult,
-            TransactionCancelationRequestedResponse, TransactionChargeRequestedResponse,
-            TransactionInitializeSessionResponse, TransactionProcessSessionResponse,
-            TransactionRefundRequestedResponse, TransactionSessionResult,
-        },
-        utils::{get_webhook_event_type, EitherWebhookType},
-        SyncWebhookEventType,
+use saleor_app_sdk::webhooks::{
+    sync_response::{
+        CancelationRequestedResult, ChargeRequestedResult, PaymentGatewayInitializeSessionResponse,
+        RefundRequestedResult, TransactionCancelationRequestedResponse,
+        TransactionChargeRequestedResponse, TransactionInitializeSessionResponse,
+        TransactionProcessSessionResponse, TransactionRefundRequestedResponse,
+        TransactionSessionResult,
     },
+    utils::{get_webhook_event_type, EitherWebhookType},
+    SyncWebhookEventType,
 };
 use serde_json::Value;
 use std::str::FromStr;
@@ -39,16 +36,16 @@ pub async fn webhooks(
     debug!("/api/webhooks");
     debug!("req: {:?}", body);
 
-    let saleor_api_url = headers
-        .get(SALEOR_API_URL_HEADER)
-        .context("missing saleor api url header")?
-        .to_str()?
-        .to_owned();
+    // let saleor_api_url = headers
+    //     .get(SALEOR_API_URL_HEADER)
+    //     .context("missing saleor api url header")?
+    //     .to_str()?
+    //     .to_owned();
     let event_type = get_webhook_event_type(&headers)?;
 
     debug!("event: {:?}", event_type);
 
-    let res = match create_response(event_type, body, state, &saleor_api_url).await {
+    let res = match create_response(event_type, body, state).await {
         Ok(r) => r,
         Err(e) => {
             error!("Response creation failed: {:?}", e);
@@ -65,7 +62,6 @@ async fn create_response(
     event_type: EitherWebhookType,
     body: String,
     state: AppState,
-    saleor_api_url: &str,
 ) -> anyhow::Result<Json<Value>> {
     Ok(match event_type {
         EitherWebhookType::Sync(a) => match a {
@@ -134,14 +130,14 @@ async fn create_response(
                     .context("Missing Payment Method in request")?
                     .payment_method;
 
-                let apl_token = state
-                    .saleor_app
-                    .lock()
-                    .await
-                    .apl
-                    .get(saleor_api_url)
-                    .await?
-                    .token;
+                // let apl_token = state
+                //     .saleor_app
+                //     .lock()
+                //     .await
+                //     .apl
+                //     .get(saleor_api_url)
+                //     .await?
+                //     .token;
 
                 let str_payment_method =
                     serde_json::to_string(&TransactionInitializeSessionData { payment_method })?;

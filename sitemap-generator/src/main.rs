@@ -18,7 +18,7 @@ use saleor_app_sdk::{
 };
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::{
     app::{trace_to_std, AppState, SitemapConfig, XmlCache},
@@ -36,7 +36,6 @@ async fn main() -> anyhow::Result<()> {
     let saleor_app = SaleorApp::new(&config)?;
 
     debug!("Creating saleor App...");
-
     let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
         .add_permissions(vec![
             AppPermission::ManageProducts,
@@ -71,6 +70,13 @@ async fn main() -> anyhow::Result<()> {
         )?)),
         manifest: app_manifest,
         config: config.clone(),
+        target_channel: match dotenvy::var("CHANNEL_SLUG") {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Missing channel slug, Saleor will soon deprecate product queries without channel specified.");
+                anyhow::bail!(e);
+            }
+        },
         saleor_app: Arc::new(Mutex::new(saleor_app)),
     };
     debug!("Created AppState...");

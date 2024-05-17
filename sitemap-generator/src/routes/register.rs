@@ -86,8 +86,27 @@ pub async fn regenerate(state: AppState, saleor_api_url: String) -> anyhow::Resu
             .map(|c| (c, vec![]))
             .collect();
     let mut products = vec![];
+
+    // If there are no products, append this empty array
+    let mut empty_products = vec![];
+
     for category in categories.iter_mut() {
-        products.append(&mut get_all_products(&saleor_api_url, &auth_data.token, category).await?);
+        products.append(
+            match &mut get_all_products(
+                &saleor_api_url,
+                &state.target_channel,
+                &auth_data.token,
+                category,
+            )
+            .await
+            {
+                Ok(p) => p,
+                Err(e) => {
+                    info!("Category {} has no products, {e}", category.0.slug);
+                    &mut empty_products
+                }
+            },
+        );
     }
     let pages = get_all_pages(&saleor_api_url, &auth_data.token).await?;
     let collections = get_all_collections(&saleor_api_url, &auth_data.token).await?;
@@ -358,7 +377,7 @@ async fn get_all_categories(saleor_api_url: &str, token: &str) -> anyhow::Result
                         .collect::<Vec<_>>(),
                 );
                 debug!(
-                    "fetched first categories, eg.:{:?}",
+                    "fetched next categories, eg.:{:?}",
                     &categories.edges.first()
                 );
                 next_cursor.clone_from(&categories.page_info.end_cursor);
@@ -441,12 +460,14 @@ async fn get_all_collections(saleor_api_url: &str, token: &str) -> anyhow::Resul
  */
 async fn get_all_products(
     saleor_api_url: &str,
+    channel: &str,
     token: &str,
     main_category: &mut (Category3, Vec<Arc<CategorisedProduct>>),
 ) -> anyhow::Result<Vec<Arc<CategorisedProduct>>> {
     debug!("Collecting all products...");
     let operation = GetCategoryProductsInitial::build(GetCategoryProductsInitialVariables {
         id: &main_category.0.id,
+        channel,
     });
     let mut all_categorised_products: Vec<Arc<CategorisedProduct>> = vec![];
     let res = surf::post(saleor_api_url)
@@ -473,40 +494,39 @@ async fn get_all_products(
         //Keep fetching next page
         debug!("fetched first products, eg: {:?}", products.edges.first());
         let mut next_cursor = products.page_info.end_cursor.clone();
-        loop {
-            while let Some(cursor) = &mut next_cursor {
-                let res = surf::post(saleor_api_url)
-                    .header("authorization-bearer", token)
-                    .run_graphql(GetCategoryProductsNext::build(
-                        GetCategoryProductsNextVariables {
-                            id: &main_category.0.id,
-                            after: cursor,
-                        },
-                    ))
-                    .await;
-                if let Ok(query) = &res
-                    && let Some(data) = &query.data
-                    && let Some(category) = &data.category
-                    && let Some(products) = &category.products
-                {
-                    all_categorised_products.append(
-                        &mut products
-                            .edges
-                            .iter()
-                            .map(|p| {
-                                Arc::new(CategorisedProduct {
-                                    product: p.node.clone(),
-                                    category_id: main_category.0.id.clone(),
-                                })
+        while let Some(cursor) = &mut next_cursor {
+            let res = surf::post(saleor_api_url)
+                .header("authorization-bearer", token)
+                .run_graphql(GetCategoryProductsNext::build(
+                    GetCategoryProductsNextVariables {
+                        id: &main_category.0.id,
+                        after: cursor,
+                        channel,
+                    },
+                ))
+                .await;
+            if let Ok(query) = &res
+                && let Some(data) = &query.data
+                && let Some(category) = &data.category
+                && let Some(products) = &category.products
+            {
+                all_categorised_products.append(
+                    &mut products
+                        .edges
+                        .iter()
+                        .map(|p| {
+                            Arc::new(CategorisedProduct {
+                                product: p.node.clone(),
+                                category_id: main_category.0.id.clone(),
                             })
-                            .collect::<Vec<_>>(),
-                    );
-                    debug!("fetched next products, eg: {:?}", products.edges.first());
-                    next_cursor.clone_from(&products.page_info.end_cursor);
-                } else {
-                    error!("Failed fetching initial products! {:?}", &res);
-                    anyhow::bail!("Failed fetching initial products! {:?}", res);
-                }
+                        })
+                        .collect::<Vec<_>>(),
+                );
+                debug!("fetched next products, eg: {:?}", products.edges.first());
+                next_cursor.clone_from(&products.page_info.end_cursor);
+            } else {
+                error!("Failed fetching initial products! {:?}", &res);
+                anyhow::bail!("Failed fetching initial products! {:?}", res);
             }
         }
     }

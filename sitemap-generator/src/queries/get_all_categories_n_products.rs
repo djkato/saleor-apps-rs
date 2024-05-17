@@ -39,12 +39,12 @@ query getCategoriesNext($after: String) {
   }
 }
 
-query getCategoryProductsInitial($id: ID!) {
+query getCategoryProductsInitial($id: ID!, $channel: String!) {
   category(id: $id) {
     slug
     id
     updatedAt
-    products(first: 50) {
+    products(first: 50, channel: $channel) {
       pageInfo {
         hasNextPage
         endCursor
@@ -61,9 +61,9 @@ query getCategoryProductsInitial($id: ID!) {
   }
 }
 
-query getCategoryProductsNext($id: ID!, $after: String!) {
+query getCategoryProductsNext($id: ID!, $after: String!, $channel: String!) {
   category(id: $id) {
-    products(first: 50, after: $after) {
+    products(first: 50, after: $after, channel: $channel) {
       pageInfo {
         hasNextPage
         endCursor
@@ -81,19 +81,21 @@ query getCategoryProductsNext($id: ID!, $after: String!) {
 */
 
 #[derive(cynic::QueryVariables, Debug)]
+pub struct GetCategoriesNextVariables<'a> {
+    pub after: Option<&'a str>,
+}
+
+#[derive(cynic::QueryVariables, Debug)]
 pub struct GetCategoryProductsInitialVariables<'a> {
+    pub channel: &'a str,
     pub id: &'a cynic::Id,
 }
 
 #[derive(cynic::QueryVariables, Debug)]
 pub struct GetCategoryProductsNextVariables<'a> {
     pub after: &'a str,
+    pub channel: &'a str,
     pub id: &'a cynic::Id,
-}
-
-#[derive(cynic::QueryVariables, Debug)]
-pub struct GetCategoriesNextVariables<'a> {
-    pub after: Option<&'a str>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -155,11 +157,12 @@ pub struct Category3 {
 }
 
 #[derive(cynic::QueryFragment, Debug)]
+#[cynic(variables = "GetCategoryProductsInitialVariables")]
 pub struct Category {
     pub slug: String,
     pub id: cynic::Id,
     pub updated_at: DateTime,
-    #[arguments(first: 50)]
+    #[arguments(first: 50, channel: $channel)]
     pub products: Option<ProductCountableConnection>,
 }
 
@@ -176,7 +179,7 @@ pub struct ProductCountableConnection {
     variables = "GetCategoryProductsNextVariables"
 )]
 pub struct Category2 {
-    #[arguments(first: 50, after: $after)]
+    #[arguments(first: 50, after: $after, channel: $channel)]
     pub products: Option<ProductCountableConnection2>,
 }
 

@@ -582,7 +582,7 @@ async fn update_sitemap_index(state: &AppState) -> anyhow::Result<()> {
             if path
                 .extension()
                 .map_or(false, |ext| ext == "xml" || ext == "gz")
-                && !path.to_string_lossy().to_string().contains("sitemap-index")
+                && !path.to_string_lossy().to_string().contains("sitemap_index")
             {
                 Some(path)
             } else {
@@ -609,7 +609,7 @@ async fn update_sitemap_index(state: &AppState) -> anyhow::Result<()> {
                     }),
                 ))
             } else {
-                error!("file dissapeared or broke during sitemap-index construction");
+                error!("file dissapeared or broke during sitemap_index construction");
                 None
             }
         })
@@ -619,7 +619,7 @@ async fn update_sitemap_index(state: &AppState) -> anyhow::Result<()> {
         .create(true)
         .write(true)
         .open(format!(
-            "{}/sitemap-index.xml",
+            "{}/sitemap_index.xml",
             state.sitemap_config.target_folder
         ))
         .await?;

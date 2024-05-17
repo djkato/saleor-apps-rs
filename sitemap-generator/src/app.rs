@@ -59,6 +59,7 @@ pub struct AppState {
     pub xml_cache: Arc<tokio::sync::Mutex<XmlCache>>,
     pub saleor_app: Arc<tokio::sync::Mutex<SaleorApp>>,
     pub config: Config,
+    pub target_channel: String,
     pub sitemap_config: SitemapConfig,
     pub manifest: AppManifest,
 }

@@ -1,6 +1,5 @@
 use anyhow::Context;
 use axum::{extract::State, http::HeaderMap, Json};
-use cynic::{http::SurfExt, MutationBuilder};
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use saleor_app_sdk::{
     headers::SALEOR_API_URL_HEADER,
@@ -25,16 +24,10 @@ use crate::{
         AppError, AppState, PaymentGatewayInitializeSessionData, PaymentMethodType,
         TransactionInitializeSessionData,
     },
-    queries::{
-        event_transactions::{
-            DeliveryMethod, OrderOrCheckout, PaymentGatewayInitializeSession2,
-            TransactionCancelationRequested2, TransactionChargeRequested2,
-            TransactionFlowStrategyEnum, TransactionInitializeSession2, TransactionProcessSession2,
-            TransactionRefundRequested2,
-        },
-        mutation_transaction_update::{
-            TransactionUpdate, TransactionUpdateInput, TransactionUpdateVariables,
-        },
+    queries::event_transactions::{
+        DeliveryMethod, OrderOrCheckout, PaymentGatewayInitializeSession2,
+        TransactionCancelationRequested2, TransactionChargeRequested2, TransactionFlowStrategyEnum,
+        TransactionInitializeSession2, TransactionProcessSession2, TransactionRefundRequested2,
     },
 };
 
@@ -153,12 +146,12 @@ async fn create_response(
                 let str_payment_method =
                     serde_json::to_string(&TransactionInitializeSessionData { payment_method })?;
 
-                update_transaction_message(
-                    session_data.transaction.id,
-                    str_payment_method.clone(),
-                    apl_token,
-                    saleor_api_url.to_owned(),
-                );
+                // update_transaction_message(
+                //     session_data.transaction.id,
+                //     str_payment_method.clone(),
+                //     apl_token,
+                //     saleor_api_url.to_owned(),
+                // );
 
                 Json::from(serde_json::to_value(
                     TransactionInitializeSessionResponse::<u8> {
@@ -246,48 +239,96 @@ async fn create_response(
     })
 }
 
-fn update_transaction_message(
-    trans_id: cynic::Id,
-    str_payment_method: String,
-    apl_token: String,
-    saleor_api_url: String,
-) {
-    tokio::spawn(async move {
-        let operation = TransactionUpdate::build(TransactionUpdateVariables {
-            id: &trans_id,
-            transaction: Some(TransactionUpdateInput {
-                message: Some(&str_payment_method),
-                ..Default::default()
-            }),
-        });
+// fn set_order_payment_method(
+//     order_id: cynic::Id,
+//     str_payment_method: String,
+//     apl_token: String,
+//     saleor_api_url: String,
+// ) {
+//     tokio::spawn(async move {
+//         let operation = SetOrderPaymentMethod::build(SetOrderPaymentMethodVariables {
+//             id: &trans_id,
+//             transaction: Some(TransactionUpdateInput {
+//                 message: Some(&str_payment_method),
+//                 ..Default::default()
+//             }),
+//         });
+//
+//         debug!("operation: {:?}", serde_json::to_string(&operation));
+//
+//         let mut res = surf::post(saleor_api_url)
+//             .header("authorization-bearer", apl_token)
+//             .run_graphql(operation)
+//             .await;
+//
+//         match &mut res {
+//             Ok(r) => {
+//                 if let Some(data) = &mut r.data
+//                     && let Some(q_res) = &mut data.transaction_update
+//                 {
+//                     if !q_res.errors.is_empty() {
+//                         q_res
+//                             .errors
+//                             .iter()
+//                             .for_each(|e| error!("failed update transaction, {:?}", e));
+//                     } else if q_res.transaction.is_some() {
+//                         debug!("sucessfully set transactions message to payment method");
+//                     }
+//                 }
+//             }
+//             Err(e) => error!("Failed updating transaction through gql: {:?}", e),
+//         }
+//     });
+// }
+//
+// enum WebhookResult {
+//     Success,
+//     // NeedsMessageUpdate(&'a str),
+//     Failure,
+// }
 
-        debug!("operation: {:?}", serde_json::to_string(&operation));
-
-        let mut res = surf::post(saleor_api_url)
-            .header("authorization-bearer", apl_token)
-            .run_graphql(operation)
-            .await;
-
-        match &mut res {
-            Ok(r) => {
-                if let Some(data) = &mut r.data
-                    && let Some(q_res) = &mut data.transaction_update
-                {
-                    if !q_res.errors.is_empty() {
-                        q_res
-                            .errors
-                            .iter()
-                            .for_each(|e| error!("failed update transaction, {:?}", e));
-                    } else if q_res.transaction.is_some() {
-                        debug!("sucessfully set transactions message to payment method");
-                    }
-                }
-            }
-            Err(e) => error!("Failed updating transaction through gql: {:?}", e),
-        }
-    });
-}
-
+// fn update_transaction_message(
+//     trans_id: cynic::Id,
+//     str_payment_method: String,
+//     apl_token: String,
+//     saleor_api_url: String,
+// ) {
+//     tokio::spawn(async move {
+//         let operation = TransactionUpdate::build(TransactionUpdateVariables {
+//             id: &trans_id,
+//             transaction: Some(TransactionUpdateInput {
+//                 message: Some(&str_payment_method),
+//                 ..Default::default()
+//             }),
+//         });
+//
+//         debug!("operation: {:?}", serde_json::to_string(&operation));
+//
+//         let mut res = surf::post(saleor_api_url)
+//             .header("authorization-bearer", apl_token)
+//             .run_graphql(operation)
+//             .await;
+//
+//         match &mut res {
+//             Ok(r) => {
+//                 if let Some(data) = &mut r.data
+//                     && let Some(q_res) = &mut data.transaction_update
+//                 {
+//                     if !q_res.errors.is_empty() {
+//                         q_res
+//                             .errors
+//                             .iter()
+//                             .for_each(|e| error!("failed update transaction, {:?}", e));
+//                     } else if q_res.transaction.is_some() {
+//                         debug!("sucessfully set transactions message to payment method");
+//                     }
+//                 }
+//             }
+//             Err(e) => error!("Failed updating transaction through gql: {:?}", e),
+//         }
+//     });
+// }
+//
 enum WebhookResult {
     Success,
     // NeedsMessageUpdate(&'a str),

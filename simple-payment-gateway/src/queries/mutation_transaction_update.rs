@@ -1,4 +1,5 @@
 #[cynic::schema("saleor")]
+
 mod schema {}
 /*
 mutation transactionUpdate($id: ID!, $transaction: TransactionUpdateInput) {
@@ -17,7 +18,6 @@ mutation transactionUpdate($id: ID!, $transaction: TransactionUpdateInput) {
   }
 }
 */
-
 #[derive(cynic::QueryVariables, Debug)]
 pub struct TransactionUpdateVariables<'a> {
     pub id: &'a cynic::Id,

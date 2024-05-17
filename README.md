@@ -19,7 +19,7 @@ Simply add the package to your `docker-compose.yml`, for example like so:
 ```yml
 services:
   app-payment-gateway:
-    image: ghcr.io/djkato/saleor-simple-payment-gateway:latest
+    image: ghcr.io/djkato/saleor-simple-payment-gateway:0.1.1
     env_file:
       - docker-gateway.env
     networks:
@@ -30,7 +30,7 @@ services:
       - 3001:3001
 
   app-sitemap-generator:
-    image: ghcr.io/djkato/saleor-sitemap-generator:latest
+    image: ghcr.io/djkato/saleor-sitemap-generator:0.1.0
     env_file:
       - docker-sitemap.env
     networks:

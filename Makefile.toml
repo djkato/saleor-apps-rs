@@ -9,15 +9,15 @@ alias = "build-containers"
 [tasks.build-sitemap-generator]
 workspace = false
 script = '''
-docker build --rm --target chef-sitemap-generator .
-docker tag $(docker image ls -q --filter=label=service=chef-sitemap-generator) ghcr.io/djkato/saleor-sitemap-generator
+PKG_VER=$(cargo pkgid --package=sitemap-generator | cut -d "#" -f2)
+docker build --rm --target chef-sitemap-generator . -t ghcr.io/djkato/saleor-sitemap-generator:${PKG_VER}
 '''
 
 [tasks.build-simple-payment-gateway]
 workspace = false
 script = '''
-docker build --rm --target chef-simple-payment-gateway .
-docker tag $(docker image ls -q --filter=label=service=chef-simple-payment-gateway) ghcr.io/djkato/saleor-simple-payment-gateway
+PKG_VER=$(cargo pkgid --package=simple-payment-gateway | cut -d "#" -f2)
+docker build --rm --target chef-simple-payment-gateway . -t ghcr.io/djkato/saleor-simple-payment-gateway:${PKG_VER}
 '''
 
 [tasks.build-containers]

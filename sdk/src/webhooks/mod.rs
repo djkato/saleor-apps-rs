@@ -1,4 +1,5 @@
 pub mod sync_response;
+#[cfg(feature = "webhook_utils")]
 pub mod utils;
 
 use serde::{Deserialize, Serialize};

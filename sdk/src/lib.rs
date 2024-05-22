@@ -3,6 +3,7 @@ pub mod config;
 pub mod headers;
 pub mod locales;
 pub mod manifest;
+#[cfg(feature = "middleware")]
 pub mod middleware;
 pub mod webhooks;
 
@@ -10,7 +11,9 @@ use apl::{AplType, APL};
 use config::Config;
 use serde::{Deserialize, Serialize};
 
-use crate::apl::{env_apl::EnvApl, file_apl::FileApl, redis_apl::RedisApl};
+use crate::apl::env_apl::EnvApl;
+#[cfg(feature = "redis_apl")]
+use crate::apl::{file_apl::FileApl, redis_apl::RedisApl};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthToken {
@@ -51,11 +54,25 @@ impl SaleorApp {
         use AplType::{Env, File, Redis};
         Ok(SaleorApp {
             apl: match config.apl {
-                Redis => Box::new(RedisApl::new(&config.apl_url, &config.app_api_base_url)?),
+                Redis => {
+                    if cfg!(not(feature = "redis_apl")) {
+                        dbg!("Tried starting app with apl that wasn't present at compile time (cargo feature missing). Falling back to env_apl");
+                        Box::new(EnvApl {})
+                    } else {
+                        Box::new(RedisApl::new(&config.apl_url, &config.app_api_base_url)?)
+                    }
+                }
                 Env => Box::new(EnvApl {}),
-                File => Box::new(FileApl {
-                    path: "apl.txt".to_owned(),
-                }),
+                File => {
+                    if cfg!(not(feature = "file_apl")) {
+                        dbg!("Tried starting app with apl that wasn't present at compile time (cargo feature missing). Falling back to env_apl");
+                        Box::new(EnvApl {})
+                    } else {
+                        Box::new(FileApl {
+                            path: "apl.txt".to_owned(),
+                        })
+                    }
+                }
             },
         })
     }

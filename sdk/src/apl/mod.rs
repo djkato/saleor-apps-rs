@@ -1,12 +1,12 @@
 pub mod env_apl;
 pub mod file_apl;
+#[cfg(feature = "redis_apl")]
 pub mod redis_apl;
 
 use crate::AuthData;
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AplType {

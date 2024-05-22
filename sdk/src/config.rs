@@ -1,9 +1,11 @@
 use serde::Deserialize;
 
+#[cfg(feature = "tracing")]
 use tracing::{debug, Level};
 
 use crate::apl::AplType;
 
+#[cfg(feature = "tracing")]
 #[derive(Debug, Deserialize)]
 #[serde(remote = "Level")]
 pub enum LocalTracingLevel {
@@ -27,6 +29,7 @@ pub struct Config {
     pub app_iframe_base_url: String,
     pub apl: AplType,
     pub apl_url: String,
+    #[cfg(feature = "tracing")]
     #[serde(with = "LocalTracingLevel")]
     pub log_level: tracing::Level,
 }
@@ -41,6 +44,7 @@ impl Config {
     pub fn load() -> Result<Self, envy::Error> {
         _ = dotenvy::dotenv();
         let env = envy::from_env::<Config>();
+        #[cfg(feature = "tracing")]
         debug!("{:?}", &env);
         env
     }

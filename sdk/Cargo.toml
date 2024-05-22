@@ -1,7 +1,7 @@
 [package]
 name = "saleor-app-sdk"
 authors = ["Djkáťo <djkatovfx@gmail.com>"]
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 description = "Unofficial Saleor App SDK like library, made to for Rust."
 keywords = ["saleor", "sdk", "plugin"]
@@ -45,6 +45,7 @@ tracing-subscriber = { workspace = true, optional = true }
 ## Needed for webhooks
 
 [features]
+# default = []
 default = ["middleware", "redis_apl", "webhook_utils", "tracing"]
 middleware = [
   "dep:axum",

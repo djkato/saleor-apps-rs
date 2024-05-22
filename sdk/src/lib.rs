@@ -12,8 +12,10 @@ use config::Config;
 use serde::{Deserialize, Serialize};
 
 use crate::apl::env_apl::EnvApl;
+#[cfg(feature = "file_apl")]
+use crate::apl::file_apl::FileApl;
 #[cfg(feature = "redis_apl")]
-use crate::apl::{file_apl::FileApl, redis_apl::RedisApl};
+use crate::apl::redis_apl::RedisApl;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthToken {
@@ -52,28 +54,36 @@ pub struct SaleorApp {
 impl SaleorApp {
     pub fn new(config: &Config) -> anyhow::Result<SaleorApp> {
         use AplType::{Env, File, Redis};
-        Ok(SaleorApp {
-            apl: match config.apl {
+        fn decide_apl(config: &Config) -> anyhow::Result<Box<dyn APL>> {
+            match config.apl {
                 Redis => {
-                    if cfg!(not(feature = "redis_apl")) {
+                    #[cfg(feature = "redis_apl")]
+                    return Ok(Box::new(RedisApl::new(
+                        &config.apl_url,
+                        &config.app_api_base_url,
+                    )?));
+
+                    #[cfg(not(feature = "redis_apl"))]
+                    {
                         dbg!("Tried starting app with apl that wasn't present at compile time (cargo feature missing). Falling back to env_apl");
-                        Box::new(EnvApl {})
-                    } else {
-                        Box::new(RedisApl::new(&config.apl_url, &config.app_api_base_url)?)
+                        Ok(Box::new(EnvApl {}))
                     }
                 }
-                Env => Box::new(EnvApl {}),
+                Env => Ok(Box::new(EnvApl {})),
                 File => {
-                    if cfg!(not(feature = "file_apl")) {
+                    #[cfg(feature = "file_apl")]
+                    return Ok(Box::new(FileApl {
+                        path: "apl.txt".to_owned(),
+                    }));
+                    #[cfg(not(feature = "file_apl"))]
+                    {
                         dbg!("Tried starting app with apl that wasn't present at compile time (cargo feature missing). Falling back to env_apl");
-                        Box::new(EnvApl {})
-                    } else {
-                        Box::new(FileApl {
-                            path: "apl.txt".to_owned(),
-                        })
+                        Ok(Box::new(EnvApl {}))
                     }
                 }
-            },
-        })
+            }
+        }
+        let apl = decide_apl(config)?;
+        Ok(SaleorApp { apl })
     }
 }

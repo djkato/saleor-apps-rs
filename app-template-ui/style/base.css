@@ -1,0 +1,78 @@
+@import url("https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&family=Space+Grotesk:wght@300..700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-brand-white;
+  }
+
+  html {
+    @apply text-brand-black;
+  }
+
+  ::selection {
+    @apply bg-brand-sunset-400;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-sans my-4 text-brand-sea-300 text-2xl;
+  }
+
+  h2 {
+    @apply text-brand-sea-300 text-xl;
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply text-brand-sea-500 text-base;
+  }
+
+  p {
+    @apply font-serif my-2 text-base;
+  }
+
+  input:disabled,
+  button:disabled {
+    @apply brightness-50 cursor-not-allowed;
+  }
+
+  details,
+  summary {
+    @apply list-none;
+  }
+
+  input:focus,
+  input:active,
+  option:focus,
+  option:active {
+    @apply !outline-none !appearance-none !select-none shadow-none !border-none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
+@layer components {
+  .header-gradient {
+    background: theme("colors.brand-sea.400");
+    background: linear-gradient(25deg,
+        theme("colors.brand-sunset.500") 0%,
+        theme("colors.brand-sea.300") 45%,
+        theme("colors.brand-sea.300") 55%,
+        theme("colors.brand-sunset.500") 100%);
+  }
+}

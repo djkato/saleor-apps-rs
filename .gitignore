@@ -3,6 +3,7 @@
 temp
 temp/**.*
 volumes/
+node_modules
 
 # Allow
 !.env.example

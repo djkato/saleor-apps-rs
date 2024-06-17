@@ -18,6 +18,7 @@ crate-type = ["cdylib", "rlib"]
 axum = { workspace = true, optional = true }
 console_error_panic_hook = { workspace = true }
 leptos = { workspace = true, features = ["nightly"] }
+anyhow = { workspace = true, optional = true }
 leptos_axum = { workspace = true, optional = true }
 leptos_meta = { workspace = true, features = ["nightly"] }
 leptos_router = { workspace = true, features = ["nightly"] }
@@ -29,13 +30,20 @@ tower = { workspace = true, optional = true }
 tower-http = { workspace = true, features = ["fs"], optional = true }
 wasm-bindgen = { workspace = true }
 tracing = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
 thiserror = { workspace = true }
 http = { workspace = true }
 pulldown-cmark = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-saleor-app-sdk = { workspace = true }
+saleor-app-sdk = { workspace = true, features = ["bridge"], optional = true }
 dotenvy = { workspace = true }
+envy = { workspace = true }
+cynic = { workspace = true, features = ["http-surf"], optional = true }
+surf = { workspace = true, optional = true }
+
+[build-dependencies]
+cynic-codegen = { workspace = true, optional = true }
 
 [features]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
@@ -45,11 +53,18 @@ ssr = [
     "dep:tower",
     "dep:tower-http",
     "dep:leptos_axum",
+    "dep:tracing",
+    "dep:saleor-app-sdk",
+    "dep:tracing-subscriber",
+    "dep:anyhow",
+    "dep:cynic",
+    "dep:cynic-codegen",
+    "dep:surf",
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",
-    "dep:tracing",
 ]
+
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

@@ -15,10 +15,10 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/saleor-marketplace.css"/>
+        <Stylesheet id="leptos" href="/pkg/saleor-app-template-ui.css"/>
 
         // sets the document title
-        <Title text="Saleors Harbour"/>
+        <Title text="Example UI App template in Rust"/>
 
         // content for this welcome page
         <Router fallback=|| {
@@ -28,9 +28,18 @@ pub fn App() -> impl IntoView {
         }>
             <main class="p-4 md:p-8 md:px-16">
                 <Routes>
-                    <Route path="" view=Home/>
+                    <Route path="/" view=Home/>
                 </Routes>
             </main>
         </Router>
     }
+}
+
+#[cfg(feature = "ssr")]
+#[derive(Debug, Clone)]
+pub struct AppState {
+    pub saleor_app: std::sync::Arc<tokio::sync::Mutex<saleor_app_sdk::SaleorApp>>,
+    pub config: saleor_app_sdk::config::Config,
+    pub manifest: saleor_app_sdk::manifest::AppManifest,
+    pub leptos_options: LeptosOptions,
 }

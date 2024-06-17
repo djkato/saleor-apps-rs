@@ -1,6 +1,40 @@
-use http::status::StatusCode;
 use leptos::*;
+
+#[cfg(feature = "ssr")]
+use axum::response::{IntoResponse, Response};
+#[cfg(feature = "ssr")]
+use http::header::ToStrError;
+use http::status::StatusCode;
 use thiserror::Error;
+
+/* ERROR STUFF FOR AXUM */
+
+#[cfg(feature = "ssr")]
+#[derive(Error, Debug)]
+pub enum AxumError {
+    #[error("Error converting something to string, `{0}`")]
+    ToStrError(#[from] ToStrError),
+    #[error("Anyhow function error: {0}")]
+    Anyhow(#[from] anyhow::Error),
+    #[error("Request is missing header `{0}`")]
+    MissingHeader(String),
+    #[error("Internal server error, `{0}`")]
+    InternalServerError(String),
+}
+
+// Tell axum how to convert `AppError` into a response.
+#[cfg(feature = "ssr")]
+impl IntoResponse for AxumError {
+    fn into_response(self) -> Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Something went wrong: {:?}", self),
+        )
+            .into_response()
+    }
+}
+
+/* THIS IS ERROR STUFF FOR LEPTOS */
 
 #[derive(Clone, Debug, Error)]
 pub enum AppError {
@@ -52,16 +86,16 @@ pub fn ErrorTemplate(
     }
 
     view! {
-        <h1>{if errors.len() > 1 {"Errors"} else {"Error"}}</h1>
+        <h1>{if errors.len() > 1 { "Errors" } else { "Error" }}</h1>
         <For
             // a function that returns the items we're iterating over; a signal is fine
-            each= move || {errors.clone().into_iter().enumerate()}
+            each=move || { errors.clone().into_iter().enumerate() }
             // a unique key for each item as a reference
             key=|(index, _error)| *index
             // renders each item to a view
             children=move |error| {
                 let error_string = error.1.to_string();
-                let error_code= error.1.status_code();
+                let error_code = error.1.status_code();
                 view! {
                     <h2>{error_code.to_string()}</h2>
                     <p>"Error: " {error_string}</p>

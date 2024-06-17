@@ -1,44 +1,133 @@
-pub mod server;
-pub mod components;
-pub mod routes;
+#![allow(
+    non_upper_case_globals,
+    clippy::large_enum_variant,
+    clippy::upper_case_acronyms,
+    dead_code
+)]
+#![feature(let_chains)]
 
 #[cfg(feature = "ssr")]
-pub mod fileserv;
+mod fileserv;
 #[cfg(feature = "ssr")]
-pub mod error_template;
+mod queries;
 
-#[cfg(feature = "ssr")]
-pub mod app;
-#[cfg(feature = "ssr")]
+mod app;
+mod components;
+mod routes;
+mod error_template;
+
 #[tokio::main]
-async fn main() {
+#[cfg(feature = "ssr")]
+async fn main() -> Result<(), std::io::Error> {
 
-    use axum::Router;
+    use std::sync::Arc;
+    use axum::{middleware, routing::{post,get}, Router};
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use crate::app::*;
-    use crate::fileserv::file_and_error_handler;
-    // Setting get_configuration(None) means we'll be using cargo-leptos's env values
-    // For deployment these variables are:
-    // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
-    // Alternately a file can be specified such as Some("Cargo.toml")
-    // The file would need to be included with the executable when moved to deployment
+    use app::*;
+    use fileserv::file_and_error_handler;
+    use saleor_app_sdk::middleware::verify_webhook_signature::webhook_signature_verifier;
+    use tokio::sync::Mutex;
+use saleor_app_sdk::{
+    cargo_info,
+    config::Config,
+    manifest::{AppManifestBuilder, AppPermission},
+    webhooks::{AsyncWebhookEventType, WebhookManifestBuilder},
+    SaleorApp,
+};
+
+    use crate::routes::api::{manifest::manifest, register::register, webhooks::webhooks};
+
+    //Leptos stuff
     let conf = get_configuration(None).await.unwrap();
     let leptos_options = conf.leptos_options;
-    let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
 
-    // build our application with a route
-    let app = Router::new()
+    // Saleor stuff
+    let config = Config::load().unwrap();
+    trace_to_std(&config).unwrap();
+    let saleor_app = SaleorApp::new(&config).unwrap();
+
+    let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
+        .add_webhook(
+            WebhookManifestBuilder::new(&config)
+                .set_query(
+                    r#"
+                    subscription QueryProductsChanged {
+                      event {
+                        ... on ProductUpdated {
+                          product {
+                            ... BaseProduct
+                          }
+                        }
+                        ... on ProductCreated {
+                          product {
+                            ... BaseProduct
+                          }
+                        }
+                        ... on ProductDeleted {
+                          product {
+                            ... BaseProduct
+                          }
+                        }
+                      }
+                    }
+
+                    fragment BaseProduct on Product {
+                      id
+                      slug
+                      name
+                      category {
+                        slug
+                      }
+                    }
+                    "#,
+                )
+                .add_async_events(vec![
+                    AsyncWebhookEventType::ProductCreated,
+                    AsyncWebhookEventType::ProductUpdated,
+                    AsyncWebhookEventType::ProductDeleted,
+                ])
+                .build(),
+        )
+        .add_permission(AppPermission::ManageProducts)
+        .build();
+
+    let app_state = AppState{
+        manifest: app_manifest,
+        config: config.clone(),
+        saleor_app: Arc::new(Mutex::new(saleor_app)),
+        leptos_options,
+    };
+
+    let state_1 = app_state.clone();
+    let app = 
+    Router::new()
+        .layer(middleware::from_fn(webhook_signature_verifier))
+        .route("/api/webhooks", post(webhooks))
+        .route("/api/register", post(register))
+        .route("/api/manifest", get(manifest))
+        // .leptos_routes_with_context(&leptos_options, routes,move || provide_context(state_1.clone()) , App)
         .leptos_routes(&leptos_options, routes, App)
         .fallback(file_and_error_handler)
-        .with_state(leptos_options);
+        .with_state(app_state.clone());
 
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    logging::log!("listening on http://{}", &addr);
-    axum::serve(listener, app.into_make_service())
-        .await
-        .unwrap();
+
+    let listener = tokio::net::TcpListener::bind(
+        "0.0.0.0:".to_owned()
+            + config
+                .app_api_base_url
+                .split(':')
+                .collect::<Vec<_>>()
+                .get(2)
+                .unwrap_or(&"3000"),
+    )
+    .await?;
+    tracing::debug!("listening on {}", listener.local_addr()?);
+
+   let _= axum::serve(listener, app.into_make_service())
+        .await;
+    Ok(())
 }
 
 #[cfg(not(feature = "ssr"))]
@@ -47,3 +136,26 @@ pub fn main() {
     // unless we want this to work with e.g., Trunk for a purely client-side app
     // see lib.rs for hydration function instead
 }
+
+
+#[cfg(feature = "ssr")]
+use saleor_app_sdk::config::Config;
+#[cfg(feature = "ssr")]
+pub fn trace_to_std(config: &Config) -> Result<(), envy::Error>  {
+    use tracing::level_filters::LevelFilter;
+    use tracing_subscriber::EnvFilter;
+
+    let filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::DEBUG.into())
+        .from_env().unwrap()
+        .add_directive(format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level).parse().unwrap());
+    tracing_subscriber::fmt()
+        .with_max_level(config.log_level)
+        .with_env_filter(filter)
+        .with_target(true)
+        .compact()
+        .init();
+    Ok(())
+}
+
+

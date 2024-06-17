@@ -14,6 +14,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 anyhow = { workspace = true }
 serde = { workspace = true }
+thiserror = { workspace = true }
 serde_json = { workspace = true }
 envy = { workspace = true }
 dotenvy = { workspace = true }
@@ -44,8 +45,24 @@ tracing-subscriber = { workspace = true, optional = true }
 
 ## Needed for webhooks
 
+## Needed for bridge
+wasm-bindgen = { workspace = true, optional = true }
+serde-wasm-bindgen = { version = "0.6.5", optional = true }
+bus = { version = "2.4.1", optional = true }
+
+[dependencies.web-sys]
+workspace = true
+features = [
+  "Window",
+  "Document",
+  "Url",
+  "UrlSearchParams",
+  "EventListener",
+  "EventTarget",
+  "console",
+]
+
 [features]
-# default = []
 default = ["middleware", "redis_apl", "webhook_utils", "tracing"]
 middleware = [
   "dep:axum",
@@ -57,3 +74,4 @@ middleware = [
 redis_apl = ["dep:redis"]
 webhook_utils = ["dep:http"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
+bridge = ["dep:wasm-bindgen", "dep:bus", "dep:serde-wasm-bindgen"]

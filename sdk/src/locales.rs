@@ -46,3 +46,9 @@ pub enum LocaleCode {
     ZhHans,
     ZhHant,
 }
+
+impl Default for LocaleCode {
+    fn default() -> Self {
+        Self::En
+    }
+}

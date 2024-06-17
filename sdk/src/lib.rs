@@ -1,4 +1,6 @@
 pub mod apl;
+#[cfg(feature = "bridge")]
+pub mod bridge;
 pub mod config;
 pub mod headers;
 pub mod locales;

@@ -36,7 +36,7 @@ pub fn App() -> impl IntoView {
 }
 
 #[cfg(feature = "ssr")]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, axum::extract::FromRef)]
 pub struct AppState {
     pub saleor_app: std::sync::Arc<tokio::sync::Mutex<saleor_app_sdk::SaleorApp>>,
     pub config: saleor_app_sdk::config::Config,

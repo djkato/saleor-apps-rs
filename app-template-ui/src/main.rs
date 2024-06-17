@@ -21,20 +21,20 @@ mod error_template;
 async fn main() -> Result<(), std::io::Error> {
 
     use std::sync::Arc;
-    use axum::{middleware, routing::{post,get}, Router};
+    use axum::{middleware, routing::{get, post}, Router};
     use leptos::*;
-    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use leptos_axum::{generate_route_list, LeptosRoutes };
     use app::*;
     use fileserv::file_and_error_handler;
     use saleor_app_sdk::middleware::verify_webhook_signature::webhook_signature_verifier;
     use tokio::sync::Mutex;
-use saleor_app_sdk::{
-    cargo_info,
-    config::Config,
-    manifest::{AppManifestBuilder, AppPermission},
-    webhooks::{AsyncWebhookEventType, WebhookManifestBuilder},
-    SaleorApp,
-};
+    use saleor_app_sdk::{
+        cargo_info,
+        config::Config,
+        manifest::{AppManifestBuilder, AppPermission},
+        webhooks::{AsyncWebhookEventType, WebhookManifestBuilder},
+        SaleorApp,
+    };
 
     use crate::routes::api::{manifest::manifest, register::register, webhooks::webhooks};
 
@@ -103,15 +103,12 @@ use saleor_app_sdk::{
     let state_1 = app_state.clone();
     let app = 
     Router::new()
-        .layer(middleware::from_fn(webhook_signature_verifier))
-        .route("/api/webhooks", post(webhooks))
-        .route("/api/register", post(register))
-        .route("/api/manifest", get(manifest))
-        // .leptos_routes_with_context(&leptos_options, routes,move || provide_context(state_1.clone()) , App)
-        .leptos_routes(&leptos_options, routes, App)
+        .leptos_routes_with_context(&app_state, routes,move || provide_context(state_1.clone()) , App)
         .fallback(file_and_error_handler)
+        .route("/api/webhooks", post(webhooks).route_layer(middleware::from_fn(webhook_signature_verifier)))
+        .route("/api/register", post(register).route_layer(middleware::from_fn(webhook_signature_verifier)))
+        .route("/api/manifest", get(manifest))
         .with_state(app_state.clone());
-
 
     let listener = tokio::net::TcpListener::bind(
         "0.0.0.0:".to_owned()

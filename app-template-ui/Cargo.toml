@@ -15,7 +15,7 @@ license = "MIT OR Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axum = { workspace = true, optional = true }
+axum = { workspace = true, optional = true, features = ["macros"] }
 console_error_panic_hook = { workspace = true }
 leptos = { workspace = true, features = ["nightly"] }
 anyhow = { workspace = true, optional = true }

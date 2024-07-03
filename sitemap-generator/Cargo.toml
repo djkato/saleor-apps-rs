@@ -1,6 +1,6 @@
 [package]
 name = "sitemap-generator"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 authors = ["Djkáťo <djkatovfx@gmail.com>"]
 description = "Creates and keeps Sitemap.xml uptodate with Saleor."
@@ -16,11 +16,6 @@ anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["full"] }
-redis = { workspace = true, features = [
-  "aio",
-  "tokio-comp",
-  "connection-manager",
-] }
 envy.workspace = true
 tracing.workspace = true
 tracing-serde.workspace = true
@@ -35,13 +30,13 @@ cynic = { workspace = true, features = ["http-surf"] }
 cynic-codegen.workspace = true
 tera = { version = "1.19.1", default-features = false }
 fd-lock = "4.0.2"
-quick-xml = { version = "0.31.0", features = ["serialize"] }
+quick-xml = { version = "0.34.0", features = ["serialize"] }
 flate2 = "1.0.28"
 tinytemplate = "1.2.1"
-sitemap-rs = "0.2.1"
 chrono = { version = "0.4.34", features = ["serde"] }
 serde_cbor = "0.11.2"
 pico-args = "0.5.0"
+rayon = "1.10.0"
 
 [build-dependencies]
 cynic-codegen.workspace = true

@@ -25,9 +25,8 @@ pub fn create_routes(state: AppState) -> Router {
     //TODO : Fix this relative path issue in workspaces
     let serve_dir = ServeDir::new("./public").not_found_service(service);
 
-    //TODO Query for everything using the app auth token
-    //TODO "Failed fetching initial products: More than one channel exists, please spocify which
-    //one"
+    //TODO: Query for everything using the app auth token
+    //TODO: "Failed fetching initial products: More than one channel exists, please spocify which one"
     Router::new()
         .route("/api/webhooks", any(webhooks))
         .layer(middleware::from_fn(webhook_signature_verifier))

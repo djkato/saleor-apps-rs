@@ -8,13 +8,12 @@ use axum::{
 };
 use cynic::{http::SurfExt, QueryBuilder};
 use saleor_app_sdk::{AuthData, AuthToken};
-use sitemap_rs::url::Url;
 use tinytemplate::TinyTemplate;
 use tokio::spawn;
 use tracing::{debug, error, info, trace};
 
 use crate::{
-    app::{AppError, AppState, XmlData, XmlDataType},
+    app::{AppError, AppState},
     queries::{
         event_subjects_updated::{
             self, CategoryUpdated, CollectionUpdated, PageUpdated, ProductUpdated,
@@ -30,7 +29,6 @@ use crate::{
         },
         get_all_pages::{self, GetPagesInitial, GetPagesNext, GetPagesNextVariables},
     },
-    routes::webhooks::write_xml,
 };
 
 pub async fn register(
@@ -75,206 +73,24 @@ pub async fn register(
 
 pub async fn regenerate(state: AppState, saleor_api_url: String) -> anyhow::Result<()> {
     info!("regeneration: fetching all categories, products, collections, pages");
-    let xml_cache = state.xml_cache.lock().await;
     let app = state.saleor_app.lock().await;
     let auth_data = app.apl.get(&saleor_api_url).await?;
 
-    let mut categories: Vec<(Category3, Vec<Arc<CategorisedProduct>>)> =
-        get_all_categories(&saleor_api_url, &auth_data.token)
-            .await?
-            .into_iter()
-            .map(|c| (c, vec![]))
-            .collect();
-    let mut products = vec![];
-
-    // If there are no products, append this empty array
-    let mut empty_products = vec![];
-
-    for category in categories.iter_mut() {
-        products.append(
-            match &mut get_all_products(
-                &saleor_api_url,
-                &state.target_channel,
-                &auth_data.token,
-                category,
-            )
-            .await
-            {
-                Ok(p) => p,
-                Err(e) => {
-                    info!("Category {} has no products, {e}", category.0.slug);
-                    &mut empty_products
-                }
-            },
-        );
-    }
     let pages = get_all_pages(&saleor_api_url, &auth_data.token).await?;
     let collections = get_all_collections(&saleor_api_url, &auth_data.token).await?;
     info!(
         "regeneration: found {} products, {} categories, {} pages, {} collections",
-        products.len(),
-        categories.len(),
+        0,
+        0,
         pages.len(),
         collections.len()
     );
-    info!("regeneration: creating xml data and caching it");
-    let mut xml_data = vec![];
-    xml_data.append(
-        &mut categories
-            .into_iter()
-            .map(|c| XmlData {
-                slug: c.0.slug,
-                last_modified: chrono::DateTime::<chrono::Utc>::from_str(&c.0.updated_at.0)
-                    .map_or(chrono::offset::Utc::now().fixed_offset(), |d| {
-                        d.fixed_offset()
-                    }),
-                id: c.0.id,
-                relations: c.1.iter().map(|p| p.product.id.clone()).collect::<Vec<_>>(),
-                data_type: XmlDataType::Category,
-            })
-            .collect::<Vec<_>>(),
-    );
-    xml_data.append(
-        &mut products
-            .into_iter()
-            .map(|p| XmlData {
-                data_type: XmlDataType::Product,
-                relations: vec![p.category_id.clone()],
-                id: p.product.id.clone(),
-                last_modified: chrono::DateTime::<chrono::Utc>::from_str(&p.product.updated_at.0)
-                    .map_or(chrono::offset::Utc::now().fixed_offset(), |d| {
-                        d.fixed_offset()
-                    }),
-                slug: p.product.slug.clone(),
-            })
-            .collect(),
-    );
-    xml_data.append(
-        &mut pages
-            .into_iter()
-            .map(|p| XmlData {
-                data_type: XmlDataType::Page,
-                relations: vec![],
-                id: p.id.clone(),
-                last_modified: match p.published_at {
-                    Some(d) => chrono::DateTime::<chrono::Utc>::from_str(&d.0)
-                        .map_or(chrono::offset::Utc::now().fixed_offset(), |d| {
-                            d.fixed_offset()
-                        }),
-                    None => chrono::offset::Utc::now().fixed_offset(),
-                },
-                slug: p.slug.clone(),
-            })
-            .collect(),
-    );
-    xml_data.append(
-        &mut collections
-            .into_iter()
-            .map(|c| XmlData {
-                slug: c.slug,
-                last_modified: chrono::offset::Utc::now().fixed_offset(),
-                id: c.id,
-                relations: vec![],
-                data_type: XmlDataType::Category,
-            })
-            .collect::<Vec<_>>(),
-    );
-
-    xml_cache.set(xml_data.clone(), &saleor_api_url).await?;
-    info!("regeneration: xml_cache was set");
-
-    //create urls
+    info!("regeneration: creating xml data");
     info!("regeneration: creating urls");
-    let mut page_urls = vec![];
-    let mut product_urls = vec![];
-    let mut category_urls = vec![];
-    let mut collection_urls = vec![];
-
-    for x in xml_data.iter() {
-        match x.data_type {
-            XmlDataType::Page => {
-                let mut tt = TinyTemplate::new();
-                tt.add_template("page_url", &state.sitemap_config.pages_template)?;
-                let context = PageUpdated {
-                    page: Some(event_subjects_updated::Page {
-                        slug: x.slug.clone(),
-                        id: x.id.clone(),
-                    }),
-                };
-                let page_url = Url::builder(tt.render("page_url", &context)?)
-                    .last_modified(x.last_modified)
-                    .build()?;
-                trace!("Created Page url: {}", &page_url.location);
-                page_urls.push(page_url);
-            }
-            XmlDataType::Product => {
-                let mut tt = TinyTemplate::new();
-                tt.add_template("product_url", &state.sitemap_config.product_template)?;
-                let context = ProductUpdated {
-                    product: Some(event_subjects_updated::Product {
-                        id: x.id.clone(),
-                        slug: x.slug.clone(),
-                        category: match xml_data.iter().find(|all| {
-                            x.relations
-                                .iter()
-                                .any(|rel| all.id == *rel && all.data_type == XmlDataType::Category)
-                        }) {
-                            Some(c) => Some(event_subjects_updated::Category {
-                                slug: c.slug.clone(),
-                                id: c.id.clone(),
-                            }),
-                            None => Some(event_subjects_updated::Category {
-                                slug: "unknown".to_owned(),
-                                id: cynic::Id::new("unknown".to_owned()),
-                            }),
-                        },
-                    }),
-                };
-                let product_url = Url::builder(tt.render("product_url", &context)?)
-                    .last_modified(x.last_modified)
-                    .build()?;
-
-                trace!("Created Page url: {}", &product_url.location);
-                product_urls.push(product_url);
-            }
-            XmlDataType::Category => {
-                let mut tt = TinyTemplate::new();
-                tt.add_template("category_url", &state.sitemap_config.category_template)?;
-                let context = CategoryUpdated {
-                    category: Some(event_subjects_updated::Category2 {
-                        id: x.id.clone(),
-                        slug: x.slug.clone(),
-                    }),
-                };
-                let category_url = Url::builder(tt.render("category_url", &context)?)
-                    .last_modified(x.last_modified)
-                    .build()?;
-
-                trace!("Created category url: {}", &category_url.location);
-                category_urls.push(category_url);
-            }
-            XmlDataType::Collection => {
-                let mut tt = TinyTemplate::new();
-                tt.add_template("coll_url", &state.sitemap_config.collection_template)?;
-                let context = CollectionUpdated {
-                    collection: Some(event_subjects_updated::Collection {
-                        slug: x.slug.clone(),
-                        id: x.id.clone(),
-                    }),
-                };
-                let collection_url = Url::builder(tt.render("coll_url", &context)?)
-                    .last_modified(x.last_modified)
-                    .build()?;
-
-                trace!("Created collection url: {}", &collection_url.location);
-                collection_urls.push(collection_url);
-            }
-        }
-    }
-    write_xml(page_urls, &state, XmlDataType::Page).await?;
-    write_xml(collection_urls, &state, XmlDataType::Collection).await?;
-    write_xml(category_urls, &state, XmlDataType::Category).await?;
-    write_xml(product_urls, &state, XmlDataType::Product).await?;
+    // write_xml(page_urls, &state, XmlDataType::Page).await?;
+    // write_xml(collection_urls, &state, XmlDataType::Collection).await?;
+    // write_xml(category_urls, &state, XmlDataType::Category).await?;
+    // write_xml(product_urls, &state, XmlDataType::Product).await?;
     Ok(())
 }
 

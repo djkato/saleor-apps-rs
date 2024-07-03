@@ -36,26 +36,26 @@ query getPagesNext($after: String!) {
 }
 */
 
-#[derive(cynic::QueryVariables, Debug)]
+#[derive(cynic::QueryVariables, Debug, Clone)]
 pub struct GetPagesNextVariables<'a> {
     pub after: &'a str,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 #[cynic(graphql_type = "Query", variables = "GetPagesNextVariables")]
 pub struct GetPagesNext {
     #[arguments(first: 50, after: $after)]
     pub pages: Option<PageCountableConnection>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 #[cynic(graphql_type = "Query")]
 pub struct GetPagesInitial {
     #[arguments(first: 50)]
     pub pages: Option<PageCountableConnection2>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 #[cynic(graphql_type = "PageCountableConnection")]
 pub struct PageCountableConnection2 {
     pub total_count: Option<i32>,
@@ -63,18 +63,18 @@ pub struct PageCountableConnection2 {
     pub edges: Vec<PageCountableEdge>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct PageCountableConnection {
     pub page_info: PageInfo,
     pub edges: Vec<PageCountableEdge>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct PageCountableEdge {
     pub node: Page,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct PageInfo {
     pub has_next_page: bool,
     pub end_cursor: Option<String>,

@@ -93,6 +93,7 @@ async fn main() -> anyhow::Result<()> {
         manifest: app_manifest,
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),
+        cod_extra_price_as_product_slug: std::env::var("COD_EXTRA_PRICE_AS_PRODUCT_SLUG").ok()
     };
     let app = create_routes(app_state);
 

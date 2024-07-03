@@ -69,6 +69,7 @@ pub struct AppState {
     pub config: Config,
     pub manifest: AppManifest,
     pub active_payment_methods: Vec<ActivePaymentMethod>,
+    pub cod_extra_price_as_product_slug: Option<String>,
 }
 
 pub fn get_active_payment_methods_from_env() -> anyhow::Result<Vec<ActivePaymentMethod>> {

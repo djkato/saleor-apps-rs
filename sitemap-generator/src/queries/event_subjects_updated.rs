@@ -90,111 +90,111 @@ fragment BaseProduct on Product {
 }
 "#;
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 #[cynic(graphql_type = "Subscription")]
 pub struct QueryProductsChanged {
     pub event: Option<Event>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct ProductUpdated {
     pub product: Option<Product>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct ProductDeleted {
     pub product: Option<Product>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct ProductCreated {
     pub product: Option<Product>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct Product {
     pub id: cynic::Id,
     pub slug: String,
     pub category: Option<Category>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct PageUpdated {
     pub page: Option<Page>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct PageDeleted {
     pub page: Option<Page>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct PageCreated {
     pub page: Option<Page>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct Page {
     pub slug: String,
     pub id: cynic::Id,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct CollectionUpdated {
     pub collection: Option<Collection>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct CollectionDeleted {
     pub collection: Option<Collection>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct CollectionCreated {
     pub collection: Option<Collection>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct Collection {
     pub id: cynic::Id,
     pub slug: String,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct CategoryUpdated {
     pub category: Option<Category2>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct CategoryDeleted {
     pub category: Option<Category2>,
 }
 
-#[derive(cynic::QueryFragment, Debug)]
+#[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct CategoryCreated {
     pub category: Option<Category2>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct Category {
     pub slug: String,
     pub id: cynic::Id,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 #[cynic(graphql_type = "Category")]
 pub struct Category2 {
     pub id: cynic::Id,
     pub slug: String,
 }
 
-#[derive(cynic::QueryFragment, Debug, Serialize)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct PageInfo {
     pub end_cursor: Option<String>,
     pub has_next_page: bool,
 }
 
-#[derive(cynic::InlineFragments, Debug)]
+#[derive(cynic::InlineFragments, Debug, Clone)]
 pub enum Event {
     ProductUpdated(ProductUpdated),
     ProductCreated(ProductCreated),

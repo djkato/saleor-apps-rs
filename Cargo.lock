@@ -3938,6 +3938,7 @@ dependencies = [
  "serde_json",
  "surf",
  "tera",
+ "thiserror",
  "tinytemplate",
  "tokio",
  "tower",

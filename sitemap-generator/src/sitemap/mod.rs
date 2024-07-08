@@ -8,13 +8,10 @@ use chrono::{DateTime, FixedOffset, SubsecRound};
 use quick_xml::DeError;
 use serde::{Deserialize, Serialize};
 
-
 const SITEMAP_XMLNS: &str = "http://sitemaps.org/schemas/sitemap/0.9";
 const SALEOR_REF_XMLNS: &str = "http://app-sitemap-generator.kremik.sk/xml-schemas/saleor-ref.xsd";
 
-
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 #[serde(rename = "urlset")]
 pub struct UrlSet {
     #[serde(rename = "@xmlns:saleor")]
@@ -24,28 +21,44 @@ pub struct UrlSet {
     pub url: Vec<Url>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct Url {
     pub loc: String,
     pub lastmod: DateTime<FixedOffset>,
     #[serde(rename = "saleor:ref")]
     pub saleor_ref: SaleorRef,
 }
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub enum RefType {
     Product,
-    
+    Category,
+    Collection,
+    Page,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct SaleorRef {
     #[serde(rename = "saleor:id")]
     pub id: String,
     #[serde(rename = "saleor:type")]
-    pub typ: String,
-    #[serde(rename = "saleor:category-id")]
+    pub typ: RefType,
+    /**
+    Related items come first in url, if present. eg:
+        site.com/{page} : typ = RefType::Page
+        site.com/{category}/{product} : typ= Product, related_typ: Category
+    */
+    #[serde(rename = "saleor:related-id")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub category_id: Option<String>,
-    pub 
+    pub related_id: Option<String>,
+    /**
+    Related items come first in url, if present. eg:
+        site.com/{page} : typ = RefType::Page
+        site.com/{category}/{product} : typ= Product, related_typ: Category
+    */
+    #[serde(rename = "saleor:related-typ")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub related_typ: Option<RefType>,
 }
 
 impl UrlSet {
@@ -76,14 +89,25 @@ impl UrlSet {
             url: vec![],
         }
     }
+
+    pub fn find_urls(&mut self, id: &str) -> Vec<&mut Url> {
+        self.url
+            .iter_mut()
+            .filter(|url| {
+                url.saleor_ref.id == id || url.saleor_ref.related_id == Some(id.to_owned())
+            })
+            .collect()
+    }
 }
 
 impl Url {
-    pub fn new_generic_url(id: String, slug: String) -> Self {
+    pub fn new(id: String, slug: String, typ: RefType) -> Self {
         Self {
             saleor_ref: SaleorRef {
-                product_id: None,
-                category_id: Some(id),
+                id,
+                typ,
+                related_id: None,
+                related_typ: None,
             },
             lastmod: chrono::offset::Utc::now().fixed_offset().round_subsecs(1),
             // Have template string determine the url
@@ -91,20 +115,35 @@ impl Url {
         }
     }
 
-    pub fn new_product_url(
-        category_id: String,
-        product_id: String,
-        category_slug: String,
-        product_slug: String,
+    /**
+    For exaple: product/category, product/collection
+    */
+    pub fn new_with_ref(
+        id: String,
+        slug: String,
+        typ: RefType,
+        related_id: Option<String>,
+        related_slug: Option<String>,
+        related_typ: Option<RefType>,
     ) -> Self {
+        let loc = match related_slug {
+            Some(r_s) => {
+                format!("https://example.com/{r_s}/{slug}")
+            }
+            None => {
+                format!("https://example.com/{slug}")
+            }
+        };
         Self {
-            // Have template string determine the url
-            loc: format!("https://example.com/{category_slug}/{product_slug}"),
-            lastmod: chrono::offset::Utc::now().fixed_offset().round_subsecs(1),
             saleor_ref: SaleorRef {
-                product_id: Some(product_id),
-                category_id: Some(category_id),
+                id,
+                typ,
+                related_id,
+                related_typ,
             },
+            lastmod: chrono::offset::Utc::now().fixed_offset().round_subsecs(1),
+            // Have template string determine the url
+            loc,
         }
     }
 }

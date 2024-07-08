@@ -31,7 +31,7 @@ use tracing::{debug, error, info};
 use crate::{
     app::{trace_to_std, AppState, SitemapConfig},
     queries::event_subjects_updated::EVENTS_QUERY,
-    routes::{create_routes, register::regenerate},
+    routes::create_routes,
 };
 
 #[tokio::main]

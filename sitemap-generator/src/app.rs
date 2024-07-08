@@ -10,6 +10,8 @@ use saleor_app_sdk::{config::Config, manifest::AppManifest, SaleorApp};
 use serde::{Deserialize, Serialize};
 use tracing::level_filters::LevelFilter;
 
+use crate::queries::event_subjects_updated::Event;
+
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(anyhow::Error);
 
@@ -60,7 +62,7 @@ pub struct AppState {
     pub target_channel: String,
     pub sitemap_config: SitemapConfig,
     pub manifest: AppManifest,
-    pub task_queue_sender: Sender<EventType>,
+    pub task_queue_sender: Sender<Event>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

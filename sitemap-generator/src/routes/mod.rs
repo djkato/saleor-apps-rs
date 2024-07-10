@@ -1,11 +1,15 @@
 use axum::{
     handler::HandlerWithoutStateExt,
     http::StatusCode,
-    middleware,
     routing::{any, get, post},
     Router,
 };
+
+#[cfg(not(debug_assertions))]
+use axum::middleware;
+#[cfg(not(debug_assertions))]
 use saleor_app_sdk::middleware::verify_webhook_signature::webhook_signature_verifier;
+
 use tower_http::services::ServeDir;
 
 use crate::app::AppState;
@@ -22,14 +26,20 @@ pub fn create_routes(state: AppState) -> Router {
         (StatusCode::NOT_FOUND, "Not found")
     }
     let service = handle_404.into_service();
-    //TODO : Fix this relative path issue in workspaces
+
+    #[cfg(not(debug_assertions))]
     let serve_dir = ServeDir::new("./public").not_found_service(service);
 
+    #[cfg(debug_assertions)]
+    let serve_dir = ServeDir::new("./sitemap-generator/public").not_found_service(service);
     //TODO: Query for everything using the app auth token
     //TODO: "Failed fetching initial products: More than one channel exists, please spocify which one"
-    Router::new()
-        .route("/api/webhooks", any(webhooks))
-        .layer(middleware::from_fn(webhook_signature_verifier))
+    let r = Router::new().route("/api/webhooks", any(webhooks));
+
+    #[cfg(not(debug_assertions))]
+    r.layer(middleware::from_fn(webhook_signature_verifier));
+
+    r
         //handles just path, eg. localhost:3000/
         .route(
             "/",

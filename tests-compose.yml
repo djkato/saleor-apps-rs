@@ -1,0 +1,9 @@
+services:
+  redis:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - DISABLE_COMMANDS=FLUSHDB,FLUSHALL,CONFIG
+    ports:
+      - 6379:6379
+    restart: unless-stopped

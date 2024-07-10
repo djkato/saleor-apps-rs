@@ -10,8 +10,11 @@ mod app;
 mod queries;
 mod routes;
 mod sitemap;
-mod test;
 
+#[cfg(debug_assertions)]
+mod tests;
+
+use axum::Router;
 use saleor_app_sdk::{
     config::Config,
     manifest::{cargo_info, AppManifestBuilder, AppPermission},
@@ -35,13 +38,31 @@ use crate::{
 };
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let config = Config::load()?;
-    trace_to_std(&config)?;
-    let sitemap_config = SitemapConfig::load()?;
+async fn main() {
     debug!("Creating configs...");
+    let config = Config::load().unwrap();
+    trace_to_std(&config).unwrap();
+    let sitemap_config = SitemapConfig::load().unwrap();
 
-    let saleor_app = SaleorApp::new(&config)?;
+    let app = create_app(&config, sitemap_config).await;
+
+    let listener = tokio::net::TcpListener::bind(
+        "0.0.0.0:".to_owned()
+            + config
+                .app_api_base_url
+                .split(':')
+                .collect::<Vec<_>>()
+                .get(2)
+                .unwrap_or(&"3000"),
+    )
+    .await
+    .unwrap();
+    info!("listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, app).await.unwrap();
+}
+
+async fn create_app(config: &Config, sitemap_config: SitemapConfig) -> Router {
+    let saleor_app = SaleorApp::new(&config).unwrap();
 
     debug!("Creating saleor App...");
     let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
@@ -83,27 +104,11 @@ async fn main() -> anyhow::Result<()> {
             Ok(v) => v,
             Err(e) => {
                 error!("Missing channel slug, Saleor will soon deprecate product queries without channel specified.");
-                anyhow::bail!(e);
+                "".to_string()
             }
         },
         saleor_app: Arc::new(Mutex::new(saleor_app)),
     };
     debug!("Created AppState...");
-
-    let app = create_routes(app_state);
-    let listener = tokio::net::TcpListener::bind(
-        "0.0.0.0:".to_owned()
-            + config
-                .app_api_base_url
-                .split(':')
-                .collect::<Vec<_>>()
-                .get(2)
-                .unwrap_or(&"3000"),
-    )
-    .await?;
-    info!("listening on {}", listener.local_addr()?);
-    match axum::serve(listener, app).await {
-        Ok(o) => Ok(o),
-        Err(e) => anyhow::bail!(e),
-    }
+    create_routes(app_state)
 }

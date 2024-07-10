@@ -4,9 +4,18 @@ mod event_handler;
 mod page;
 mod product;
 
-use chrono::{DateTime, FixedOffset, SubsecRound};
-use quick_xml::DeError;
+use std::ops::{Deref, DerefMut};
+
 use serde::{Deserialize, Serialize};
+use tinytemplate::TinyTemplate;
+
+use crate::{
+    app::SitemapConfig,
+    queries::{
+        event_subjects_updated::{Category, Collection, Page, Product, ProductUpdated},
+        get_all_categories_n_products::Product,
+    },
+};
 
 const SITEMAP_XMLNS: &str = "http://sitemaps.org/schemas/sitemap/0.9";
 const SALEOR_REF_XMLNS: &str = "http://app-sitemap-generator.kremik.sk/xml-schemas/saleor-ref.xsd";
@@ -14,136 +23,145 @@ const SALEOR_REF_XMLNS: &str = "http://app-sitemap-generator.kremik.sk/xml-schem
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 #[serde(rename = "urlset")]
 pub struct UrlSet {
-    #[serde(rename = "@xmlns:saleor")]
-    xmlns_saleor: String,
-    #[serde(rename = "@xmlns")]
-    xmlns: String,
-    pub url: Vec<Url>,
+    pub urls: Vec<Url>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct Url {
-    pub loc: String,
-    pub lastmod: DateTime<FixedOffset>,
-    #[serde(rename = "saleor:ref")]
-    pub saleor_ref: SaleorRef,
+    pub url: String,
+    pub data: ItemData,
+    pub related: Option<ItemData>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
-pub enum RefType {
+pub struct ItemData {
+    pub id: String,
+    pub slug: String,
+    pub typ: ItemType,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+pub enum ItemType {
     Product,
     Category,
     Collection,
     Page,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
-pub struct SaleorRef {
-    #[serde(rename = "saleor:id")]
-    pub id: String,
-    #[serde(rename = "saleor:type")]
-    pub typ: RefType,
-    /**
-    Related items come first in url, if present. eg:
-        site.com/{page} : typ = RefType::Page
-        site.com/{category}/{product} : typ= Product, related_typ: Category
-    */
-    #[serde(rename = "saleor:related-id")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub related_id: Option<String>,
-    /**
-    Related items come first in url, if present. eg:
-        site.com/{page} : typ = RefType::Page
-        site.com/{category}/{product} : typ= Product, related_typ: Category
-    */
-    #[serde(rename = "saleor:related-typ")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub related_typ: Option<RefType>,
+impl UrlSet {
+    pub fn new() -> Self {
+        Self { urls: vec![] }
+    }
 }
 
-impl UrlSet {
-    /**
-    Icludes xml version header
-    */
-    pub fn to_file(&self) -> Result<String, DeError> {
-        let init = quick_xml::se::to_string(self)?;
-        Ok(r#"<?xml version="1.0" encoding="UTF-8"?>"#.to_string() + "\n" + &init)
+impl Deref for UrlSet {
+    type Target = Vec<Url>;
+    fn deref(&self) -> &Self::Target {
+        &self.urls
     }
-    /**
-    adds static xmlns default strings
-    */
-    pub fn new() -> Self {
-        let mut base_url = std::env::var("APP_API_BASE_URL").unwrap();
-        //Cuz apparently xml url thingy isn't actually an url so you can't https? Gosh I hate xml
-        if base_url.contains("https") {
-            base_url = base_url.replacen("https", "http", 1);
-        }
-        //Trailing / in url would mess stuff up
-        if base_url.chars().last().unwrap() == '/' {
-            base_url.pop();
-        }
-        let xmlns_saleor = format!("{base_url}/schemas/saleor-ref.xsd",);
-        Self {
-            xmlns: SITEMAP_XMLNS.to_string(),
-            xmlns_saleor,
-            url: vec![],
-        }
-    }
+}
 
-    pub fn find_urls(&mut self, id: &str) -> Vec<&mut Url> {
-        self.url
-            .iter_mut()
-            .filter(|url| {
-                url.saleor_ref.id == id || url.saleor_ref.related_id == Some(id.to_owned())
-            })
-            .collect()
+impl DerefMut for UrlSet {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.urls
     }
 }
 
 impl Url {
-    pub fn new(id: String, slug: String, typ: RefType) -> Self {
-        Self {
-            saleor_ref: SaleorRef {
-                id,
-                typ,
-                related_id: None,
-                related_typ: None,
-            },
-            lastmod: chrono::offset::Utc::now().fixed_offset().round_subsecs(1),
-            // Have template string determine the url
-            loc: format!("https://example.com/{slug}"),
-        }
+    pub fn new_product(
+        sitemap_config: &SitemapConfig,
+        product: Product,
+    ) -> Result<Self, NewUrlError> {
+        let category = product
+            .category
+            .as_ref()
+            .ok_or(NewUrlError::MissingData)?
+            .clone();
+        let data = ItemData {
+            id: product.id.inner().to_owned(),
+            slug: product.slug.clone(),
+            typ: ItemType::Product,
+        };
+
+        let related = Some(ItemData {
+            id: category.id.inner().to_owned(),
+            slug: category.slug,
+            typ: ItemType::Category,
+        });
+
+        let mut tt = TinyTemplate::new();
+
+        tt.add_template("t", &sitemap_config.product_template);
+
+        let url = tt.render("t", &product)?;
+        Ok(Self { url, data, related })
     }
 
-    /**
-    For exaple: product/category, product/collection
-    */
-    pub fn new_with_ref(
-        id: String,
-        slug: String,
-        typ: RefType,
-        related_id: Option<String>,
-        related_slug: Option<String>,
-        related_typ: Option<RefType>,
-    ) -> Self {
-        let loc = match related_slug {
-            Some(r_s) => {
-                format!("https://example.com/{r_s}/{slug}")
-            }
-            None => {
-                format!("https://example.com/{slug}")
-            }
+    pub fn new_category(
+        sitemap_config: &SitemapConfig,
+        category: Category,
+    ) -> Result<Self, NewUrlError> {
+        let data = ItemData {
+            id: category.id.inner().to_owned(),
+            slug: category.slug.clone(),
+            typ: ItemType::Category,
         };
-        Self {
-            saleor_ref: SaleorRef {
-                id,
-                typ,
-                related_id,
-                related_typ,
-            },
-            lastmod: chrono::offset::Utc::now().fixed_offset().round_subsecs(1),
-            // Have template string determine the url
-            loc,
-        }
+        let mut tt = TinyTemplate::new();
+
+        tt.add_template("t", &sitemap_config.category_template);
+
+        let url = tt.render("t", &category)?;
+        Ok(Self {
+            url,
+            data,
+            related: None,
+        })
     }
+
+    pub fn new_collection(
+        sitemap_config: &SitemapConfig,
+        collection: Collection,
+    ) -> Result<Self, NewUrlError> {
+        let data = ItemData {
+            id: collection.id.inner().to_owned(),
+            slug: collection.slug.clone(),
+            typ: ItemType::Collection,
+        };
+        let mut tt = TinyTemplate::new();
+
+        tt.add_template("t", &sitemap_config.collection_template);
+
+        let url = tt.render("t", &collection)?;
+        Ok(Self {
+            url,
+            data,
+            related: None,
+        })
+    }
+
+    pub fn new_page(sitemap_config: &SitemapConfig, page: Page) -> Result<Self, NewUrlError> {
+        let data = ItemData {
+            id: page.id.inner().to_owned(),
+            slug: page.slug.clone(),
+            typ: ItemType::Page,
+        };
+        let mut tt = TinyTemplate::new();
+
+        tt.add_template("t", &sitemap_config.pages_template);
+
+        let url = tt.render("t", &page)?;
+        Ok(Self {
+            url,
+            data,
+            related: None,
+        })
+    }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum NewUrlError {
+    #[error("Some property inside passed data for new url was None, but should've been Some")]
+    MissingData,
+    #[error("Bad templates or wrong context data to fill out the template")]
+    BadTemplating(#[from] tinytemplate::error::Error),
 }

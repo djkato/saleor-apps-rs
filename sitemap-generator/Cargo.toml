@@ -22,13 +22,16 @@ tracing-serde.workspace = true
 tracing-subscriber.workspace = true
 dotenvy.workspace = true
 axum.workspace = true
-saleor-app-sdk.workspace = true
+saleor-app-sdk = { workspace = true, features = ["file_apl"] }
 tower = { workspace = true, features = ["util"] }
 tower-http = { workspace = true, features = ["fs", "trace"] }
 surf.workspace = true
 cynic = { workspace = true, features = ["http-surf"] }
 cynic-codegen.workspace = true
 thiserror.workspace = true
+rstest.workspace = true
+async-std = { workspace = true, features = ["attributes"] }
+
 tera = { version = "1.19.1", default-features = false }
 fd-lock = "4.0.2"
 quick-xml = { version = "0.34.0", features = ["serialize"] }

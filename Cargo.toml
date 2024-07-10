@@ -42,6 +42,8 @@ leptos_axum = { version = "0.6" }
 leptos_meta = { version = "0.6", features = ["nightly"] }
 leptos_router = { version = "0.6", features = ["nightly"] }
 web-sys = "0.3.69"
+rstest = "0.21.0"
+async-std = { version = "1.5", features = ["attributes"] }
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

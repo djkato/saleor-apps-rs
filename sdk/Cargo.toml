@@ -63,6 +63,8 @@ features = [
   "console",
 ]
 
+[dev-dependencies]
+
 [features]
 default = ["middleware", "redis_apl", "webhook_utils", "tracing"]
 middleware = [
@@ -73,6 +75,7 @@ middleware = [
   "dep:http",
 ]
 redis_apl = ["dep:redis"]
+file_apl = []
 webhook_utils = ["dep:http"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 bridge = [

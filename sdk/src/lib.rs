@@ -73,7 +73,7 @@ impl SaleorApp {
                 File => {
                     #[cfg(feature = "file_apl")]
                     return Ok(Box::new(FileApl {
-                        path: "apl.txt".to_owned(),
+                        path: config.apl_url.to_owned(),
                     }));
                     #[cfg(not(feature = "file_apl"))]
                     {

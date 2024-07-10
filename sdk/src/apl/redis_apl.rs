@@ -28,7 +28,7 @@ impl APL for RedisApl {
     async fn set(&self, auth_data: AuthData) -> Result<()> {
         debug!("set()");
         let mut conn = self.client.get_multiplexed_async_connection().await?;
-        conn.set(
+        conn.set::<_, _, String>(
             self.prepare_key(&auth_data.saleor_api_url),
             serde_json::to_string(&auth_data)?,
         )

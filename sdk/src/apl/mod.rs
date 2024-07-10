@@ -1,4 +1,4 @@
-pub mod env_apl;
+#[cfg(feature = "file_apl")]
 pub mod file_apl;
 #[cfg(feature = "redis_apl")]
 pub mod redis_apl;
@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 pub enum AplType {
     Redis,
     File,
-    Env,
 }
 
 #[async_trait]

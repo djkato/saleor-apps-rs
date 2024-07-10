@@ -9,11 +9,11 @@ pub mod manifest;
 pub mod middleware;
 pub mod webhooks;
 
+use anyhow::bail;
 use apl::{AplType, APL};
 use config::Config;
 use serde::{Deserialize, Serialize};
 
-use crate::apl::env_apl::EnvApl;
 #[cfg(feature = "file_apl")]
 use crate::apl::file_apl::FileApl;
 #[cfg(feature = "redis_apl")]
@@ -55,7 +55,7 @@ pub struct SaleorApp {
 
 impl SaleorApp {
     pub fn new(config: &Config) -> anyhow::Result<SaleorApp> {
-        use AplType::{Env, File, Redis};
+        use AplType::{File, Redis};
         fn decide_apl(config: &Config) -> anyhow::Result<Box<dyn APL>> {
             match config.apl {
                 Redis => {
@@ -67,11 +67,9 @@ impl SaleorApp {
 
                     #[cfg(not(feature = "redis_apl"))]
                     {
-                        dbg!("Tried starting app with apl that wasn't present at compile time (cargo feature missing). Falling back to env_apl");
-                        Ok(Box::new(EnvApl {}))
+                        bail!("Tried starting app with apl that wasn't present at compile time (cargo feature missing)")
                     }
                 }
-                Env => Ok(Box::new(EnvApl {})),
                 File => {
                     #[cfg(feature = "file_apl")]
                     return Ok(Box::new(FileApl {
@@ -79,8 +77,7 @@ impl SaleorApp {
                     }));
                     #[cfg(not(feature = "file_apl"))]
                     {
-                        dbg!("Tried starting app with apl that wasn't present at compile time (cargo feature missing). Falling back to env_apl");
-                        Ok(Box::new(EnvApl {}))
+                        bail!("Tried starting app with apl that wasn't present at compile time (cargo feature missing)")
                     }
                 }
             }

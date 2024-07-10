@@ -29,7 +29,7 @@ impl APL for FileApl {
         auths.insert(auth_data.saleor_api_url.clone(), auth_data);
 
         debug!("writing to {:?}", &path);
-        std::fs::write(path, &serde_json::to_string_pretty(&auths)?.as_bytes())?;
+        std::fs::write(path, serde_json::to_string_pretty(&auths)?.as_bytes())?;
         Ok(())
     }
 
@@ -57,7 +57,7 @@ impl APL for FileApl {
         auths.remove(saleor_api_url);
 
         debug!("writing to {:?}", &path);
-        std::fs::write(path, &serde_json::to_string_pretty(&auths)?.as_bytes())?;
+        std::fs::write(path, serde_json::to_string_pretty(&auths)?.as_bytes())?;
         Ok(())
     }
 

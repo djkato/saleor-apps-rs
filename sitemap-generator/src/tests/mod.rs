@@ -2,7 +2,7 @@ use crate::{
     app::{trace_to_std, SitemapConfig},
     create_app,
     queries::event_subjects_updated::{Category, Product, ProductUpdated},
-    sitemap::{RefType, Url, UrlSet},
+    sitemap::{Url, UrlSet},
 };
 use axum::{
     body::Body,
@@ -79,12 +79,17 @@ async fn index_returns_ok() {
 #[rstest]
 async fn updates_xml_from_product() {
     let mut app = init_test_app().await;
-    // let app = app.ready().await.unwrap();
 
-    let product_id = cynic::Id::new("product1".to_owned());
-    let product_slug = "product1slug".to_owned();
-    let category_id = cynic::Id::new("category1".to_owned());
-    let category_slug = "category1slug".to_owned();
+    let product_updated = ProductUpdated {
+        product: Some(Product {
+            id: cynic::Id::new("product1".to_owned()),
+            slug: "product1slug".to_owned(),
+            category: Some(Category {
+                slug: "category1slug".to_owned(),
+                id: cynic::Id::new("category1".to_owned()),
+            }),
+        }),
+    };
 
     let response = app
         .ready()
@@ -94,17 +99,7 @@ async fn updates_xml_from_product() {
             Request::builder()
                 .uri("/api/webhooks")
                 .body(Body::from(
-                    serde_json::to_string_pretty(&ProductUpdated {
-                        product: Some(Product {
-                            id: product_id.clone(),
-                            slug: product_slug.clone(),
-                            category: Some(Category {
-                                slug: category_slug.clone(),
-                                id: category_id.clone(),
-                            }),
-                        }),
-                    })
-                    .unwrap(),
+                    serde_json::to_string_pretty(&product_updated).unwrap(),
                 ))
                 .unwrap(),
         )
@@ -117,14 +112,11 @@ async fn updates_xml_from_product() {
         serde_json::from_str(&std::fs::read_to_string("./temp/sitemaps/1.xml").unwrap()).unwrap();
 
     let mut webhook_url_set = UrlSet::new();
-    webhook_url_set.url = vec![Url::new_with_ref(
-        product_id.inner().to_owned(),
-        product_slug.clone(),
-        RefType::Product,
-        Some(category_id.inner().to_owned()),
-        Some(category_slug.clone()),
-        Some(RefType::Category),
-    )];
+    webhook_url_set.urls = vec![Url::new_product(
+        "https://example.com/{product.category.slug}/{product.slug}",
+        product_updated.product.unwrap(),
+    )
+    .unwrap()];
 
     assert_eq!(xml, webhook_url_set);
 }
@@ -132,38 +124,50 @@ async fn updates_xml_from_product() {
 #[rstest]
 fn urlset_serialisation_isnt_lossy() {
     std::env::set_var("APP_API_BASE_URL", "http://localhost:3000");
+    let sitemap_config = SitemapConfig {
+        target_folder: "./temp/sitemaps".to_string(),
+        pages_template: "https://example.com/{page.slug}".to_string(),
+        index_hostname: "https://example.com".to_string(),
+        product_template: "https://example.com/{product.category.slug}/{product.slug}".to_string(),
+        category_template: "https://example.com/{category.slug}".to_string(),
+        collection_template: "https://example.com/collection/{collection.slug}".to_string(),
+    };
+
     init_tracing();
+    let product1 = Product {
+        id: cynic::Id::new("product1".to_owned()),
+        slug: "product1slug".to_owned(),
+        category: Some(Category {
+            slug: "category1slug".to_owned(),
+            id: cynic::Id::new("category1".to_owned()),
+        }),
+    };
+
+    let product2 = Product {
+        id: cynic::Id::new("product2".to_owned()),
+        slug: "product2slug".to_owned(),
+        category: Some(Category {
+            slug: "category2slug".to_owned(),
+            id: cynic::Id::new("category2".to_owned()),
+        }),
+    };
+
     let mut url_set = UrlSet::new();
-    url_set.url.append(&mut vec![
-        Url::new(
-            "category1coolid".to_string(),
-            "category1".to_string(),
-            RefType::Category,
-        ),
-        Url::new(
-            "Collection1coolid".to_string(),
-            "Collection1".to_string(),
-            RefType::Collection,
-        ),
-        Url::new_with_ref(
-            "category1coolid".to_string(),
-            "category1".to_string(),
-            RefType::Product,
-            Some("product1coolid".to_string()),
-            Some("product1".to_string()),
-            Some(RefType::Category),
-        ),
-        Url::new_with_ref(
-            "category2coolid".to_string(),
-            "category2".to_string(),
-            RefType::Product,
-            Some("product2coolid".to_string()),
-            Some("product2".to_string()),
-            Some(RefType::Category),
-        ),
-    ]);
-    let file_str = quick_xml::se::to_string(&url_set).unwrap();
-    dbg!(&file_str);
-    let deserialized_url_set: UrlSet = quick_xml::de::from_str(&file_str).unwrap();
+    url_set.urls = vec![
+        Url::new_category(
+            &sitemap_config.category_template,
+            product1.category.clone().unwrap(),
+        )
+        .unwrap(),
+        Url::new_product(&sitemap_config.product_template, product1).unwrap(),
+        Url::new_category(
+            &sitemap_config.category_template,
+            product2.category.clone().unwrap(),
+        )
+        .unwrap(),
+        Url::new_product(&sitemap_config.product_template, product2).unwrap(),
+    ];
+    let file_str = serde_cbor::to_vec(&url_set).unwrap();
+    let deserialized_url_set: UrlSet = serde_cbor::de::from_slice(&file_str).unwrap();
     assert_eq!(url_set, deserialized_url_set);
 }

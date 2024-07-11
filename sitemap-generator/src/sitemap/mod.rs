@@ -11,10 +11,7 @@ use tinytemplate::TinyTemplate;
 
 use crate::{
     app::SitemapConfig,
-    queries::{
-        event_subjects_updated::{Category, Collection, Page, Product, ProductUpdated},
-        get_all_categories_n_products::Product,
-    },
+    queries::event_subjects_updated::{Category, Collection, Page, Product, ProductUpdated},
 };
 
 const SITEMAP_XMLNS: &str = "http://sitemaps.org/schemas/sitemap/0.9";
@@ -52,6 +49,27 @@ impl UrlSet {
     pub fn new() -> Self {
         Self { urls: vec![] }
     }
+
+    pub fn flush_related(&mut self, id: &str) {
+        self.retain(|u| u.data.id != id && u.related.as_ref().map_or(true, |ud| ud.id != id));
+    }
+
+    pub fn find_related(&mut self, id: &str) -> Vec<&mut Url> {
+        self.iter_mut()
+            .filter(|u| u.data.id == id || u.related.as_ref().map_or(false, |ud| ud.id == id))
+            .collect()
+    }
+
+    pub fn find_affected(&mut self, id: &str, slug: &str) -> Vec<&mut Url> {
+        self.iter_mut()
+            .filter(|u| {
+                u.data.id == id && u.data.slug != slug
+                    || u.related
+                        .as_ref()
+                        .map_or(false, |ud| ud.id == id && ud.slug != slug)
+            })
+            .collect()
+    }
 }
 
 impl Deref for UrlSet {
@@ -68,10 +86,7 @@ impl DerefMut for UrlSet {
 }
 
 impl Url {
-    pub fn new_product(
-        sitemap_config: &SitemapConfig,
-        product: Product,
-    ) -> Result<Self, NewUrlError> {
+    pub fn new_product(template: &str, product: Product) -> Result<Self, NewUrlError> {
         let category = product
             .category
             .as_ref()
@@ -91,16 +106,13 @@ impl Url {
 
         let mut tt = TinyTemplate::new();
 
-        tt.add_template("t", &sitemap_config.product_template);
+        tt.add_template("t", template)?;
 
         let url = tt.render("t", &product)?;
         Ok(Self { url, data, related })
     }
 
-    pub fn new_category(
-        sitemap_config: &SitemapConfig,
-        category: Category,
-    ) -> Result<Self, NewUrlError> {
+    pub fn new_category(template: &str, category: Category) -> Result<Self, NewUrlError> {
         let data = ItemData {
             id: category.id.inner().to_owned(),
             slug: category.slug.clone(),
@@ -108,7 +120,7 @@ impl Url {
         };
         let mut tt = TinyTemplate::new();
 
-        tt.add_template("t", &sitemap_config.category_template);
+        tt.add_template("t", template)?;
 
         let url = tt.render("t", &category)?;
         Ok(Self {
@@ -118,10 +130,7 @@ impl Url {
         })
     }
 
-    pub fn new_collection(
-        sitemap_config: &SitemapConfig,
-        collection: Collection,
-    ) -> Result<Self, NewUrlError> {
+    pub fn new_collection(template: &str, collection: Collection) -> Result<Self, NewUrlError> {
         let data = ItemData {
             id: collection.id.inner().to_owned(),
             slug: collection.slug.clone(),
@@ -129,7 +138,7 @@ impl Url {
         };
         let mut tt = TinyTemplate::new();
 
-        tt.add_template("t", &sitemap_config.collection_template);
+        tt.add_template("t", template);
 
         let url = tt.render("t", &collection)?;
         Ok(Self {
@@ -139,7 +148,7 @@ impl Url {
         })
     }
 
-    pub fn new_page(sitemap_config: &SitemapConfig, page: Page) -> Result<Self, NewUrlError> {
+    pub fn new_page(template: &str, page: Page) -> Result<Self, NewUrlError> {
         let data = ItemData {
             id: page.id.inner().to_owned(),
             slug: page.slug.clone(),
@@ -147,7 +156,7 @@ impl Url {
         };
         let mut tt = TinyTemplate::new();
 
-        tt.add_template("t", &sitemap_config.pages_template);
+        tt.add_template("t", template);
 
         let url = tt.render("t", &page)?;
         Ok(Self {

@@ -3,11 +3,11 @@ pub mod sync_response;
 pub mod utils;
 
 use serde::{Deserialize, Serialize};
-use strum_macros::EnumString;
+use strum_macros::{AsRefStr, EnumString};
 
 use crate::config::Config;
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumString)]
+#[derive(Debug, Clone, Serialize, Deserialize, EnumString, AsRefStr)]
 //kinda annoying that in an apps manifest, the `AsyncWebhookEventType` is in SCREAMING_SNAKE_CASE,
 //but when receiving saleors webhook the header `saleor-event` is in snake_case,
 //have to serialize and deserialize the enum two different ways
@@ -156,7 +156,7 @@ pub enum AsyncWebhookEventType {
     ShopMetadataUpdated,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumString)]
+#[derive(Debug, Clone, Serialize, Deserialize, EnumString, AsRefStr)]
 //kinda annoying that in an apps manifest, the `AsyncWebhookEventType` is in SCREAMING_SNAKE_CASE,
 //but when receiving saleors webhook the header `saleor-event` is in snake_case,
 //have to serialize and deserialize the enum two different ways

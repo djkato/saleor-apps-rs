@@ -24,7 +24,11 @@ impl APL for FileApl {
     async fn set(&self, auth_data: crate::AuthData) -> Result<()> {
         let path = std::path::Path::new(&self.path);
         debug!("reading from {:?}", &path);
-        let mut auths: FileStructure = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+        let mut auths: FileStructure;
+        match path.is_file() {
+            true => auths = serde_json::from_str(&std::fs::read_to_string(path)?)?,
+            false => auths = FileStructure { 0: HashMap::new() },
+        }
 
         auths.insert(auth_data.saleor_api_url.clone(), auth_data);
 

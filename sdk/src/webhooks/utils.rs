@@ -1,10 +1,11 @@
 use http::HeaderMap;
+use strum_macros::{AsRefStr, EnumString};
 
 use crate::headers::SALEOR_EVENT_HEADER;
 
 use super::{AsyncWebhookEventType, SyncWebhookEventType};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EitherWebhookType {
     Sync(SyncWebhookEventType),
     Async(AsyncWebhookEventType),

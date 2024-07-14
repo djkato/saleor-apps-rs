@@ -196,7 +196,7 @@ async fn product_updated_or_created<T: Serialize>(
 ) {
     update_or_create(
         request,
-        &sitemap_config,
+        sitemap_config,
         ItemData {
             id: product.id.inner().to_owned(),
             slug: product.slug,
@@ -218,7 +218,7 @@ async fn category_updated_or_created<T: Serialize>(
 ) {
     update_or_create(
         request,
-        &sitemap_config,
+        sitemap_config,
         ItemData {
             id: category.id.inner().to_owned(),
             slug: category.slug,
@@ -236,7 +236,7 @@ async fn page_updated_or_created<T: Serialize>(
 ) {
     update_or_create(
         request,
-        &sitemap_config,
+        sitemap_config,
         ItemData {
             id: page.id.inner().to_owned(),
             slug: page.slug,
@@ -254,7 +254,7 @@ async fn collection_updated_or_created<T: Serialize>(
 ) {
     update_or_create(
         request,
-        &sitemap_config,
+        sitemap_config,
         ItemData {
             id: collection.id.inner().to_owned(),
             slug: collection.slug,
@@ -298,7 +298,7 @@ async fn update_or_create<T: Serialize>(
 
     if affected_urls.is_empty() {
         trace!("{:?} doesn't exist in url_set yet", &item.slug);
-        url_set.push(Url::new(data, &sitemap_config, item, rel_item).unwrap());
+        url_set.push(Url::new(data, sitemap_config, item, rel_item).unwrap());
     } else {
         // Update affected urls
         affected_urls.iter_mut().for_each(|url| {
@@ -370,7 +370,7 @@ pub async fn write_db_to_file(
     }
     fs::write(
         format!("{target_folder}/{DB_FILE_NAME}"),
-        &serde_json::to_vec(url_set).unwrap(),
+        serde_json::to_vec(url_set).unwrap(),
     )?;
     Ok(())
 }

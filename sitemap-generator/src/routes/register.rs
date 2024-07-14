@@ -1,4 +1,3 @@
-use std::sync::Arc;
 
 use anyhow::Context;
 use axum::{
@@ -6,10 +5,9 @@ use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
 };
-use cynic::{http::SurfExt, QueryBuilder};
+use cynic::QueryBuilder;
 use saleor_app_sdk::{headers::SALEOR_API_URL_HEADER, AuthData, AuthToken};
-use tokio::spawn;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 use crate::{
     app::{AppError, AppState},

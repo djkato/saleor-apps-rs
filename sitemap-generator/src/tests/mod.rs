@@ -12,12 +12,12 @@ use axum::{
 use rstest::*;
 use saleor_app_sdk::{
     headers::{SALEOR_API_URL_HEADER, SALEOR_EVENT_HEADER},
-    webhooks::{utils::EitherWebhookType, AsyncWebhookEventType},
+    webhooks::utils::EitherWebhookType,
 };
 use serial_test::{parallel, serial};
 use tower::{Service, ServiceExt};
 use tracing_test::traced_test;
-use utils::{gen_random_url_set, init_tracing, testing_configs};
+use utils::{gen_random_url_set, testing_configs};
 
 async fn init_test_app() -> RouterIntoService<Body> {
     if let Err(e) = std::fs::remove_dir_all("./temp/sitemaps") {
@@ -61,7 +61,7 @@ async fn updates_sitemap_from_request() {
     let (_, sitemap_config) = testing_configs();
 
     let evn = gen_random_url_set(1, &sitemap_config);
-    let (body, url, webhook_type) = evn.get(0).cloned().unwrap();
+    let (body, url, webhook_type) = evn.first().cloned().unwrap();
 
     let response = app
         .ready()

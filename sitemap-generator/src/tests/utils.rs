@@ -6,7 +6,7 @@ use rand::{
 use saleor_app_sdk::{
     apl::AplType,
     config::Config,
-    webhooks::{utils::EitherWebhookType, AsyncWebhookEventType, SyncWebhookEventType},
+    webhooks::{utils::EitherWebhookType, AsyncWebhookEventType},
 };
 use tracing::Level;
 
@@ -14,7 +14,7 @@ use crate::{
     app::{trace_to_std, SitemapConfig},
     queries::event_subjects_updated::{
         Category, Category2, CategoryUpdated, Collection, CollectionUpdated, Page, PageUpdated,
-        Product, ProductCreated, ProductUpdated,
+        Product, ProductUpdated,
     },
     sitemap::{ItemData, ItemType, Url},
 };
@@ -333,8 +333,7 @@ pub fn gen_random_url_set(
                 // new one
                 if res
                     .iter()
-                    .find(|r| r.1.data.typ == ItemType::Category)
-                    .is_some()
+                    .any(|r| r.1.data.typ == ItemType::Category)
                 {
                     match rand::random::<bool>() {
                         true => loop {
@@ -348,8 +347,7 @@ pub fn gen_random_url_set(
                         },
                         false => (),
                     };
-                } else {
-                }
+                } 
                 let product_updated = ProductUpdated {
                     product: Some(Product {
                         id: id.clone(),
@@ -362,7 +360,7 @@ pub fn gen_random_url_set(
                 };
                 let url = Url::new(
                     product_updated.clone(),
-                    &sitemap_config,
+                    sitemap_config,
                     ItemData {
                         id: id.clone().inner().to_owned(),
                         slug: slug.clone(),
@@ -386,7 +384,7 @@ pub fn gen_random_url_set(
 
                     let cat_url = Url::new(
                         category_updated.clone(),
-                        &sitemap_config,
+                        sitemap_config,
                         ItemData {
                             id: id.clone().inner().to_owned(),
                             slug: slug.clone(),
@@ -418,7 +416,7 @@ pub fn gen_random_url_set(
 
                 let url = Url::new(
                     category_updated.clone(),
-                    &sitemap_config,
+                    sitemap_config,
                     ItemData {
                         id: id.clone().inner().to_owned(),
                         slug: slug.clone(),
@@ -443,7 +441,7 @@ pub fn gen_random_url_set(
 
                 let url = Url::new(
                     collection_updated.clone(),
-                    &sitemap_config,
+                    sitemap_config,
                     ItemData {
                         id: id.clone().inner().to_owned(),
                         slug: slug.clone(),
@@ -468,7 +466,7 @@ pub fn gen_random_url_set(
 
                 let url = Url::new(
                     page_updated.clone(),
-                    &sitemap_config,
+                    sitemap_config,
                     ItemData {
                         id: id.clone().inner().to_owned(),
                         slug: slug.clone(),

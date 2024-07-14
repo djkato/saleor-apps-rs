@@ -1,7 +1,5 @@
-use http::HeaderMap;
-use strum_macros::{AsRefStr, EnumString};
-
 use crate::headers::SALEOR_EVENT_HEADER;
+use http::HeaderMap;
 
 use super::{AsyncWebhookEventType, SyncWebhookEventType};
 

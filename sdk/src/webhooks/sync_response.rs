@@ -36,16 +36,19 @@ pub struct ExcludedMethodsResponse {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(transparent)]
 pub struct OrderCalculateTaxes(CheckoutCalculateTaxesResponse);
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(transparent)]
 pub struct OrderFilterShippingMethods(CheckoutFilterShippingMethodsResponse);
 
 #[derive(Serialize, Debug, Clone)]
+#[serde(transparent)]
 pub struct ShippingListMethodsForCheckout(Vec<ShippingListMethodsForCheckoutVec>);
 
 #[derive(Serialize, Debug, Clone)]
-struct ShippingListMethodsForCheckoutVec {
+pub struct ShippingListMethodsForCheckoutVec {
     pub id: String,
     pub name: Option<String>,
     #[serde(with = "rust_decimal::serde::float")]

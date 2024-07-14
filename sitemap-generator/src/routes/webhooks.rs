@@ -19,6 +19,7 @@ use crate::{
         CollectionUpdated, PageCreated, PageDeleted, PageUpdated, ProductCreated, ProductDeleted,
         ProductUpdated,
     },
+    sitemap::event_handler::Event,
 };
 
 pub async fn webhooks(
@@ -27,53 +28,106 @@ pub async fn webhooks(
     data: String,
 ) -> Result<StatusCode, AppError> {
     debug!("/api/webhooks");
-    //debug!("req: {:?}", data);
-    //debug!("headers: {:?}", headers);
+    debug!("req: {:?}", data);
+    debug!("headers: {:?}", headers);
 
     let url = headers
         .get(SALEOR_API_URL_HEADER)
         .context("missing saleor api url header")?
         .to_str()?
         .to_owned();
+    if url != state.sitemap_config.allowed_host {
+        debug!("webhook didn't come from allowed host");
+        return Ok(StatusCode::METHOD_NOT_ALLOWED);
+    }
     let event_type = get_webhook_event_type(&headers)?;
+    debug!("event type: {:?}", &event_type);
     if let EitherWebhookType::Async(a) = event_type {
         // TODO: Extract this into a function so You can check what the error was if something fails
         match a {
             AsyncWebhookEventType::ProductUpdated => {
                 let product: ProductUpdated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::ProductUpdated(product))
+                    .await?;
             }
             AsyncWebhookEventType::ProductCreated => {
                 let product: ProductCreated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::ProductCreated(product))
+                    .await?;
             }
             AsyncWebhookEventType::ProductDeleted => {
                 let product: ProductDeleted = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::ProductDeleted(product))
+                    .await?;
             }
             AsyncWebhookEventType::CategoryCreated => {
                 let category: CategoryCreated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::CategoryCreated(category))
+                    .await?;
             }
             AsyncWebhookEventType::CategoryUpdated => {
                 let category: CategoryUpdated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::CategoryUpdated(category))
+                    .await?;
             }
             AsyncWebhookEventType::CategoryDeleted => {
                 let category: CategoryDeleted = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::CategoryDeleted(category))
+                    .await?;
             }
             AsyncWebhookEventType::PageCreated => {
                 let page: PageCreated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::PageCreated(page))
+                    .await?;
             }
             AsyncWebhookEventType::PageUpdated => {
                 let page: PageUpdated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::PageUpdated(page))
+                    .await?;
             }
             AsyncWebhookEventType::PageDeleted => {
                 let page: PageDeleted = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::PageDeleted(page))
+                    .await?;
             }
             AsyncWebhookEventType::CollectionCreated => {
                 let collection: CollectionCreated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::CollectionCreated(collection))
+                    .await?;
             }
             AsyncWebhookEventType::CollectionUpdated => {
                 let collection: CollectionUpdated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::CollectionUpdated(collection))
+                    .await?;
             }
             AsyncWebhookEventType::CollectionDeleted => {
                 let collection: CollectionDeleted = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::CollectionDeleted(collection))
+                    .await?;
             }
             _ => (),
         }

@@ -1,61 +1,34 @@
-use crate::{
-    app::{trace_to_std, SitemapConfig},
-    create_app,
-    queries::event_subjects_updated::{Category, Product, ProductUpdated},
-    sitemap::{Url, UrlSet},
-};
+mod utils;
+
+use std::time::Duration;
+
+use crate::{create_app, sitemap::UrlSet};
+use async_std::task::sleep;
 use axum::{
     body::Body,
-    extract::path::ErrorKind,
     http::{Request, StatusCode},
     routing::RouterIntoService,
-    Json, Router,
 };
 use rstest::*;
-use saleor_app_sdk::{apl::AplType, config::Config};
-use tower::{MakeService, Service, ServiceExt};
-use tracing::Level;
-
-fn init_tracing() {
-    let config = Config {
-        apl: AplType::File,
-        apl_url: "redis://localhost:6379".to_string(),
-        log_level: Level::TRACE,
-        app_api_base_url: "http://localhost:3000".to_string(),
-        app_iframe_base_url: "http://localhost:3000".to_string(),
-        required_saleor_version: "^3.13".to_string(),
-    };
-    trace_to_std(&config).unwrap();
-}
+use saleor_app_sdk::{
+    headers::{SALEOR_API_URL_HEADER, SALEOR_EVENT_HEADER},
+    webhooks::{utils::EitherWebhookType, AsyncWebhookEventType},
+};
+use serial_test::{parallel, serial};
+use tower::{Service, ServiceExt};
+use tracing_test::traced_test;
+use utils::{gen_random_url_set, init_tracing, testing_configs};
 
 async fn init_test_app() -> RouterIntoService<Body> {
-    match std::fs::remove_dir_all("./temp/sitemaps") {
-        Err(e) => match e.kind() {
+    if let Err(e) = std::fs::remove_dir_all("./temp/sitemaps") {
+        match e.kind() {
             std::io::ErrorKind::NotFound => (),
             _ => panic!("{:?}", e),
-        },
-        _ => (),
+        }
     };
     std::fs::create_dir_all("./temp/sitemaps").unwrap();
-
     std::env::set_var("APP_API_BASE_URL", "http://localhost:3000");
-
-    let config = Config {
-        apl: AplType::File,
-        apl_url: "redis://localhost:6379".to_string(),
-        log_level: Level::TRACE,
-        app_api_base_url: "http://localhost:3000".to_string(),
-        app_iframe_base_url: "http://localhost:3000".to_string(),
-        required_saleor_version: "^3.13".to_string(),
-    };
-    let sitemap_config = SitemapConfig {
-        target_folder: "./temp/sitemaps".to_string(),
-        pages_template: "https://example.com/{page.slug}".to_string(),
-        index_hostname: "https://example.com".to_string(),
-        product_template: "https://example.com/{product.category.slug}/{product.slug}".to_string(),
-        category_template: "https://example.com/{category.slug}".to_string(),
-        collection_template: "https://example.com/collection/{collection.slug}".to_string(),
-    };
+    let (config, sitemap_config) = testing_configs();
 
     create_app(&config, sitemap_config)
         .await
@@ -63,7 +36,10 @@ async fn init_test_app() -> RouterIntoService<Body> {
 }
 
 #[rstest]
-async fn index_returns_ok() {
+#[tokio::test]
+#[traced_test]
+#[serial]
+pub async fn index_returns_ok() {
     let mut app = init_test_app().await;
 
     let response = app
@@ -77,19 +53,15 @@ async fn index_returns_ok() {
 }
 
 #[rstest]
-async fn updates_xml_from_product() {
+#[tokio::test]
+#[traced_test]
+#[serial]
+async fn updates_sitemap_from_request() {
     let mut app = init_test_app().await;
+    let (_, sitemap_config) = testing_configs();
 
-    let product_updated = ProductUpdated {
-        product: Some(Product {
-            id: cynic::Id::new("product1".to_owned()),
-            slug: "product1slug".to_owned(),
-            category: Some(Category {
-                slug: "category1slug".to_owned(),
-                id: cynic::Id::new("category1".to_owned()),
-            }),
-        }),
-    };
+    let evn = gen_random_url_set(1, &sitemap_config);
+    let (body, url, webhook_type) = evn.get(0).cloned().unwrap();
 
     let response = app
         .ready()
@@ -98,9 +70,15 @@ async fn updates_xml_from_product() {
         .call(
             Request::builder()
                 .uri("/api/webhooks")
-                .body(Body::from(
-                    serde_json::to_string_pretty(&product_updated).unwrap(),
-                ))
+                .header(SALEOR_API_URL_HEADER, "https://api.example.com")
+                .header(
+                    SALEOR_EVENT_HEADER,
+                    match webhook_type {
+                        EitherWebhookType::Sync(s) => s.as_ref().to_string(),
+                        EitherWebhookType::Async(a) => a.as_ref().to_string(),
+                    },
+                )
+                .body(Body::from(body))
                 .unwrap(),
         )
         .await
@@ -108,65 +86,72 @@ async fn updates_xml_from_product() {
 
     assert_eq!(response.status(), StatusCode::OK);
 
-    let xml: UrlSet =
-        serde_json::from_str(&std::fs::read_to_string("./temp/sitemaps/1.xml").unwrap()).unwrap();
+    //wait for the file to get written
+    sleep(Duration::from_secs(3)).await;
 
-    let mut webhook_url_set = UrlSet::new();
-    webhook_url_set.urls = vec![Url::new_product(
-        "https://example.com/{product.category.slug}/{product.slug}",
-        product_updated.product.unwrap(),
-    )
-    .unwrap()];
+    let file_url = std::fs::read_to_string("./temp/sitemaps/sitemap.txt").unwrap();
 
-    assert_eq!(xml, webhook_url_set);
+    assert_eq!(file_url, url.url);
 }
 
 #[rstest]
+#[tokio::test]
+#[traced_test]
+#[parallel]
+async fn sequence_of_actions_is_preserved() {
+    let mut app = init_test_app().await;
+    let (_, sitemap_config) = testing_configs();
+
+    let evn = gen_random_url_set(1000, &sitemap_config);
+    for (body, _, webhook_type) in evn.clone() {
+        let response = app
+            .ready()
+            .await
+            .unwrap()
+            .call(
+                Request::builder()
+                    .uri("/api/webhooks")
+                    .header(SALEOR_API_URL_HEADER, "https://api.example.com")
+                    .header(
+                        SALEOR_EVENT_HEADER,
+                        match webhook_type {
+                            EitherWebhookType::Sync(s) => s.as_ref().to_string(),
+                            EitherWebhookType::Async(a) => a.as_ref().to_string(),
+                        },
+                    )
+                    .body(Body::from(body))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    //wait for the file to get written
+    sleep(Duration::from_secs(3)).await;
+
+    let file_url = std::fs::read_to_string("./temp/sitemaps/sitemap.txt").unwrap();
+
+    assert_eq!(
+        file_url,
+        evn.iter()
+            .map(|u| u.1.url.clone())
+            .collect::<Vec<_>>()
+            .join("\n"),
+    );
+}
+
+#[rstest]
+#[traced_test]
 fn urlset_serialisation_isnt_lossy() {
     std::env::set_var("APP_API_BASE_URL", "http://localhost:3000");
-    let sitemap_config = SitemapConfig {
-        target_folder: "./temp/sitemaps".to_string(),
-        pages_template: "https://example.com/{page.slug}".to_string(),
-        index_hostname: "https://example.com".to_string(),
-        product_template: "https://example.com/{product.category.slug}/{product.slug}".to_string(),
-        category_template: "https://example.com/{category.slug}".to_string(),
-        collection_template: "https://example.com/collection/{collection.slug}".to_string(),
-    };
+    let (_, sitemap_config) = testing_configs();
 
-    init_tracing();
-    let product1 = Product {
-        id: cynic::Id::new("product1".to_owned()),
-        slug: "product1slug".to_owned(),
-        category: Some(Category {
-            slug: "category1slug".to_owned(),
-            id: cynic::Id::new("category1".to_owned()),
-        }),
-    };
-
-    let product2 = Product {
-        id: cynic::Id::new("product2".to_owned()),
-        slug: "product2slug".to_owned(),
-        category: Some(Category {
-            slug: "category2slug".to_owned(),
-            id: cynic::Id::new("category2".to_owned()),
-        }),
-    };
+    let urls = gen_random_url_set(100, &sitemap_config);
 
     let mut url_set = UrlSet::new();
-    url_set.urls = vec![
-        Url::new_category(
-            &sitemap_config.category_template,
-            product1.category.clone().unwrap(),
-        )
-        .unwrap(),
-        Url::new_product(&sitemap_config.product_template, product1).unwrap(),
-        Url::new_category(
-            &sitemap_config.category_template,
-            product2.category.clone().unwrap(),
-        )
-        .unwrap(),
-        Url::new_product(&sitemap_config.product_template, product2).unwrap(),
-    ];
+    url_set.urls = urls.into_iter().map(|u| u.1).collect();
     let file_str = serde_cbor::to_vec(&url_set).unwrap();
     let deserialized_url_set: UrlSet = serde_cbor::de::from_slice(&file_str).unwrap();
     assert_eq!(url_set, deserialized_url_set);

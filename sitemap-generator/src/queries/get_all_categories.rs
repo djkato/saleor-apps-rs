@@ -1,10 +1,5 @@
 #[cynic::schema("saleor")]
 mod schema {}
-pub struct CategorisedProduct {
-    pub product: Product,
-    pub category_id: cynic::Id,
-}
-
 /*
 query getCategoriesInitial {
   categories(first: 50) {
@@ -34,46 +29,6 @@ query getCategoriesNext($after: String) {
         updatedAt
         id
         slug
-      }
-    }
-  }
-}
-
-query getCategoryProductsInitial($id: ID!, $channel: String!) {
-  category(id: $id) {
-    slug
-    id
-    updatedAt
-    products(first: 50, channel: $channel) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      edges {
-        node {
-          id
-          slug
-          updatedAt
-        }
-      }
-      totalCount
-    }
-  }
-}
-
-query getCategoryProductsNext($id: ID!, $after: String!, $channel: String!) {
-  category(id: $id) {
-    products(first: 50, after: $after, channel: $channel) {
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      edges {
-        node {
-          id
-          slug
-          updatedAt
-        }
       }
     }
   }

@@ -10,7 +10,7 @@ use saleor_app_sdk::{config::Config, manifest::AppManifest, SaleorApp};
 use serde::{Deserialize, Serialize};
 use tracing::level_filters::LevelFilter;
 
-use crate::queries::event_subjects_updated::Event;
+use crate::sitemap::event_handler::Event;
 
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(anyhow::Error);
@@ -39,7 +39,7 @@ where
 
 pub fn trace_to_std(config: &Config) -> anyhow::Result<()> {
     let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::DEBUG.into())
+        .with_default_directive(LevelFilter::INFO.into())
         .from_env()?
         .add_directive(format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level).parse()?);
     tracing_subscriber::fmt()
@@ -79,6 +79,8 @@ pub struct SitemapConfig {
     pub collection_template: String,
     #[serde(rename = "sitemap_index_hostname")]
     pub index_hostname: String,
+    #[serde(rename = "sitemap_allowed_host")]
+    pub allowed_host: String,
 }
 
 impl SitemapConfig {

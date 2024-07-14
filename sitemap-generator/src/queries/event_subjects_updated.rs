@@ -101,12 +101,12 @@ pub struct ProductUpdated {
     pub product: Option<Product>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct ProductDeleted {
     pub product: Option<Product>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct ProductCreated {
     pub product: Option<Product>,
 }
@@ -123,12 +123,12 @@ pub struct PageUpdated {
     pub page: Option<Page>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct PageDeleted {
     pub page: Option<Page>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct PageCreated {
     pub page: Option<Page>,
 }
@@ -144,12 +144,12 @@ pub struct CollectionUpdated {
     pub collection: Option<Collection>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct CollectionDeleted {
     pub collection: Option<Collection>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct CollectionCreated {
     pub collection: Option<Collection>,
 }
@@ -165,12 +165,12 @@ pub struct CategoryUpdated {
     pub category: Option<Category2>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct CategoryDeleted {
     pub category: Option<Category2>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct CategoryCreated {
     pub category: Option<Category2>,
 }

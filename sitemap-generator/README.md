@@ -1,9 +1,7 @@
 # Using sitemap-generator
 
-To clear the cache, you can run the program with `./sitemap-generator --for-url https://my-saleor-api.com/graphql --cache-clear` or `docker compose --rm app-sitemap-generator sitemap-generator --for-url https://my-saleor-api.com/graphql --cache-clear`
-To regenerate the cache, you can run the program with `./sitemap-generator --for-url https://my-saleor-api.com/graphql --cache-regenerate` or `docker compose --rm app-sitemap-generator sitemap-generator --for-url https://my-saleor-api.com/graphql --cache-regenerate`
-
-You can also add both flags (do --cache-regenerate first), which will clear and then regenerate.
+Only works for a single website. No locale support and no sitemap-index. Outputs Only pure sitemap.txt file. Downside is limit of 50 000 links. Upside: Easy to write c:
+Partially supports relations of objects (Category-product), where the sitemap template can use info from both.
 
 # Unofficial Saleor App Template
 

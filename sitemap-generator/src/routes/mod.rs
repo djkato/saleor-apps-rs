@@ -30,6 +30,8 @@ pub fn create_routes(state: AppState) -> Router {
     #[cfg(not(debug_assertions))]
     let serve_dir = ServeDir::new("./public").not_found_service(service);
 
+    // When working in workspace, cargo works relative to workspace dir, not app dir. This is
+    // dev-only workaround
     #[cfg(debug_assertions)]
     let serve_dir = ServeDir::new("./sitemap-generator/public").not_found_service(service);
     //TODO: Query for everything using the app auth token

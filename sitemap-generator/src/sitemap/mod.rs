@@ -1,18 +1,12 @@
-mod category;
-mod collection;
-mod event_handler;
-mod page;
-mod product;
+pub mod event_handler;
+pub mod regenerate;
 
 use std::ops::{Deref, DerefMut};
 
 use serde::{Deserialize, Serialize};
 use tinytemplate::TinyTemplate;
 
-use crate::{
-    app::SitemapConfig,
-    queries::event_subjects_updated::{Category, Collection, Page, Product, ProductUpdated},
-};
+use crate::app::SitemapConfig;
 
 const SITEMAP_XMLNS: &str = "http://sitemaps.org/schemas/sitemap/0.9";
 const SALEOR_REF_XMLNS: &str = "http://app-sitemap-generator.kremik.sk/xml-schemas/saleor-ref.xsd";
@@ -86,83 +80,28 @@ impl DerefMut for UrlSet {
 }
 
 impl Url {
-    pub fn new_product(template: &str, product: Product) -> Result<Self, NewUrlError> {
-        let category = product
-            .category
-            .as_ref()
-            .ok_or(NewUrlError::MissingData)?
-            .clone();
-        let data = ItemData {
-            id: product.id.inner().to_owned(),
-            slug: product.slug.clone(),
-            typ: ItemType::Product,
-        };
-
-        let related = Some(ItemData {
-            id: category.id.inner().to_owned(),
-            slug: category.slug,
-            typ: ItemType::Category,
-        });
-
+    pub fn new<T: Serialize>(
+        data: T,
+        sitemap_config: &SitemapConfig,
+        item: ItemData,
+        rel_item: Option<ItemData>,
+    ) -> Result<Self, NewUrlError> {
         let mut tt = TinyTemplate::new();
 
-        tt.add_template("t", template)?;
-
-        let url = tt.render("t", &product)?;
-        Ok(Self { url, data, related })
-    }
-
-    pub fn new_category(template: &str, category: Category) -> Result<Self, NewUrlError> {
-        let data = ItemData {
-            id: category.id.inner().to_owned(),
-            slug: category.slug.clone(),
-            typ: ItemType::Category,
-        };
-        let mut tt = TinyTemplate::new();
-
-        tt.add_template("t", template)?;
-
-        let url = tt.render("t", &category)?;
+        tt.add_template(
+            "t",
+            match item.typ {
+                ItemType::Category => &sitemap_config.category_template,
+                ItemType::Page => &sitemap_config.pages_template,
+                ItemType::Collection => &sitemap_config.collection_template,
+                ItemType::Product => &sitemap_config.product_template,
+            },
+        )?;
+        let url = tt.render("t", &data)?;
         Ok(Self {
             url,
-            data,
-            related: None,
-        })
-    }
-
-    pub fn new_collection(template: &str, collection: Collection) -> Result<Self, NewUrlError> {
-        let data = ItemData {
-            id: collection.id.inner().to_owned(),
-            slug: collection.slug.clone(),
-            typ: ItemType::Collection,
-        };
-        let mut tt = TinyTemplate::new();
-
-        tt.add_template("t", template);
-
-        let url = tt.render("t", &collection)?;
-        Ok(Self {
-            url,
-            data,
-            related: None,
-        })
-    }
-
-    pub fn new_page(template: &str, page: Page) -> Result<Self, NewUrlError> {
-        let data = ItemData {
-            id: page.id.inner().to_owned(),
-            slug: page.slug.clone(),
-            typ: ItemType::Page,
-        };
-        let mut tt = TinyTemplate::new();
-
-        tt.add_template("t", template);
-
-        let url = tt.render("t", &page)?;
-        Ok(Self {
-            url,
-            data,
-            related: None,
+            data: item,
+            related: rel_item,
         })
     }
 }

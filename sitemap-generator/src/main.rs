@@ -5,13 +5,13 @@
     dead_code
 )]
 #![feature(let_chains)]
-#![deny(clippy::unwrap_used, clippy::expect_used)]
+// #![deny(clippy::unwrap_used, clippy::expect_used)]
 mod app;
 mod queries;
 mod routes;
 mod sitemap;
 
-#[cfg(debug_assertions)]
+#[cfg(test)]
 mod tests;
 
 use axum::Router;
@@ -21,14 +21,9 @@ use saleor_app_sdk::{
     webhooks::{AsyncWebhookEventType, WebhookManifestBuilder},
     SaleorApp,
 };
+use sitemap::event_handler::EventHandler;
 use std::sync::Arc;
-use tokio::{
-    spawn,
-    sync::{
-        mpsc::{channel, Receiver},
-        Mutex,
-    },
-};
+use tokio::sync::Mutex;
 use tracing::{debug, error, info};
 
 use crate::{
@@ -62,16 +57,16 @@ async fn main() {
 }
 
 async fn create_app(config: &Config, sitemap_config: SitemapConfig) -> Router {
-    let saleor_app = SaleorApp::new(&config).unwrap();
+    let saleor_app = SaleorApp::new(config).unwrap();
 
     debug!("Creating saleor App...");
-    let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
+    let app_manifest = AppManifestBuilder::new(config, cargo_info!())
         .add_permissions(vec![
             AppPermission::ManageProducts,
             AppPermission::ManagePages,
         ])
         .add_webhook(
-            WebhookManifestBuilder::new(&config)
+            WebhookManifestBuilder::new(config)
                 .set_query(EVENTS_QUERY)
                 .add_async_events(vec![
                     AsyncWebhookEventType::ProductCreated,
@@ -92,8 +87,9 @@ async fn create_app(config: &Config, sitemap_config: SitemapConfig) -> Router {
         .build();
     debug!("Created AppManifest...");
 
-    //Task queue
     let (sender, receiver) = tokio::sync::mpsc::channel(100);
+
+    EventHandler::start(sitemap_config.clone(), receiver);
 
     let app_state = AppState {
         task_queue_sender: sender,
@@ -102,7 +98,7 @@ async fn create_app(config: &Config, sitemap_config: SitemapConfig) -> Router {
         config: config.clone(),
         target_channel: match dotenvy::var("CHANNEL_SLUG") {
             Ok(v) => v,
-            Err(e) => {
+            Err(_) => {
                 error!("Missing channel slug, Saleor will soon deprecate product queries without channel specified.");
                 "".to_string()
             }

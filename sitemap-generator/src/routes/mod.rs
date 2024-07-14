@@ -39,7 +39,7 @@ pub fn create_routes(state: AppState) -> Router {
     let r = Router::new().route("/api/webhooks", any(webhooks));
 
     #[cfg(not(debug_assertions))]
-    r.layer(middleware::from_fn(webhook_signature_verifier));
+    let r = r.layer(middleware::from_fn(webhook_signature_verifier));
 
     r
         //handles just path, eg. localhost:3000/

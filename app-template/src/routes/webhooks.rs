@@ -37,6 +37,8 @@ pub async fn webhooks(
         .get(SALEOR_API_URL_HEADER)
         .context("missing saleor api url header")?;
     let event_type = get_webhook_event_type(&headers)?;
+    // In this case I disagree with this hint
+    #[allow(clippy::collapsible_match)]
     if let EitherWebhookType::Async(a) = event_type {
         match a {
             AsyncWebhookEventType::ProductUpdated

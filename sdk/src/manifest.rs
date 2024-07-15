@@ -134,32 +134,32 @@ pub struct AppManifest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhooks: Option<Vec<WebhookManifest>>,
     /**
-     * Allows app installation for specific Saleor versions, using semver.
-     * https://github.com/npm/node-semver#versions
-     *
-     * If not set, Saleor will allow installation for every version
-     *
-     * In Saleor versions lower than 3.13, this field will be ignored
-     *
-     * Examples:
-     * ">=3.10" - allow for versions 3.10 or newer
-     * ">=3.10 <4" - allow for versions 3.10 and newer, but not 4.0 and newer
-     * ">=3.10 <4 || 4.0.0" - 3.10 and newer, less than 4, but allow exactly 4.0.0
-     */
+     Allows app installation for specific Saleor versions, using semver.
+     https://github.com/npm/node-semver#versions
+
+     If not set, Saleor will allow installation for every version
+
+     In Saleor versions lower than 3.13, this field will be ignored
+
+     Examples:
+     ">=3.10" - allow for versions 3.10 or newer
+     ">=3.10 <4" - allow for versions 3.10 and newer, but not 4.0 and newer
+     ">=3.10 <4 || 4.0.0" - 3.10 and newer, less than 4, but allow exactly 4.0.0
+    */
     #[serde(skip_serializing_if = "Option::is_none")]
     pub required_saleor_version: Option<String>,
     /**
-     * App author name displayed in the dashboard
-     *
-     * In Saleor versions lower than 3.13, this field will be ignored
-     */
+     App author name displayed in the dashboard
+
+     In Saleor versions lower than 3.13, this field will be ignored
+    */
     #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
     /**
-     * Add brand-specific metadata to the app
-     *
-     * Available from Saleor 3.15. In previous versions will be ignored
-     */
+     Add brand-specific metadata to the app
+
+     Available from Saleor 3.15. In previous versions will be ignored
+    */
     #[serde(skip_serializing_if = "Option::is_none")]
     pub brand: Option<SaleorAppBranding>,
 }
@@ -170,8 +170,8 @@ pub struct AppManifestBuilder {
 
 impl AppManifestBuilder {
     /**
-     * to simply create a webhook manifest, you can use WebhookManifest::new()
-     */
+    to simply create a webhook manifest, you can use WebhookManifest::new()
+    */
     pub fn add_webhook(mut self, webhook: WebhookManifest) -> Self {
         if let Some(webhooks) = &mut self.manifest.webhooks {
             webhooks.push(webhook)
@@ -216,17 +216,19 @@ macro_rules! cargo_info {
 pub use cargo_info;
 impl AppManifestBuilder {
     /**
-     * Builder for AppManifest
-     *
-     * Takes these out of config:
-     * - Takes fields id, saleor_version, logo, token_target_url
-     * And these out of the environment:
-     * - name(CARGO_PKG_NAME), about(CARGO_PKG_DESCRIPTION), author(CARGO_PKG_AUTHORS),
-     * version(CARGO_PKG_VERSION), homepage_url(CARGO_PKG_HOMEPAGE)
-     *
-     * To set webhooks and permissions use the add_webhook() and add_permissions()
-     *
-     */
+     Builder for AppManifest
+
+     Takes these out of config:
+     - Takes fields id, saleor_version, logo, token_target_url
+
+     And these out of the environment:
+     - name(CARGO_PKG_NAME), about(CARGO_PKG_DESCRIPTION), author(CARGO_PKG_AUTHORS),
+
+     version(CARGO_PKG_VERSION), homepage_url(CARGO_PKG_HOMEPAGE)
+
+     To set webhooks and permissions use the add_webhook() and add_permissions()
+
+    */
     pub fn new(config: &Config, info: CargoInfo) -> Self {
         AppManifestBuilder {
             manifest: AppManifest {

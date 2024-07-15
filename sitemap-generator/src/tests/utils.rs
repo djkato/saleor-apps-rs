@@ -109,211 +109,115 @@ impl Distribution<ActionType> for Standard {
 //             action_type = rand::random::<ActionType>();
 //         }
 //
-//         match rand::random::<ItemType>() {
-//             ItemType::Product => {
-//                 // If there is a category url already, use that for relation instead of always a
-//                 let mut is_using_existing_category = false;
-//                 // new one
-//                 if res
-//                     .iter()
-//                     .find(|r| r.url.data.typ == ItemType::Category)
-//                     .is_some()
-//                 {
-//                     match rand::random::<bool>() {
-//                         true => loop {
-//                             let r = res.choose(&mut rand::thread_rng()).unwrap().clone();
-//                             if r.url.data.typ == ItemType::Category {
-//                                 rel_slug = r.url.data.slug;
-//                                 rel_id = cynic::Id::new(r.url.data.id);
-//                                 is_using_existing_category = true;
-//                                 break;
-//                             }
-//                         },
-//                         false => (),
-//                     };
-//                 }
-//                 let product_updated: String = match action_type {
-//                     ActionType::Create => serde_json::to_string_pretty(&ProductCreated {
-//                         product: Some(Product {
-//                             id: id.clone(),
-//                             slug: slug.clone(),
-//                             category: Some(Category {
-//                                 slug: rel_slug.clone(),
-//                                 id: rel_id.clone(),
-//                             }),
-//                         }),
-//                     })
-//                     .unwrap(),
-//                     ActionType::Update => {
-//                         let p;
-//                         loop {
-//                             let c = res.choose(&mut rand::thread_rng()).unwrap().clone();
-//                             if c.action_type != ActionType::Delete {
-//                                 p = c;
-//                                 break;
-//                             }
-//                         }
-//                         serde_json::to_string_pretty(&ProductUpdated {
-//                             product: Some(Product {
-//                                 id: cynic::Id::new(p.url.data.id),
-//                                 slug: p.url.data.slug.clone(),
-//                                 category: p.url.related.map(|c| Category {
-//                                     slug: c.slug.clone(),
-//                                     id: cynic::Id::new(c.id),
-//                                 }),
-//                             }),
-//                         })
+//         let item_type = rand::random::<ItemType>();
+//         // If there is a category url already, use that for relation instead of always a
+//         let mut is_using_existing_category = false;
+//         // new one
+//         if res
+//             .iter()
+//             .find(|r| r.url.data.typ == ItemType::Category)
+//             .is_some()
+//         {
+//             match rand::random::<bool>() {
+//                 true => loop {
+//                     let r = res.choose(&mut rand::thread_rng()).unwrap().clone();
+//                     if r.url.data.typ == ItemType::Category {
+//                         rel_slug = r.url.data.slug;
+//                         rel_id = cynic::Id::new(r.url.data.id);
+//                         is_using_existing_category = true;
+//                         break;
 //                     }
-//                     .unwrap(),
-//                     ActionType::Delete => {
-//                         let p;
-//                         loop {
-//                             let c = res.choose(&mut rand::thread_rng()).unwrap().clone();
-//                             if c.action_type != ActionType::Delete {
-//                                 p = c;
-//                                 break;
-//                             }
-//                         }
-//                         serde_json::to_string_pretty(&ProductUpdated {
-//                         product: Some(Product {
-//                             id: id.clone(),
-//                             slug: slug.clone(),
-//                             category: Some(Category {
-//                                 slug: rel_slug.clone(),
-//                                 id: rel_id.clone(),
-//                             }),
-//                         }),
-//                     })
-//                     .unwrap()}
-//                 };
-//                 let url = Url::new(
-//                     product_updated.clone(),
-//                     &sitemap_config,
-//                     ItemData {
-//                         id: id.clone().inner().to_owned(),
-//                         slug: slug.clone(),
-//                         typ: ItemType::Product,
-//                     },
-//                     Some(ItemData {
-//                         id: rel_id.inner().to_owned(),
-//                         slug: rel_slug.clone(),
-//                         typ: ItemType::Category,
-//                     }),
-//                 )
-//                 .unwrap();
-//
-//                 if !is_using_existing_category {
-//                     let category_updated = CategoryUpdated {
-//                         category: Some(Category2 {
-//                             id: rel_id.clone(),
-//                             slug: rel_slug.clone(),
-//                         }),
-//                     };
-//
-//                     let cat_url = Url::new(
-//                         category_updated.clone(),
-//                         &sitemap_config,
-//                         ItemData {
-//                             id: id.clone().inner().to_owned(),
-//                             slug: slug.clone(),
-//                             typ: ItemType::Category,
-//                         },
-//                         None,
-//                     )
-//                     .unwrap();
-//                     res.push((
-//                         serde_json::to_string_pretty(&category_updated).unwrap(),
-//                         cat_url,
-//                         EitherWebhookType::Async(AsyncWebhookEventType::CategoryCreated),
-//                     ));
-//                 }
-//
-//                 res.push((
-//                     serde_json::to_string_pretty(&product_updated).unwrap(),
-//                     url,
-//                     EitherWebhookType::Async(AsyncWebhookEventType::ProductCreated),
-//                 ));
-//             }
-//             ItemType::Category => {
-//                 let category_updated = CategoryUpdated {
-//                     category: Some(Category2 {
-//                         id: id.clone(),
-//                         slug: slug.clone(),
-//                     }),
-//                 };
-//
-//                 let url = Url::new(
-//                     category_updated.clone(),
-//                     &sitemap_config,
-//                     ItemData {
-//                         id: id.clone().inner().to_owned(),
-//                         slug: slug.clone(),
-//                         typ: ItemType::Category,
-//                     },
-//                     None,
-//                 )
-//                 .unwrap();
-//                 res.push((
-//                     serde_json::to_string_pretty(&category_updated).unwrap(),
-//                     url,
-//                     EitherWebhookType::Async(AsyncWebhookEventType::CategoryCreated),
-//                 ));
-//             }
-//             ItemType::Collection => {
-//                 let collection_updated = CollectionUpdated {
-//                     collection: Some(Collection {
-//                         id: id.clone(),
-//                         slug: slug.clone(),
-//                     }),
-//                 };
-//
-//                 let url = Url::new(
-//                     collection_updated.clone(),
-//                     &sitemap_config,
-//                     ItemData {
-//                         id: id.clone().inner().to_owned(),
-//                         slug: slug.clone(),
-//                         typ: ItemType::Collection,
-//                     },
-//                     None,
-//                 )
-//                 .unwrap();
-//                 res.push((
-//                     serde_json::to_string_pretty(&collection_updated).unwrap(),
-//                     url,
-//                     EitherWebhookType::Async(AsyncWebhookEventType::CollectionCreated),
-//                 ));
-//             }
-//             ItemType::Page => {
-//                 let page_updated = PageUpdated {
-//                     page: Some(Page {
-//                         id: id.clone(),
-//                         slug: slug.clone(),
-//                     }),
-//                 };
-//
-//                 let url = Url::new(
-//                     page_updated.clone(),
-//                     &sitemap_config,
-//                     ItemData {
-//                         id: id.clone().inner().to_owned(),
-//                         slug: slug.clone(),
-//                         typ: ItemType::Page,
-//                     },
-//                     None,
-//                 )
-//                 .unwrap();
-//                 res.push((
-//                     serde_json::to_string_pretty(&page_updated).unwrap(),
-//                     url,
-//                     EitherWebhookType::Async(AsyncWebhookEventType::PageCreated),
-//                 ));
-//             }
+//                 },
+//                 false => (),
+//             };
 //         }
+//         let body_data: String = match (action_type, item_type) {
+//             (ActionType::Create, ItemType::Product) => {
+//                 serde_json::to_string_pretty(&ProductCreated {
+//                     product: Some(Product {
+//                         id: id.clone(),
+//                         slug: slug.clone(),
+//                         category: Some(Category {
+//                             slug: rel_slug.clone(),
+//                             id: rel_id.clone(),
+//                         }),
+//                     }),
+//                 })
+//                 .unwrap()
+//             }
+//             (ActionType::Update, ItemType::Product) => {
+//                 let p;
+//                 loop {
+//                     let c = res.choose(&mut rand::thread_rng()).unwrap().clone();
+//                     if c.action_type != ActionType::Delete {
+//                         p = c;
+//                         break;
+//                     }
+//                 }
+//                 serde_json::to_string_pretty(&ProductUpdated {
+//                     product: Some(Product {
+//                         id: cynic::Id::new(p.url.data.id),
+//                         slug: p.url.data.slug.clone(),
+//                         category: p.url.related.map(|c| Category {
+//                             slug: c.slug.clone(),
+//                             id: cynic::Id::new(c.id),
+//                         }),
+//                     }),
+//                 })
+//             }
+//             (ActionType::Delete, ) => {}
+//         };
+//         let url = Url::new(
+//             product_updated.clone(),
+//             &sitemap_config,
+//             ItemData {
+//                 id: id.clone().inner().to_owned(),
+//                 slug: slug.clone(),
+//                 typ: ItemType::Product,
+//             },
+//             Some(ItemData {
+//                 id: rel_id.inner().to_owned(),
+//                 slug: rel_slug.clone(),
+//                 typ: ItemType::Category,
+//             }),
+//         )
+//         .unwrap();
+//
+//         if !is_using_existing_category {
+//             let category_updated = CategoryUpdated {
+//                 category: Some(Category2 {
+//                     id: rel_id.clone(),
+//                     slug: rel_slug.clone(),
+//                 }),
+//             };
+//
+//             let cat_url = Url::new(
+//                 category_updated.clone(),
+//                 &sitemap_config,
+//                 ItemData {
+//                     id: id.clone().inner().to_owned(),
+//                     slug: slug.clone(),
+//                     typ: ItemType::Category,
+//                 },
+//                 None,
+//             )
+//             .unwrap();
+//             res.push((
+//                 serde_json::to_string_pretty(&category_updated).unwrap(),
+//                 cat_url,
+//                 EitherWebhookType::Async(AsyncWebhookEventType::CategoryCreated),
+//             ));
+//         }
+//
+//         res.push((
+//             serde_json::to_string_pretty(&product_updated).unwrap(),
+//             url,
+//             EitherWebhookType::Async(AsyncWebhookEventType::ProductCreated),
+//         ));
 //     }
 //     res
 // }
-
+//
 pub fn gen_random_url_set(
     len: usize,
     sitemap_config: &SitemapConfig,
@@ -331,10 +235,7 @@ pub fn gen_random_url_set(
                 // If there is a category url already, use that for relation instead of always a
                 let mut is_using_existing_category = false;
                 // new one
-                if res
-                    .iter()
-                    .any(|r| r.1.data.typ == ItemType::Category)
-                {
+                if res.iter().any(|r| r.1.data.typ == ItemType::Category) {
                     match rand::random::<bool>() {
                         true => loop {
                             let r = res.choose(&mut rand::thread_rng()).unwrap().clone();
@@ -347,7 +248,7 @@ pub fn gen_random_url_set(
                         },
                         false => (),
                     };
-                } 
+                }
                 let product_updated = ProductUpdated {
                     product: Some(Product {
                         id: id.clone(),

@@ -144,6 +144,7 @@ async fn sequence_of_actions_is_preserved() {
 
 #[rstest]
 #[traced_test]
+#[parallel]
 fn urlset_serialisation_isnt_lossy() {
     std::env::set_var("APP_API_BASE_URL", "http://localhost:3000");
     let (_, sitemap_config) = testing_configs();
@@ -156,3 +157,17 @@ fn urlset_serialisation_isnt_lossy() {
     let deserialized_url_set: UrlSet = serde_cbor::de::from_slice(&file_str).unwrap();
     assert_eq!(url_set, deserialized_url_set);
 }
+//TODO: TEST UPDATES AND DELETES, UPDATING URL CREATES A NEW ENTRY INSTEAD OF EDITING PREVIOUS ONE
+
+// #[rstest]
+// #[traced_test]
+// #[parallel]
+// async fn url_set_find_affected_works() {
+//     let mut url_set = get_db_from_file("./").await.unwrap();
+//     assert!(url_set
+//         .find_affected("UHJvZHVjdDoxNjEwMg==", "dute-vlakno-0-5kg-biele")
+//         .is_empty());
+//     assert!(!url_set
+//         .find_affected("UHJvZHVjdDoxNjEwMg==", "dute-vlakno-0-5kg-biele-test")
+//         .is_empty());
+// }

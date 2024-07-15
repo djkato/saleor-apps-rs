@@ -5,6 +5,7 @@ use std::ops::{Deref, DerefMut};
 
 use serde::{Deserialize, Serialize};
 use tinytemplate::TinyTemplate;
+use tracing::debug;
 
 use crate::app::SitemapConfig;
 
@@ -57,10 +58,22 @@ impl UrlSet {
     pub fn find_affected(&mut self, id: &str, slug: &str) -> Vec<&mut Url> {
         self.iter_mut()
             .filter(|u| {
-                u.data.id == id && u.data.slug != slug
-                    || u.related
+                debug!(
+                    "comparing: ( {} == {} && {} != {} ) || ( {:?} == {} && {:?} != {} )",
+                    &u.data.id,
+                    &id,
+                    &u.data.slug,
+                    &slug,
+                    u.related.clone().map(|ud| ud.id),
+                    &id,
+                    u.related.clone().map(|ud| ud.slug),
+                    &slug
+                );
+                (u.data.id == id && u.data.slug != slug)
+                    || (u
+                        .related
                         .as_ref()
-                        .map_or(false, |ud| ud.id == id && ud.slug != slug)
+                        .map_or(false, |ud| ud.id == id && ud.slug != slug))
             })
             .collect()
     }

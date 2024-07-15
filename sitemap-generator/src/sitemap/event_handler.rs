@@ -16,14 +16,14 @@ use crate::{
     sitemap::Url,
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, warn};
 
 use super::{ItemData, ItemType, UrlSet};
 
 // 10k links google says, but there's also a size limit and my custom params might be messing with
 // that? Rather split prematurely to be sure.
 const MAX_URL_IN_SET: usize = 50_000;
-const DB_FILE_NAME: &str = "db.toml";
+const DB_FILE_NAME: &str = "db.json";
 const SITEMAP_FILE_NAME: &str = "sitemap.txt";
 
 pub struct EventHandler {
@@ -297,7 +297,7 @@ async fn update_or_create<T: Serialize>(
     debug!("affected urls: {:?}", &affected_urls);
 
     if affected_urls.is_empty() {
-        trace!("{:?} doesn't exist in url_set yet", &item.slug);
+        debug!("{:?} doesn't exist in url_set yet", &item.slug);
         url_set.push(Url::new(data, sitemap_config, item, rel_item).unwrap());
     } else {
         // Update affected urls
@@ -353,7 +353,7 @@ async fn delete(id: &str, sitemap_config: &SitemapConfig) {
 
 /* =================== File and SerDe operations  ========================= */
 
-async fn get_db_from_file(target_folder: &str) -> Result<UrlSet, UrlSetFileOperationsErr> {
+pub async fn get_db_from_file(target_folder: &str) -> Result<UrlSet, UrlSetFileOperationsErr> {
     let urls: UrlSet =
         serde_json::de::from_slice(&std::fs::read(format!("{target_folder}/{DB_FILE_NAME}"))?)
             .unwrap();

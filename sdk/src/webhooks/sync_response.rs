@@ -37,15 +37,15 @@ pub struct ExcludedMethodsResponse {
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(transparent)]
-pub struct OrderCalculateTaxes(CheckoutCalculateTaxesResponse);
+pub struct OrderCalculateTaxes(pub CheckoutCalculateTaxesResponse);
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(transparent)]
-pub struct OrderFilterShippingMethods(CheckoutFilterShippingMethodsResponse);
+pub struct OrderFilterShippingMethods(pub CheckoutFilterShippingMethodsResponse);
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(transparent)]
-pub struct ShippingListMethodsForCheckout(Vec<ShippingListMethodsForCheckoutVec>);
+pub struct ShippingListMethodsForCheckout(pub Vec<ShippingListMethodsForCheckoutVec>);
 
 #[derive(Serialize, Debug, Clone)]
 pub struct ShippingListMethodsForCheckoutVec {

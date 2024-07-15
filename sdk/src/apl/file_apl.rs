@@ -27,7 +27,7 @@ impl APL for FileApl {
         let mut auths: FileStructure;
         match path.is_file() {
             true => auths = serde_json::from_str(&std::fs::read_to_string(path)?)?,
-            false => auths = FileStructure { 0: HashMap::new() },
+            false => auths = FileStructure(HashMap::new()),
         }
 
         auths.insert(auth_data.saleor_api_url.clone(), auth_data);

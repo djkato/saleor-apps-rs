@@ -139,17 +139,17 @@ async fn create_response(
                 //     .await?
                 //     .token;
 
-                if payment_method == PaymentMethodType::COD {
-                    match session_data.source_object {
-                        OrderOrCheckout::Order(o) => {
-                            o.collection_point_name;
-                        }
-                        OrderOrCheckout::Checkout(c) => {
-                            c.delivery_method;
-                        }
-                        _ => error!("session_data.source_object is neither Order or Checkout")
-                    }
-                }
+                // if payment_method == PaymentMethodType::COD {
+                //     match session_data.source_object {
+                //         OrderOrCheckout::Order(o) => {
+                //             o.collection_point_name;
+                //         }
+                //         OrderOrCheckout::Checkout(c) => {
+                //             c.delivery_method;
+                //         }
+                //         _ => error!("session_data.source_object is neither Order or Checkout")
+                //     }
+                // }
 
                 let str_payment_method =
                     serde_json::to_string(&TransactionInitializeSessionData { payment_method })?;

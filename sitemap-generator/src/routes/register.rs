@@ -1,11 +1,9 @@
-
 use anyhow::Context;
 use axum::{
     extract::Json,
     extract::State,
     http::{HeaderMap, StatusCode},
 };
-use cynic::QueryBuilder;
 use saleor_app_sdk::{headers::SALEOR_API_URL_HEADER, AuthData, AuthToken};
 use tracing::{debug, info};
 

@@ -13,7 +13,7 @@ use crate::{
         CollectionCreated, CollectionDeleted, CollectionUpdated, Page, PageCreated, PageDeleted,
         PageUpdated, Product, ProductCreated, ProductDeleted, ProductUpdated,
     },
-    sitemap::Url,
+    sitemap::{AffectedResult, AffectedType, Url},
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 use tracing::{debug, error, info, warn};
@@ -23,7 +23,7 @@ use super::{ItemData, ItemType, UrlSet};
 // 10k links google says, but there's also a size limit and my custom params might be messing with
 // that? Rather split prematurely to be sure.
 const MAX_URL_IN_SET: usize = 50_000;
-const DB_FILE_NAME: &str = "db.json";
+const DB_FILE_NAME: &str = "db.cbor";
 const SITEMAP_FILE_NAME: &str = "sitemap.txt";
 
 pub struct EventHandler {
@@ -182,14 +182,14 @@ impl EventHandler {
                 },
                 Event::Unknown => (),
             }
-            debug!("Event succesfully handled");
+            info!("Event succesfully handled");
         }
     }
 }
 
 /* =============== Event handlers =============== */
 
-async fn product_updated_or_created<T: Serialize>(
+async fn product_updated_or_created<T: Serialize + Clone>(
     request: T,
     product: Product,
     sitemap_config: &SitemapConfig,
@@ -211,7 +211,7 @@ async fn product_updated_or_created<T: Serialize>(
     .await;
 }
 
-async fn category_updated_or_created<T: Serialize>(
+async fn category_updated_or_created<T: Serialize + Clone>(
     request: T,
     category: Category2,
     sitemap_config: &SitemapConfig,
@@ -229,7 +229,7 @@ async fn category_updated_or_created<T: Serialize>(
     .await;
 }
 
-async fn page_updated_or_created<T: Serialize>(
+async fn page_updated_or_created<T: Serialize + Clone>(
     request: T,
     page: Page,
     sitemap_config: &SitemapConfig,
@@ -247,7 +247,7 @@ async fn page_updated_or_created<T: Serialize>(
     .await;
 }
 
-async fn collection_updated_or_created<T: Serialize>(
+async fn collection_updated_or_created<T: Serialize + Clone>(
     request: T,
     collection: Collection,
     sitemap_config: &SitemapConfig,
@@ -267,7 +267,7 @@ async fn collection_updated_or_created<T: Serialize>(
 
 /* ============= URL Manipulations ================ */
 
-async fn update_or_create<T: Serialize>(
+async fn update_or_create<T: Serialize + Clone>(
     data: T,
     sitemap_config: &SitemapConfig,
     item: ItemData,
@@ -293,32 +293,124 @@ async fn update_or_create<T: Serialize>(
         },
     };
 
-    let mut affected_urls = url_set.find_affected(&item.id, &item.slug);
-    debug!("affected urls: {:?}", &affected_urls);
+    let affected_urls = url_set.find_affected(&item.id, &item.slug);
+    match affected_urls {
+        AffectedResult::NoneRelated => {
+            debug!("{:?} doesn't exist in url_set yet", &item.slug);
+            std::mem::drop(affected_urls);
+            let new_url = match Url::new(data, sitemap_config, item, rel_item) {
+                Ok(v) => v,
+                Err(e) => {
+                    error!("Failed creating new url, {:?}", e);
+                    return;
+                }
+            };
+            url_set.push(new_url);
+        }
+        AffectedResult::NoneAffected => {
+            debug!("Changes haven't affected any urls, ignoring...");
+            return;
+        }
+        AffectedResult::Some(mut affected_urls) => {
+            debug!("affected urls: {:?}", &affected_urls);
+            for affected in affected_urls.iter_mut() {
+                match affected {
+                    AffectedType::Data(url) => {
+                        match Url::new(
+                            data.clone(),
+                            &sitemap_config,
+                            item.clone(),
+                            rel_item.clone(),
+                        ) {
+                            Ok(new_url) => {
+                                url.url = new_url.url;
+                                url.data = new_url.data;
+                                url.related = new_url.related;
+                            }
+                            Err(e) => error!("Failed updating url, {:?}", e),
+                        }
+                    }
+                    AffectedType::RelatedData(url) => {
+                        url.related = Some(item.clone());
 
-    if affected_urls.is_empty() {
-        debug!("{:?} doesn't exist in url_set yet", &item.slug);
-        url_set.push(Url::new(data, sitemap_config, item, rel_item).unwrap());
-    } else {
-        // Update affected urls
-        affected_urls.iter_mut().for_each(|url| {
-            let mut templater = TinyTemplate::new();
-            templater
-                .add_template("product", &sitemap_config.product_template)
-                .expect("Check your url templates!");
-            let new_loc = templater
-                .render("product", &data)
-                .expect("Check your url templates!");
-            debug!("updated `{}` to `{}`", &url.url, new_loc);
-            url.url = new_loc;
-        });
+                        match url.data.typ {
+                            ItemType::Product => {
+                                let new_data: ProductCreated = url.clone().into();
+                                match Url::new(
+                                    new_data,
+                                    &sitemap_config,
+                                    url.clone().data,
+                                    Some(item.clone()),
+                                ) {
+                                    Ok(new_url) => {
+                                        url.url = new_url.url;
+                                        url.data = new_url.data;
+                                        url.related = new_url.related;
+                                    }
+                                    Err(e) => error!("Failed updating url, {:?}", e),
+                                }
+                            }
+                            ItemType::Collection => {
+                                let new_data: CollectionCreated = url.clone().into();
+                                match Url::new(
+                                    new_data,
+                                    &sitemap_config,
+                                    url.clone().data,
+                                    Some(item.clone()),
+                                ) {
+                                    Ok(new_url) => {
+                                        url.url = new_url.url;
+                                        url.data = new_url.data;
+                                        url.related = new_url.related;
+                                    }
+                                    Err(e) => error!("Failed updating url, {:?}", e),
+                                }
+                            }
+                            ItemType::Page => {
+                                let new_data: PageCreated = url.clone().into();
+                                match Url::new(
+                                    new_data,
+                                    &sitemap_config,
+                                    url.clone().data,
+                                    Some(item.clone()),
+                                ) {
+                                    Ok(new_url) => {
+                                        url.url = new_url.url;
+                                        url.data = new_url.data;
+                                        url.related = new_url.related;
+                                    }
+                                    Err(e) => error!("Failed updating url, {:?}", e),
+                                }
+                            }
+                            ItemType::Category => {
+                                let new_data: CollectionCreated = url.clone().into();
+                                match Url::new(
+                                    new_data,
+                                    &sitemap_config,
+                                    url.clone().data,
+                                    Some(item.clone()),
+                                ) {
+                                    Ok(new_url) => {
+                                        url.url = new_url.url;
+                                        url.data = new_url.data;
+                                        url.related = new_url.related;
+                                    }
+                                    Err(e) => error!("Failed updating url, {:?}", e),
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
-    write_db_to_file(&url_set, &sitemap_config.target_folder)
-        .await
-        .unwrap();
-    write_url_set_to_file(&url_set, &sitemap_config.target_folder)
-        .await
-        .unwrap();
+
+    if let Err(e) = write_db_to_file(&url_set, &sitemap_config.target_folder).await {
+        error!("failed writing DB to file, {:?}", e);
+    }
+    if let Err(e) = write_url_set_to_file(&url_set, &sitemap_config.target_folder).await {
+        error!("failed writing url to file, {:?}", e);
+    }
 }
 
 async fn delete(id: &str, sitemap_config: &SitemapConfig) {
@@ -343,20 +435,19 @@ async fn delete(id: &str, sitemap_config: &SitemapConfig) {
     };
     url_set.flush_related(id);
 
-    write_db_to_file(&url_set, &sitemap_config.target_folder)
-        .await
-        .unwrap();
-    write_url_set_to_file(&url_set, &sitemap_config.target_folder)
-        .await
-        .unwrap();
+    if let Err(e) = write_db_to_file(&url_set, &sitemap_config.target_folder).await {
+        error!("failed writing DB to file, {:?}", e);
+    }
+    if let Err(e) = write_url_set_to_file(&url_set, &sitemap_config.target_folder).await {
+        error!("failed writing url to file, {:?}", e);
+    }
 }
 
 /* =================== File and SerDe operations  ========================= */
 
 pub async fn get_db_from_file(target_folder: &str) -> Result<UrlSet, UrlSetFileOperationsErr> {
     let urls: UrlSet =
-        serde_json::de::from_slice(&std::fs::read(format!("{target_folder}/{DB_FILE_NAME}"))?)
-            .unwrap();
+        serde_cbor::de::from_slice(&std::fs::read(format!("{target_folder}/{DB_FILE_NAME}"))?)?;
     Ok(urls)
 }
 
@@ -370,7 +461,7 @@ pub async fn write_db_to_file(
     }
     fs::write(
         format!("{target_folder}/{DB_FILE_NAME}"),
-        serde_json::to_vec(url_set).unwrap(),
+        serde_cbor::to_vec(url_set)?,
     )?;
     Ok(())
 }

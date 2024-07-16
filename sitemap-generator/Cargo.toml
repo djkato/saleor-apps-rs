@@ -1,6 +1,6 @@
 [package]
 name = "sitemap-generator"
-version = "1.0.1"
+version = "1.0.0"
 edition = "2021"
 authors = ["Djkáťo <djkatovfx@gmail.com>"]
 description = "Creates and keeps Sitemap.xml uptodate with Saleor."
@@ -30,10 +30,8 @@ surf.workspace = true
 cynic = { workspace = true, features = ["http-surf"] }
 cynic-codegen.workspace = true
 thiserror.workspace = true
-rstest.workspace = true
-async-std = { workspace = true, features = ["attributes"] }
 
-toml = "0.8.14"
+# toml = "0.8.14"
 # tera = { version = "1.19.1", default-features = false }
 # fd-lock = "4.0.2"
 # quick-xml = { version = "0.34.0", features = ["serialize"] }
@@ -46,6 +44,8 @@ serde_cbor = "0.11.2"
 # itertools = "0.13.0"
 
 [dev-dependencies]
+rstest.workspace = true
+async-std = { workspace = true, features = ["attributes"] }
 random_word = { version = "0.4.3", features = ["en"] }
 rand = "0.8.5"
 serial_test = "3.1.1"

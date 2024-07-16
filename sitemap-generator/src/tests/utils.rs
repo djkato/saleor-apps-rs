@@ -1,3 +1,8 @@
+use axum::{
+    body::Body,
+    http::{Request, Response, StatusCode},
+    routing::RouterIntoService,
+};
 use rand::{
     distributions::{Distribution, Standard},
     seq::SliceRandom,
@@ -6,8 +11,10 @@ use rand::{
 use saleor_app_sdk::{
     apl::AplType,
     config::Config,
+    headers::{SALEOR_API_URL_HEADER, SALEOR_EVENT_HEADER},
     webhooks::{utils::EitherWebhookType, AsyncWebhookEventType},
 };
+use tower::{Service, ServiceExt};
 use tracing::Level;
 
 use crate::{
@@ -64,6 +71,36 @@ pub fn testing_configs() -> (Config, SitemapConfig) {
             collection_template: "https://example.com/collection/{collection.slug}".to_string(),
         },
     )
+}
+
+pub async fn create_query(
+    mut app: RouterIntoService<Body>,
+    body: String,
+    webhook: EitherWebhookType,
+) -> RouterIntoService<Body> {
+    let response = app
+        .ready()
+        .await
+        .unwrap()
+        .call(
+            Request::builder()
+                .uri("/api/webhooks")
+                .header(SALEOR_API_URL_HEADER, "https://api.example.com")
+                .header(
+                    SALEOR_EVENT_HEADER,
+                    match webhook {
+                        EitherWebhookType::Sync(s) => s.as_ref().to_string(),
+                        EitherWebhookType::Async(a) => a.as_ref().to_string(),
+                    },
+                )
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    app
 }
 
 pub struct Action {

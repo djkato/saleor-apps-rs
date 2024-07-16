@@ -39,7 +39,7 @@ where
 
 pub fn trace_to_std(config: &Config) -> anyhow::Result<()> {
     let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
+        .with_default_directive(LevelFilter::DEBUG.into())
         .from_env()?
         .add_directive(format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level).parse()?);
     tracing_subscriber::fmt()

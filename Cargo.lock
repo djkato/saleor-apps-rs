@@ -3377,7 +3377,7 @@ checksum = "f98d2aa92eebf49b69786be48e4477826b256916e84a57ff2a4f21923b48eb4c"
 
 [[package]]
 name = "saleor-app-sdk"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3885,7 +3885,6 @@ dependencies = [
  "thiserror",
  "tinytemplate",
  "tokio",
- "toml",
  "tower",
  "tower-http",
  "tracing",

@@ -155,7 +155,11 @@ pub async fn regenerate(state: AppState, saleor_api_url: String) -> anyhow::Resu
                         slug: p.slug.clone(),
                         typ: ItemType::Product,
                     },
-                    None,
+                    p.category.clone().map(|c| ItemData {
+                        id: c.id.inner().to_owned(),
+                        slug: c.slug,
+                        typ: ItemType::Category,
+                    }),
                 ) {
                     Ok(u) => Some(u),
                     Err(e) => {

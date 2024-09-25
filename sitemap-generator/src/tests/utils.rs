@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    http::{Request, Response, StatusCode},
+    http::{Request, StatusCode},
     routing::RouterIntoService,
 };
 use rand::{
@@ -261,11 +261,35 @@ pub fn gen_random_url_set(
 ) -> Vec<(String, Url, EitherWebhookType)> {
     let mut res: Vec<(String, Url, EitherWebhookType)> = vec![];
     for _ in 0..len {
-        let slug = random_word::gen(random_word::Lang::En).to_owned();
-        let id = cynic::Id::new(slug.to_owned() + "_ID");
+        let slug = random_word::gen(random_word::Lang::En).to_owned()
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En);
+        let id = cynic::Id::new("ID_".to_owned() + &slug.clone());
 
-        let mut rel_slug = random_word::gen(random_word::Lang::En).to_owned();
-        let mut rel_id = cynic::Id::new(rel_slug.to_owned() + "_ID");
+        let mut rel_slug = random_word::gen(random_word::Lang::En).to_owned()
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En)
+            + "_"
+            + random_word::gen(random_word::Lang::En);
+        let mut rel_id = cynic::Id::new("ID_".to_owned() + &rel_slug.clone());
 
         match rand::random::<ItemType>() {
             ItemType::Product => {

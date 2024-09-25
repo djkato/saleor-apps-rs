@@ -4,8 +4,7 @@ use std::time::Duration;
 
 use crate::{
     create_app,
-    queries::event_subjects_updated::{Category, Product, ProductUpdated},
-    sitemap::{ItemType, Url, UrlSet},
+    sitemap::{ItemType, UrlSet},
 };
 use async_std::task::sleep;
 use axum::{
@@ -61,11 +60,12 @@ pub async fn app_runs_and_responses() {
 #[tokio::test]
 #[traced_test]
 #[serial]
+//TODO: This test is busted or smt
 async fn update_event_updates_correctly() {
     let mut app = init_test_app().await;
     let (_, sitemap_config) = testing_configs();
 
-    let mut evn = gen_random_url_set(50, &sitemap_config);
+    let mut evn = gen_random_url_set(500, &sitemap_config);
     for (body, _, webhook_type) in evn.clone() {
         app = create_query(app, body, webhook_type).await;
     }
@@ -272,7 +272,22 @@ fn urlset_serialisation_isnt_lossy() {
     let deserialized_url_set: UrlSet = serde_cbor::de::from_slice(&file_str).unwrap();
     assert_eq!(url_set, deserialized_url_set);
 }
-//TODO: TEST UPDATES AND DELETES, UPDATING URL CREATES A NEW ENTRY INSTEAD OF EDITING PREVIOUS ONE
+
+// #[rstest]
+// #[traced_test]
+// #[parallel]
+// fn desereialize_cbor() {
+//     std::fs::write(
+//         "db.json",
+//         serde_json::to_string_pretty(
+//             &serde_cbor::de::from_slice::<UrlSet>(&std::fs::read("db.cbor").unwrap()).unwrap(),
+//         )
+//         .unwrap(),
+//     )
+//     .unwrap();
+//
+//     // assert_eq!(url_set, deserialized_url_set);
+// }
 
 // #[rstest]
 // #[traced_test]

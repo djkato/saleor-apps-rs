@@ -31,8 +31,8 @@ dependencies = [
 [tasks.push-containers]
 workspace = false
 script = '''
-docker push ghcr.io/djkato/saleor-sitemap-generator:latest
-docker push ghcr.io/djkato/saleor-simple-payment-gateway:latest
+docker push ghcr.io/djkato/saleor-app-sitemap-generator:latest
+docker push ghcr.io/djkato/saleor-app-simple-payment-gateway:latest
 '''
 
 [tasks.delete-images]

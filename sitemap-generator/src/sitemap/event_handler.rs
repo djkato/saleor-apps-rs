@@ -4,7 +4,6 @@ use std::{
     fs::{self},
     io::ErrorKind,
 };
-use tinytemplate::TinyTemplate;
 
 use crate::{
     app::{AppState, SitemapConfig},
@@ -316,12 +315,8 @@ async fn update_or_create<T: Serialize + Clone>(
             for affected in affected_urls.iter_mut() {
                 match affected {
                     AffectedType::Data(url) => {
-                        match Url::new(
-                            data.clone(),
-                            &sitemap_config,
-                            item.clone(),
-                            rel_item.clone(),
-                        ) {
+                        match Url::new(data.clone(), sitemap_config, item.clone(), rel_item.clone())
+                        {
                             Ok(new_url) => {
                                 url.url = new_url.url;
                                 url.data = new_url.data;
@@ -338,7 +333,7 @@ async fn update_or_create<T: Serialize + Clone>(
                                 let new_data: ProductCreated = url.clone().into();
                                 match Url::new(
                                     new_data,
-                                    &sitemap_config,
+                                    sitemap_config,
                                     url.clone().data,
                                     Some(item.clone()),
                                 ) {
@@ -354,7 +349,7 @@ async fn update_or_create<T: Serialize + Clone>(
                                 let new_data: CollectionCreated = url.clone().into();
                                 match Url::new(
                                     new_data,
-                                    &sitemap_config,
+                                    sitemap_config,
                                     url.clone().data,
                                     Some(item.clone()),
                                 ) {
@@ -370,7 +365,7 @@ async fn update_or_create<T: Serialize + Clone>(
                                 let new_data: PageCreated = url.clone().into();
                                 match Url::new(
                                     new_data,
-                                    &sitemap_config,
+                                    sitemap_config,
                                     url.clone().data,
                                     Some(item.clone()),
                                 ) {
@@ -386,7 +381,7 @@ async fn update_or_create<T: Serialize + Clone>(
                                 let new_data: CollectionCreated = url.clone().into();
                                 match Url::new(
                                     new_data,
-                                    &sitemap_config,
+                                    sitemap_config,
                                     url.clone().data,
                                     Some(item.clone()),
                                 ) {

@@ -9,6 +9,8 @@ pub mod manifest;
 pub mod middleware;
 pub mod webhooks;
 
+use anyhow::bail;
+
 use apl::{AplType, APL};
 use config::Config;
 use serde::{Deserialize, Serialize};

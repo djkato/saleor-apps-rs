@@ -26,7 +26,7 @@ async fn main() -> Result<(), std::io::Error> {
     use leptos_axum::{generate_route_list, LeptosRoutes };
     use app::*;
     use fileserv::file_and_error_handler;
-    use saleor_app_sdk::middleware::verify_webhook_signature::webhook_signature_verifier;
+    use saleor_app_sdk::{manifest::{extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget}, middleware::verify_webhook_signature::webhook_signature_verifier};
     use tokio::sync::Mutex;
     use saleor_app_sdk::{
         cargo_info,
@@ -49,48 +49,16 @@ async fn main() -> Result<(), std::io::Error> {
     let saleor_app = SaleorApp::new(&config).unwrap();
 
     let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
-        .add_webhook(
-            WebhookManifestBuilder::new(&config)
-                .set_query(
-                    r#"
-                    subscription QueryProductsChanged {
-                      event {
-                        ... on ProductUpdated {
-                          product {
-                            ... BaseProduct
-                          }
-                        }
-                        ... on ProductCreated {
-                          product {
-                            ... BaseProduct
-                          }
-                        }
-                        ... on ProductDeleted {
-                          product {
-                            ... BaseProduct
-                          }
-                        }
-                      }
-                    }
-
-                    fragment BaseProduct on Product {
-                      id
-                      slug
-                      name
-                      category {
-                        slug
-                      }
-                    }
-                    "#,
-                )
-                .add_async_events(vec![
-                    AsyncWebhookEventType::ProductCreated,
-                    AsyncWebhookEventType::ProductUpdated,
-                    AsyncWebhookEventType::ProductDeleted,
-                ])
-                .build(),
-        )
         .add_permission(AppPermission::ManageProducts)
+        .add_extension(
+            AppExtensionBuilder::new()
+                .set_url("/extensions/order_to_pdf")
+                .set_label("Order to PDF")
+                .add_permissions(vec![AppPermission::ManageOrders, AppPermission::ManageProducts, AppPermission::ManageProductTypesAndAttributes])
+                .set_mount(AppExtensionMount::OrderDetailsMoreActions)
+                .set_target(AppExtensionTarget::Popup)
+                .build()
+        )
         .build();
 
     let app_state = AppState{

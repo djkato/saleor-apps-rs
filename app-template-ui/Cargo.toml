@@ -36,17 +36,16 @@ http = { workspace = true }
 pulldown-cmark = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-saleor-app-sdk = { workspace = true, features = ["bridge"], optional = true }
 dotenvy = { workspace = true }
 envy = { workspace = true }
 cynic = { workspace = true, features = ["http-surf"], optional = true }
 surf = { workspace = true, optional = true }
+saleor-app-sdk = { workspace = true, optional = true }
 
 [build-dependencies]
 cynic-codegen = { workspace = true, optional = true }
 
 [features]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
 ssr = [
     "dep:axum",
     "dep:tokio",
@@ -55,6 +54,11 @@ ssr = [
     "dep:leptos_axum",
     "dep:tracing",
     "dep:saleor-app-sdk",
+    "saleor-app-sdk/file_apl",
+    "saleor-app-sdk/redis_apl",
+    "saleor-app-sdk/tracing",
+    "saleor-app-sdk/middleware",
+    "saleor-app-sdk/webhook_utils",
     "dep:tracing-subscriber",
     "dep:anyhow",
     "dep:cynic",
@@ -63,6 +67,13 @@ ssr = [
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",
+]
+hydrate = [
+    "leptos/hydrate",
+    "leptos_meta/hydrate",
+    "leptos_router/hydrate",
+    "dep:saleor-app-sdk",
+    "saleor-app-sdk/bridge",
 ]
 
 

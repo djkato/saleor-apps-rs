@@ -1,0 +1,15 @@
+{
+  "lspconfig": {
+    "rust_analyzer": {
+      "rust-analyzer.cargo.features": "all"
+      /*
+        use this only when working with leptos
+      */
+      // "rust-analyzer.rustfmt.overrideCommand": [
+      //   "leptosfmt",
+      //   "--stdin",
+      //   "--rustfmt"
+      // ]
+    }
+  }
+}

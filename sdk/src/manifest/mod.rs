@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+pub mod extension;
 
 use crate::{config::Config, webhooks::WebhookManifest};
 
@@ -47,6 +48,11 @@ pub enum AppExtensionMount {
     OrderOverviewCreate,
     OrderOverviewMoreActions,
 }
+impl Default for AppExtensionMount {
+    fn default() -> Self {
+        Self::ProductOverviewMoreActions
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -54,8 +60,13 @@ pub enum AppExtensionTarget {
     Popup,
     AppPage,
 }
+impl Default for AppExtensionTarget {
+    fn default() -> Self {
+        Self::Popup
+    }
+}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AppExtension {
     /** Name which will be displayed in the dashboard */
@@ -186,6 +197,20 @@ impl AppManifestBuilder {
     }
     pub fn add_permissions(mut self, mut permissions: Vec<AppPermission>) -> Self {
         self.manifest.permissions.append(&mut permissions);
+        self
+    }
+    pub fn add_extension(mut self, extension: AppExtension) -> Self {
+        match &mut self.manifest.extensions {
+            Some(e) => e.push(extension),
+            None => self.manifest.extensions = Some(vec![extension]),
+        }
+        self
+    }
+    pub fn add_extensions(mut self, mut extensions: Vec<AppExtension>) -> Self {
+        match &mut self.manifest.extensions {
+            Some(e) => e.append(&mut extensions),
+            None => self.manifest.extensions = Some(extensions),
+        }
         self
     }
     pub fn build(self) -> AppManifest {

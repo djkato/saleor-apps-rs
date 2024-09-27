@@ -48,7 +48,7 @@ tracing-subscriber = { workspace = true, optional = true }
 ## Needed for bridge
 wasm-bindgen = { workspace = true, optional = true }
 serde-wasm-bindgen = { version = "0.6.5", optional = true }
-bus = { version = "2.4.1", optional = true }
+# bus = { version = "2.4.1", optional = true }
 
 [dependencies.web-sys]
 optional = true
@@ -66,7 +66,7 @@ features = [
 [dev-dependencies]
 
 [features]
-default = ["middleware", "redis_apl", "webhook_utils", "tracing"]
+default = []
 middleware = [
   "dep:axum",
   "dep:jsonwebtoken",
@@ -80,7 +80,7 @@ webhook_utils = ["dep:http"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 bridge = [
   "dep:wasm-bindgen",
-  "dep:bus",
+  # "dep:bus",
   "dep:serde-wasm-bindgen",
   "dep:web-sys",
 ]

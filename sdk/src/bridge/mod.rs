@@ -4,18 +4,17 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumString, IntoStaticStr};
-use tracing::{debug, error, warn};
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 
 use crate::{locales::LocaleCode, manifest::AppPermission};
 
-use self::event::{Event, EventChannels};
+use self::event::Event;
 use web_sys::console;
 
 pub struct AppBridge {
     pub state: AppBridgeState,
     pub referer_origin: Option<String>,
-    pub event_channels: EventChannels,
+    // pub event_channels: EventChannels,
     /**
      * Should automatically emit Actions.NotifyReady.
      * If app loading time is longer, this can be disabled and sent manually.
@@ -77,7 +76,7 @@ impl AppBridgeState {
                 state.locale = loc
             }
         }
-        debug!("state from window: {:?}", &state);
+        // debug!("state from window: {:?}", &state);
         console::log_1(&format!("state from window: {:?}", &state).into());
         Ok(state)
     }
@@ -122,10 +121,10 @@ impl Default for ThemeType {
 
 impl AppBridge {
     pub fn new(auto_notify_ready: Option<bool>) -> Result<Self, AppBridgeError> {
-        debug!("creating app bridge");
+        // debug!("creating app bridge");
         console::log_1(&"creating app bridge".into());
         if web_sys::Window::is_type_of(&JsValue::from_str("undefined")) {
-            error!("Window is undefined");
+            // error!("Window is undefined");
             console::log_1(&"Window is undefined".into());
             return Err(AppBridgeError::WindowIsUndefined);
         }
@@ -137,7 +136,7 @@ impl AppBridge {
             })
         });
         if referrer.is_none() {
-            warn!("Referrer origin is none");
+            // warn!("Referrer origin is none");
             console::log_1(&"Referrer origin is none".into());
         }
 
@@ -148,7 +147,6 @@ impl AppBridge {
                 Err(e) => return Err(AppBridgeError::JsValue(e)),
             },
             referer_origin: referrer,
-            event_channels: EventChannels::new(),
         };
         if bridge.auto_notify_ready.unwrap_or(false) {
             bridge.notify_ready()?;
@@ -161,7 +159,7 @@ impl AppBridge {
         let cb = Closure::wrap(Box::new(|e: JsValue| {
             let event_data: Result<SaleorIframeEvent, _> = serde_wasm_bindgen::from_value(e);
             web_sys::console::log_1(&format!("{:?}", &event_data).into());
-            debug!("{:?}", &event_data);
+            // debug!("{:?}", &event_data);
         }) as Box<dyn FnMut(_)>);
         window
             .add_event_listener_with_callback("message", &cb.as_ref().unchecked_ref())
@@ -182,7 +180,8 @@ impl AppBridge {
         todo!()
     }
     pub fn notify_ready(&mut self) -> Result<&mut Self, AppBridgeError> {
-        todo!()
+        self.dispatch_event(Event::NotifyReady("{}".to_owned()))?;
+        Ok(self)
     }
 }
 

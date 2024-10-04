@@ -4,7 +4,6 @@ use crate::routes::home::Home;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use saleor_app_sdk::bridge::AppBridge;
 
 #[derive(Params, PartialEq)]
 pub struct UrlAppParams {
@@ -15,7 +14,6 @@ pub struct UrlAppParams {
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
-    let app_bridge = AppBridge::new(Some(true)).unwrap();
     view! {
         <Stylesheet id="leptos" href="/pkg/saleor-app-template-ui.css" />
 

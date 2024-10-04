@@ -13,21 +13,21 @@ mod queries;
 
 mod app;
 mod components;
-mod routes;
 mod error_template;
+mod routes;
 
 #[tokio::main]
 #[cfg(feature = "ssr")]
 async fn main() -> Result<(), std::io::Error> {
-
-    use std::sync::Arc;
-    use axum::{middleware, routing::{get, post}, Router};
-    use leptos::*;
-    use leptos_axum::{generate_route_list, LeptosRoutes };
     use app::*;
+    use axum::{
+        middleware,
+        routing::{get, post},
+        Router,
+    };
     use fileserv::file_and_error_handler;
-    use saleor_app_sdk::{manifest::{extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget}, middleware::verify_webhook_signature::webhook_signature_verifier};
-    use tokio::sync::Mutex;
+    use leptos::*;
+    use leptos_axum::{generate_route_list, LeptosRoutes};
     use saleor_app_sdk::{
         cargo_info,
         config::Config,
@@ -35,6 +35,12 @@ async fn main() -> Result<(), std::io::Error> {
         webhooks::{AsyncWebhookEventType, WebhookManifestBuilder},
         SaleorApp,
     };
+    use saleor_app_sdk::{
+        manifest::{extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget},
+        middleware::verify_webhook_signature::webhook_signature_verifier,
+    };
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
 
     use crate::routes::api::{manifest::manifest, register::register, webhooks::webhooks};
 
@@ -54,14 +60,18 @@ async fn main() -> Result<(), std::io::Error> {
             AppExtensionBuilder::new()
                 .set_url("/extensions/order_to_pdf")
                 .set_label("Order to PDF")
-                .add_permissions(vec![AppPermission::ManageOrders, AppPermission::ManageProducts, AppPermission::ManageProductTypesAndAttributes])
+                .add_permissions(vec![
+                    AppPermission::ManageOrders,
+                    AppPermission::ManageProducts,
+                    AppPermission::ManageProductTypesAndAttributes,
+                ])
                 .set_mount(AppExtensionMount::OrderDetailsMoreActions)
                 .set_target(AppExtensionTarget::Popup)
-                .build()
+                .build(),
         )
         .build();
 
-    let app_state = AppState{
+    let app_state = AppState {
         manifest: app_manifest,
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),
@@ -69,12 +79,22 @@ async fn main() -> Result<(), std::io::Error> {
     };
 
     let state_1 = app_state.clone();
-    let app = 
-    Router::new()
-        .leptos_routes_with_context(&app_state, routes,move || provide_context(state_1.clone()) , App)
+    let app = Router::new()
+        .leptos_routes_with_context(
+            &app_state,
+            routes,
+            move || provide_context(state_1.clone()),
+            App,
+        )
         .fallback(file_and_error_handler)
-        .route("/api/webhooks", post(webhooks).route_layer(middleware::from_fn(webhook_signature_verifier)))
-        .route("/api/register", post(register).route_layer(middleware::from_fn(webhook_signature_verifier)))
+        .route(
+            "/api/webhooks",
+            post(webhooks).route_layer(middleware::from_fn(webhook_signature_verifier)),
+        )
+        .route(
+            "/api/register",
+            post(register).route_layer(middleware::from_fn(webhook_signature_verifier)),
+        )
         .route("/api/manifest", get(manifest))
         .with_state(app_state.clone());
 
@@ -90,30 +110,35 @@ async fn main() -> Result<(), std::io::Error> {
     .await?;
     tracing::debug!("listening on {}", listener.local_addr()?);
 
-   let _= axum::serve(listener, app.into_make_service())
-        .await;
+    let _ = axum::serve(listener, app.into_make_service()).await;
     Ok(())
 }
 
 #[cfg(not(feature = "ssr"))]
 pub fn main() {
+    use saleor_app_sdk::bridge::AppBridge;
+    let app_bridge = AppBridge::new(Some(true)).unwrap();
     // no client-side main function
     // unless we want this to work with e.g., Trunk for a purely client-side app
     // see lib.rs for hydration function instead
 }
 
-
 #[cfg(feature = "ssr")]
 use saleor_app_sdk::config::Config;
 #[cfg(feature = "ssr")]
-pub fn trace_to_std(config: &Config) -> Result<(), envy::Error>  {
+pub fn trace_to_std(config: &Config) -> Result<(), envy::Error> {
     use tracing::level_filters::LevelFilter;
     use tracing_subscriber::EnvFilter;
 
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::DEBUG.into())
-        .from_env().unwrap()
-        .add_directive(format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level).parse().unwrap());
+        .from_env()
+        .unwrap()
+        .add_directive(
+            format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level)
+                .parse()
+                .unwrap(),
+        );
     tracing_subscriber::fmt()
         .with_max_level(config.log_level)
         .with_env_filter(filter)
@@ -122,5 +147,3 @@ pub fn trace_to_std(config: &Config) -> Result<(), envy::Error>  {
         .init();
     Ok(())
 }
-
-

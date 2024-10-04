@@ -40,10 +40,22 @@ dotenvy = { workspace = true }
 envy = { workspace = true }
 cynic = { workspace = true, features = ["http-surf"], optional = true }
 surf = { workspace = true, optional = true }
-saleor-app-sdk = { workspace = true, optional = true }
+
+[target.'cfg(target_family = "unix")'.dependencies]
+saleor-app-sdk = { workspace = true, optional = true, features = [
+    "file_apl",
+    "redis_apl",
+    "tracing",
+    "middleware",
+    "webhook_utils",
+] }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+saleor-app-sdk = { workspace = true, optional = true, features = ["bridge"] }
 
 [build-dependencies]
 cynic-codegen = { workspace = true, optional = true }
+
 
 [features]
 ssr = [
@@ -106,7 +118,7 @@ tailwind-input-file = "style/base.css"
 assets-dir = "public"
 
 # The IP and port (ex: 127.0.0.1:3000) where the server serves the content. Use it in your server setup.
-site-addr = "127.0.0.1:3000"
+site-addr = "0.0.0.0:3000"
 
 # The port to use for automatic reload monitoring
 reload-port = 3001

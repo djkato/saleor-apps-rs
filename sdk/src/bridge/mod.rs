@@ -167,18 +167,20 @@ impl AppBridge {
         Ok(self)
     }
 
-    pub fn dispatch_event(&mut self, event: Event) -> Result<Event, AppBridgeError> {
+    pub fn dispatch_event(&mut self, event: Event) -> Result<(), AppBridgeError> {
         let window = web_sys::window().ok_or(AppBridgeError::WindowIsUndefined)?;
         let parent = match window.parent() {
             Ok(p) => p.ok_or(AppBridgeError::WindowParentIsUndefined)?,
             Err(e) => return Err(AppBridgeError::JsValue(e)),
         };
-        let message = JsValue::from_str(&serde_json::to_string(&event)?);
+        // let message = JsValue::from(&event);
+        let message = serde_wasm_bindgen::to_value(&event)?;
         parent
             .post_message(&message, "*")
             .map_err(|e| AppBridgeError::JsValue(e))?;
-        todo!()
+        Ok(())
     }
+
     pub fn notify_ready(&mut self) -> Result<&mut Self, AppBridgeError> {
         self.dispatch_event(Event::NotifyReady("{}".to_owned()))?;
         Ok(self)

@@ -44,10 +44,8 @@ surf = { workspace = true, optional = true }
 [target.'cfg(target_family = "unix")'.dependencies]
 saleor-app-sdk = { workspace = true, optional = true, features = [
     "file_apl",
-    "redis_apl",
-    "tracing",
-    "middleware",
-    "webhook_utils",
+    "recommended",
+    "bridge",
 ] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]

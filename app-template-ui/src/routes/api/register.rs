@@ -5,7 +5,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
 };
 use saleor_app_sdk::{AuthData, AuthToken};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::{app::AppState, error_template::AxumError};
 
@@ -34,8 +34,14 @@ pub async fn register(
         app_id: state.manifest.id,
         saleor_api_url: saleor_api_url.clone(),
     };
-    app.apl.set(auth_data).await?;
-
-    info!("registered app for{:?}", &saleor_api_url);
-    Ok(StatusCode::OK)
+    match app.apl.set(auth_data).await{
+        Ok(e) => {
+            info!("registered app for{:?}", &saleor_api_url);
+            Ok(StatusCode::OK)
+        }
+        Err(e) => {
+            error!("{e}");
+            return Err(AxumError::InternalServerError("rippi".to_owned()))
+        }
+    }
 }

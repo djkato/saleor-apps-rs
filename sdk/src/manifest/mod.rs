@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 pub mod extension;
+use thiserror::Error;
 
 use crate::{config::Config, webhooks::WebhookManifest};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AppPermission {
     ManageUsers,
@@ -213,9 +214,26 @@ impl AppManifestBuilder {
         }
         self
     }
-    pub fn build(self) -> AppManifest {
-        self.manifest
+    pub fn build(self) -> Result<AppManifest, AppManifestBuilderError> {
+        if let Some(ext) = self
+            .manifest
+            .extensions
+            .as_ref()
+            .map(|exts| exts.iter().flat_map(|e| &e.permissions).collect::<Vec<_>>())
+        {
+            match ext.iter().all(|e| self.manifest.permissions.contains(e)) {
+                true => Ok(self.manifest),
+                false => Err(AppManifestBuilderError::MismatchedPermissions),
+            }
+        } else {
+            Ok(self.manifest)
+        }
     }
+}
+#[derive(Error, Debug)]
+pub enum AppManifestBuilderError {
+    #[error("manifest.permissions doesn't list all permissions needed in manifest.extensions.permissions")]
+    MismatchedPermissions,
 }
 pub struct CargoInfo {
     pub name: String,

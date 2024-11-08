@@ -86,14 +86,15 @@ async fn main() -> anyhow::Result<()> {
             AppPermission::ManageCheckouts,
             AppPermission::HandleCheckouts,
         ])
-        .build();
+        .build()
+        .expect("Manifest has invalid parameters");
 
     let app_state = AppState {
         active_payment_methods: get_active_payment_methods_from_env()?,
         manifest: app_manifest,
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),
-        cod_extra_price_as_product_slug: std::env::var("COD_EXTRA_PRICE_AS_PRODUCT_SLUG").ok()
+        cod_extra_price_as_product_slug: std::env::var("COD_EXTRA_PRICE_AS_PRODUCT_SLUG").ok(),
     };
     let app = create_routes(app_state);
 

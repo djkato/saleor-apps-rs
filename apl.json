@@ -1,0 +1,9 @@
+{
+  "http://localhost:8000/graphql/": {
+    "domain": "http://10.100.110.60:3000",
+    "token": "NhJa5QG3J4UGbXQSiYF9L7HySMCKqA",
+    "saleorApiUrl": "http://localhost:8000/graphql/",
+    "appId": "saleor-app-template-ui",
+    "jwks": null
+  }
+}

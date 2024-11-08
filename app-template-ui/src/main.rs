@@ -55,7 +55,11 @@ async fn main() -> Result<(), std::io::Error> {
     let saleor_app = SaleorApp::new(&config).unwrap();
 
     let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
-        .add_permission(AppPermission::ManageProducts)
+        .add_permissions(vec![
+            AppPermission::ManageProducts,
+            AppPermission::ManageOrders,
+            AppPermission::ManageProductTypesAndAttributes,
+        ])
         .add_extension(
             AppExtensionBuilder::new()
                 .set_url("/extensions/order_to_pdf")
@@ -69,7 +73,8 @@ async fn main() -> Result<(), std::io::Error> {
                 .set_target(AppExtensionTarget::Popup)
                 .build(),
         )
-        .build();
+        .build()
+        .expect("Manifest has invalid parameters");
 
     let app_state = AppState {
         manifest: app_manifest,
@@ -89,11 +94,11 @@ async fn main() -> Result<(), std::io::Error> {
         .fallback(file_and_error_handler)
         .route(
             "/api/webhooks",
-            post(webhooks).route_layer(middleware::from_fn(webhook_signature_verifier)),
+            post(webhooks)//.route_layer(middleware::from_fn(webhook_signature_verifier)),
         )
         .route(
             "/api/register",
-            post(register).route_layer(middleware::from_fn(webhook_signature_verifier)),
+            post(register)//.route_layer(middleware::from_fn(webhook_signature_verifier)),
         )
         .route("/api/manifest", get(manifest))
         .with_state(app_state.clone());

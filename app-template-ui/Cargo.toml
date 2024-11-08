@@ -41,17 +41,7 @@ envy = { workspace = true }
 cynic = { workspace = true, features = ["http-surf"], optional = true }
 surf = { workspace = true, optional = true }
 
-[target.'cfg(target_family = "unix")'.dependencies]
-saleor-app-sdk = { workspace = true, optional = true, features = [
-    "file_apl",
-    "redis_apl",
-    "tracing",
-    "middleware",
-    "webhook_utils",
-] }
-
-[target.'cfg(target_family = "wasm")'.dependencies]
-saleor-app-sdk = { workspace = true, optional = true, features = ["bridge"] }
+saleor-app-sdk = { workspace = true, optional = true }
 
 [build-dependencies]
 cynic-codegen = { workspace = true, optional = true }
@@ -79,6 +69,7 @@ ssr = [
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",
+    "saleor-app-sdk/bridge",
 ]
 hydrate = [
     "leptos/hydrate",

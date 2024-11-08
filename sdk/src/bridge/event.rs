@@ -1,4 +1,4 @@
-use crate::locales::LocaleCode;
+use crate::{locales::LocaleCode, manifest::AppPermission};
 
 use super::ThemeType;
 // use bus::{Bus, BusReader};
@@ -72,14 +72,38 @@ pub enum Event {
     Theme(PayloadTheme),
     LocaleChanged(PayloadLocaleChanged),
     TokenRefreshed(PayloadTokenRefreshed),
-    NotifyReady(String),
+}
+
+#[derive(Deserialize, Serialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PayloadRequestPermissions {
+    pub permissions: Vec<AppPermission>,
+    pub redirect_path: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PayloadNotification {
+    pub status: Option<NotificationStatus>,
+    pub title: Option<String>,
+    pub text: Option<String>,
+    pub api_message: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum NotificationStatus {
+    Info,
+    Success,
+    Warning,
+    Error,
+}
+
+#[derive(Deserialize, Serialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadHanshake {
     pub token: String,
-    pub version: String,
+    pub version: f32,
     pub saleor_version: Option<String>,
     pub dashboard_version: Option<String>,
 }
@@ -87,23 +111,24 @@ pub struct PayloadHanshake {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadResponse {
-    pub action_id: String,
+    pub action_id: Option<String>,
     pub ok: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadRedirect {
-    pub path: String,
+    pub to: String,
+    pub new_context: Option<bool>,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadTheme {
     pub theme: ThemeType,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadLocaleChanged {
     pub locale: LocaleCode,

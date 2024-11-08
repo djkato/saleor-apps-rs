@@ -1,7 +1,9 @@
+pub mod action;
 pub mod event;
 
 use std::str::FromStr;
 
+use action::Action;
 use serde::{Deserialize, Serialize};
 use strum_macros::{EnumString, IntoStaticStr};
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
@@ -9,7 +11,7 @@ use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use crate::{locales::LocaleCode, manifest::AppPermission};
 
 use self::event::Event;
-use web_sys::console;
+use web_sys::{console, js_sys::JSON};
 
 pub struct AppBridge {
     pub state: AppBridgeState,
@@ -19,7 +21,7 @@ pub struct AppBridge {
      * Should automatically emit Actions.NotifyReady.
      * If app loading time is longer, this can be disabled and sent manually.
      */
-    auto_notify_ready: Option<bool>,
+    auto_notify_ready: bool,
 }
 
 #[derive(Default, Debug)]
@@ -120,7 +122,7 @@ impl Default for ThemeType {
 }
 
 impl AppBridge {
-    pub fn new(auto_notify_ready: Option<bool>) -> Result<Self, AppBridgeError> {
+    pub fn new(auto_notify_ready: bool) -> Result<Self, AppBridgeError> {
         // debug!("creating app bridge");
         console::log_1(&"creating app bridge".into());
         if web_sys::Window::is_type_of(&JsValue::from_str("undefined")) {
@@ -148,39 +150,61 @@ impl AppBridge {
             },
             referer_origin: referrer,
         };
-        if bridge.auto_notify_ready.unwrap_or(false) {
+        if bridge.auto_notify_ready {
             bridge.notify_ready()?;
         }
         Ok(bridge)
     }
 
-    pub fn listen_to_events(&mut self) -> Result<&mut Self, AppBridgeError> {
+    /*
+     * make sure to keep the returned closure handle safe, once it deallocs events will no longer
+     * trigger
+     */
+    pub fn listen_to_events(
+        &mut self,
+        mut on_event: impl FnMut(Result<Event, serde_wasm_bindgen::Error>) + 'static,
+    ) -> Result<Closure<dyn FnMut(JsValue)>, AppBridgeError> {
         let window = web_sys::window().ok_or(AppBridgeError::WindowIsUndefined)?;
-        let cb = Closure::wrap(Box::new(|e: JsValue| {
-            let event_data: Result<SaleorIframeEvent, _> = serde_wasm_bindgen::from_value(e);
-            web_sys::console::log_1(&format!("{:?}", &event_data).into());
-            // debug!("{:?}", &event_data);
-        }) as Box<dyn FnMut(_)>);
+        let cb = Closure::wrap(Box::new(move |e: JsValue| {
+            web_sys::console::log_1(
+                &format!(
+                    "sdk::bridge::listen_to_events: {:?}",
+                    &JSON::stringify(&web_sys::js_sys::Reflect::get(&e, &"data".into()).unwrap())
+                        .unwrap()
+                )
+                .into(),
+            );
+            let event_data: Result<Event, _> = serde_wasm_bindgen::from_value(
+                web_sys::js_sys::Reflect::get(&e, &"data".into())
+                    .expect("Closure should've received object with .data property, but didn't, saleor plz fix?"),
+            );
+            // web_sys::console::log_1(&format!("{:?}", &event_data).into());
+            on_event(event_data);
+        }) as Box<dyn FnMut(JsValue)>);
+
         window
             .add_event_listener_with_callback("message", &cb.as_ref().unchecked_ref())
             .map_err(|e| AppBridgeError::JsValue(e))?;
-        Ok(self)
+        Ok(cb)
     }
 
-    pub fn dispatch_event(&mut self, event: Event) -> Result<Event, AppBridgeError> {
+    pub fn dispatch_event(&mut self, action: Action) -> Result<(), AppBridgeError> {
         let window = web_sys::window().ok_or(AppBridgeError::WindowIsUndefined)?;
         let parent = match window.parent() {
             Ok(p) => p.ok_or(AppBridgeError::WindowParentIsUndefined)?,
             Err(e) => return Err(AppBridgeError::JsValue(e)),
         };
-        let message = JsValue::from_str(&serde_json::to_string(&event)?);
+        // let message = JsValue::from(&event);
+        let message = serde_wasm_bindgen::to_value(&action)?;
+        web_sys::console::log_1(&message);
         parent
             .post_message(&message, "*")
             .map_err(|e| AppBridgeError::JsValue(e))?;
-        todo!()
+        Ok(())
     }
+
     pub fn notify_ready(&mut self) -> Result<&mut Self, AppBridgeError> {
-        self.dispatch_event(Event::NotifyReady("{}".to_owned()))?;
+        self.dispatch_event(Action::NotifyReady("{}".to_owned()))?;
         Ok(self)
     }
 }
@@ -201,6 +225,6 @@ pub enum AppBridgeError {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SaleorIframeEvent {
-    origin: String,
-    data: Event,
+    pub origin: String,
+    pub data: Event,
 }

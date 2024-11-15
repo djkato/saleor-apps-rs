@@ -1,48 +1,29 @@
 use leptos::*;
-use leptos_dom::logging::{console_error, console_log};
+use saleor_app_sdk::bridge::{action::PayloadRedirect, dispatch_event, AppBridge};
 
 #[component]
-pub fn Pdf() -> impl IntoView {
-    let bridge = create_effect(|_| {
-        use saleor_app_sdk::bridge::AppBridge;
-        use saleor_app_sdk::{
-            bridge::action::{Action, PayloadRequestPermissions},
-            manifest::AppPermission,
-        };
-        match AppBridge::new(true) {
-            Ok(mut app_bridge) => {
-                console_log("App Bridge connected");
-                let cb_handle = app_bridge
-                    .listen_to_events(|event| match event {
-                        Ok(event) => console_log(&format!("order_to_pdf: {:?}", event)),
-                        Err(e) => console_error(&format!("order_to_pdf: {:?}", e)),
-                    })
-                    .unwrap();
-                //TODO: imagine leaking memory on purpose xd
-                cb_handle.forget();
-                _ = app_bridge.dispatch_event(Action::RequestPermissions(
-                    PayloadRequestPermissions {
-                        permissions: vec![AppPermission::ManageOrders],
-                        redirect_path: "".to_owned(),
-                    },
-                ));
-            }
-            Err(e) => console_error(&format!("{:?}", e)),
-        }; // let mut bridge = bridge.unwrap();
-
-        // match bridge.dispatch_event(Event::Handshake(PayloadHanshake::default())) {
-        //     Ok(ev) => {
-        //         console_log(&format! {"{:?}",ev});
-        //     }
-        //     Err(e) => {
-        //         console_log(&format! {"{:?}",e});
-        //     }
-        // };
-        // async fn temp(){}
-        // temp()
-    });
+pub fn OrderToPdf(bridge: ReadSignal<Option<AppBridge>>) -> impl IntoView {
     view! {
         <h1>Yello!</h1>
-        <p class="italic text-lg">r#"Loading AppBridge, please wait..."#</p>
+
+        {move || match bridge() {
+            Some(bridge) => {
+                match bridge.state.ready{
+                    true => view!{
+                        <div>
+                        <button on:click=move |ev|{
+                            dispatch_event(saleor_app_sdk::bridge::action::Action::Redirect(PayloadRedirect{
+                                to: format!("/apps/{}/app", bridge.state.id),
+                                new_context: None
+                            })).expect("failed sending redirect action");
+                        }>Settings</button>
+                            <p class="italic text-lg">"token:"{bridge.state.token}</p>
+                        </div>
+                    }.into_view(),
+                    false => view!{<p class="italic text-lg">r#"(bridge exists) Loading AppBridge, please wait..."#</p>}.into_view()
+                }
+            },
+                None => view!{<p class="italic text-lg">r#"Loading AppBridge, please wait..."#</p>}.into_view()
+            }}
     }
 }

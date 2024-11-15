@@ -1,9 +1,14 @@
 use crate::error_template::{AppError, ErrorTemplate};
-use crate::routes::extensions::order_to_pdf::Pdf;
+use crate::routes::extensions::order_to_pdf::OrderToPdf;
 use crate::routes::home::Home;
 use leptos::*;
+use leptos_dom::logging::{console_error, console_log};
 use leptos_meta::*;
 use leptos_router::*;
+use saleor_app_sdk::bridge::action::PayloadRequestPermissions;
+use saleor_app_sdk::bridge::event::Event;
+use saleor_app_sdk::bridge::{dispatch_event, listen_to_events, AppBridge};
+use saleor_app_sdk::manifest::AppPermission;
 
 #[derive(Params, PartialEq)]
 pub struct UrlAppParams {
@@ -12,7 +17,70 @@ pub struct UrlAppParams {
 
 #[component]
 pub fn App() -> impl IntoView {
-    // Provides context that manages stylesheets, titles, meta tags, etc.
+    let (bridge_read, bridge_set) = create_signal::<Option<AppBridge>>(None);
+
+    create_effect(move |_| match AppBridge::new(true) {
+        Ok(bridge) => bridge_set(Some(bridge)),
+        Err(e) => console_error(&format!("{:?}", e)),
+    });
+
+    create_effect(move |_| {
+        if let Err(e) = dispatch_event(saleor_app_sdk::bridge::action::Action::RequestPermissions(
+            PayloadRequestPermissions {
+                permissions: vec![AppPermission::ManageOrders, AppPermission::ManageProducts],
+                redirect_path: None,
+            },
+        )) {
+            console_error(&format!("{:?}", e));
+        };
+    });
+
+    create_effect(move |_| {
+        listen_to_events(move |event_res| match event_res {
+            Ok(event) => match event {
+                Event::Handshake(payload) => {
+                    if let Some(mut bridge) = bridge_read.get_untracked() {
+                        bridge.state.token = Some(payload.token);
+                        bridge.state.dashboard_version = payload.dashboard_version;
+                        bridge.state.saleor_version = payload.saleor_version;
+                        bridge_set(Some(bridge))
+                    }
+                }
+                Event::Response(_) => {
+                    // console_log(&format!("front::App: {:?}", payload.ok));
+                    if let Some(mut bridge) = bridge_read.get_untracked() {
+                        bridge.state.ready = true;
+                        bridge_set(Some(bridge))
+                    }
+                }
+                Event::Redirect(payload) => {
+                    console_log(&payload.path);
+                }
+                Event::Theme(payload) => {
+                    if let Some(mut bridge) = bridge_read.get_untracked() {
+                        bridge.state.theme = payload.theme;
+                        bridge_set(Some(bridge))
+                    }
+                }
+                Event::LocaleChanged(payload) => {
+                    if let Some(mut bridge) = bridge_read.get_untracked() {
+                        bridge.state.locale = payload.locale;
+                        bridge_set(Some(bridge))
+                    }
+                }
+                Event::TokenRefreshed(payload) => {
+                    if let Some(mut bridge) = bridge_read.get_untracked() {
+                        bridge.state.token = Some(payload.token);
+                        bridge_set(Some(bridge))
+                    }
+                }
+            },
+            Err(e) => {
+                console_error(&format!("front::App: {:?}", e));
+            }
+        })
+    });
+
     provide_meta_context();
     view! {
         <Stylesheet id="leptos" href="/pkg/saleor-app-template-ui.css" />
@@ -29,7 +97,7 @@ pub fn App() -> impl IntoView {
             <main class="p-4 md:p-8 md:px-16">
                 <Routes>
                     <Route path="/" view=Home />
-                    <Route path="/extensions/order_to_pdf" view=Pdf />
+                    <Route path="/extensions/order_to_pdf" view=move || view!{<OrderToPdf bridge=bridge_read />}/>
                 </Routes>
             </main>
         </Router>

@@ -11,8 +11,7 @@ pub mod settings_manager;
 pub mod webhooks;
 
 #[cfg(feature = "redis_apl")]
-use apl::redis_apl::RedisAplError;
-use apl::{AplType, APL};
+use apl::{AplError, AplType, APL};
 use config::Config;
 use serde::{Deserialize, Serialize};
 
@@ -51,8 +50,8 @@ impl std::fmt::Display for AuthData {
 }
 
 #[derive(Debug)]
-pub struct SaleorApp<E> {
-    pub apl: Box<dyn APL<E>>,
+pub struct SaleorApp {
+    pub apl: Box<dyn APL>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -60,21 +59,19 @@ pub enum CreateSaleorAppError {
     #[error("Feature needed to use this APL is not enabled in cargo.toml")]
     MissingFeature(String),
     #[cfg(feature = "redis_apl")]
-    #[error("failed creating redis_apl, {0}")]
-    #[cfg(feature = "redis_apl")]
-    RedisAplError(#[from] RedisAplError),
+    #[error("failed creating APL, {0}")]
+    AplError(#[from] AplError),
 }
 
-impl<E: std::error::Error> SaleorApp<E> {
-    pub fn new(config: &Config) -> Result<SaleorApp<E>, CreateSaleorAppError> {
+impl SaleorApp {
+    pub fn new(config: &Config) -> Result<SaleorApp, CreateSaleorAppError> {
         use AplType::{File, Redis};
-        fn decide_apl<E>(config: &Config) -> Box<dyn APL<E>> {
+        fn decide_apl<E>(config: &Config) -> Result<Box<dyn APL>, AplError> {
             match config.apl {
                 Redis => {
                     #[cfg(feature = "redis_apl")]
-                    return Box::new(
-                        RedisApl::new(&config.apl_url, &config.app_api_base_url)
-                            .expect("failed creating redisapl"),
+                    return Ok(
+                        Box::new(RedisApl::new(&config.apl_url, &config.app_api_base_url)?).into(),
                     );
 
                     #[cfg(not(feature = "redis_apl"))]

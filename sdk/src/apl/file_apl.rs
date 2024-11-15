@@ -5,7 +5,7 @@ use std::{
 
 use crate::AuthData;
 
-use super::APL;
+use super::{AplError, APL};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
@@ -18,67 +18,85 @@ pub struct FileApl {
     pub path: String,
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum FileAplError {
-    #[error("Error during an IO file operation, {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("Failed parsing from/to json, {0}")]
-    SerdeJsonDeError(#[from] serde_json::Error),
-    #[error("Can't find requested key in hashmap")]
-    MissingKey,
-}
-
 #[async_trait]
-impl APL<FileAplError> for FileApl {
-    async fn set(&self, auth_data: crate::AuthData) -> Result<(), FileAplError> {
+impl APL for FileApl {
+    async fn set(&self, auth_data: crate::AuthData) -> Result<(), AplError> {
         let path = std::path::Path::new(&self.path);
         debug!("reading from {:?}", &path);
         let mut auths: FileStructure;
         match path.is_file() {
-            true => auths = serde_json::from_str(&std::fs::read_to_string(path)?)?,
+            true => {
+                auths = serde_json::from_str(
+                    &std::fs::read_to_string(path).map_err(|e| AplError::IO(e.to_string()))?,
+                )
+                .map_err(|e| AplError::Serialization(e.to_string()))?
+            }
             false => auths = FileStructure(HashMap::new()),
         }
 
         auths.insert(auth_data.saleor_api_url.clone(), auth_data);
 
         debug!("writing to {:?}", &path);
-        std::fs::write(path, serde_json::to_string_pretty(&auths)?.as_bytes())?;
+        std::fs::write(
+            path,
+            serde_json::to_string_pretty(&auths)
+                .map_err(|e| AplError::Serialization(e.to_string()))?
+                .as_bytes(),
+        )
+        .map_err(|e| AplError::IO(e.to_string()))?;
         Ok(())
     }
 
-    async fn get(&self, saleor_api_url: &str) -> Result<crate::AuthData, FileAplError> {
+    async fn get(&self, saleor_api_url: &str) -> Result<crate::AuthData, AplError> {
         let path = std::path::Path::new(&self.path);
         debug!("reading from {:?}", &path);
-        let auth_data: FileStructure = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+        let auth_data: FileStructure = serde_json::from_str(
+            &std::fs::read_to_string(path).map_err(|e| AplError::IO(e.to_string()))?,
+        )
+        .map_err(|e| AplError::Serialization(e.to_string()))?;
         auth_data
             .get(saleor_api_url)
             .cloned()
-            .ok_or(FileAplError::MissingKey)
+            .ok_or(AplError::NotFound(
+                "haven't found entry for given url".to_owned(),
+            ))
     }
 
-    async fn get_all(&self) -> Result<Vec<crate::AuthData>, FileAplError> {
+    async fn get_all(&self) -> Result<Vec<crate::AuthData>, AplError> {
         let path = std::path::Path::new(&self.path);
         debug!("reading from {:?}", &path);
-        let auth_data: FileStructure = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+        let auth_data: FileStructure = serde_json::from_str(
+            &std::fs::read_to_string(path).map_err(|e| AplError::IO(e.to_string()))?,
+        )
+        .map_err(|e| AplError::Serialization(e.to_string()))?;
         Ok(auth_data.0.values().cloned().collect())
     }
 
-    async fn delete(&self, saleor_api_url: &str) -> Result<(), FileAplError> {
+    async fn delete(&self, saleor_api_url: &str) -> Result<(), AplError> {
         let path = std::path::Path::new(&self.path);
         debug!("reading from {:?}", &path);
-        let mut auths: FileStructure = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+        let mut auths: FileStructure = serde_json::from_str(
+            &std::fs::read_to_string(path).map_err(|e| AplError::IO(e.to_string()))?,
+        )
+        .map_err(|e| AplError::Serialization(e.to_string()))?;
         auths.remove(saleor_api_url);
 
         debug!("writing to {:?}", &path);
-        std::fs::write(path, serde_json::to_string_pretty(&auths)?.as_bytes())?;
+        std::fs::write(
+            path,
+            serde_json::to_string_pretty(&auths)
+                .map_err(|e| AplError::Serialization(e.to_string()))?
+                .as_bytes(),
+        )
+        .map_err(|e| AplError::IO(e.to_string()))?;
         Ok(())
     }
 
-    async fn is_ready(&self) -> Result<(), FileAplError> {
+    async fn is_ready(&self) -> Result<(), AplError> {
         Ok(())
     }
 
-    async fn is_configured(&self) -> Result<(), FileAplError> {
+    async fn is_configured(&self) -> Result<(), AplError> {
         Ok(())
     }
 }

@@ -19,6 +19,7 @@ pub async fn webhook_signature_verifier(request: Request, next: Next) -> Respons
                 .map_or(None, |h| url::Url::parse(h).ok())
         });
 
+    debug!("request came from {:?}",jwks_url);
     //get jwk from saleor api
     let jwks: Value = 'block: {
         if let Some(mut jwks_url) = jwks_url {

@@ -99,6 +99,7 @@ async fn main() -> Result<(), std::io::Error> {
         .route(
             "/api/register",
             post(register)//.route_layer(middleware::from_fn(webhook_signature_verifier)),
+
         )
         .route("/api/manifest", get(manifest))
         .with_state(app_state.clone());
@@ -121,8 +122,15 @@ async fn main() -> Result<(), std::io::Error> {
 
 #[cfg(not(feature = "ssr"))]
 pub fn main() {
+    use leptos::leptos_dom::logging::{console_error, console_log};
+    console_log("starting main");
     use saleor_app_sdk::bridge::AppBridge;
-    let app_bridge = AppBridge::new(Some(true)).unwrap();
+    match AppBridge::new(Some(true)) {
+        Ok(app_bridge ) => {
+            console_log("App Bridge connected");
+        }
+        Err(e) => console_error(e)
+    };
     // no client-side main function
     // unless we want this to work with e.g., Trunk for a purely client-side app
     // see lib.rs for hydration function instead

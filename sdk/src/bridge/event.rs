@@ -1,5 +1,4 @@
 use crate::manifest::{AppPermission, LocaleCode};
-
 use super::ThemeType;
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +31,6 @@ pub struct PayloadNotification {
     pub title: Option<String>,
     pub text: Option<String>,
     pub api_message: Option<String>,
-}
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -62,7 +60,8 @@ pub struct PayloadResponse {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadRedirect {
-    pub path: String,
+    pub to: String,
+    pub new_context: Option<bool>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Default)]

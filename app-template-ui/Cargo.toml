@@ -41,6 +41,7 @@ envy = { workspace = true }
 cynic = { workspace = true, features = ["http-surf"], optional = true }
 surf = { workspace = true, optional = true }
 
+
 saleor-app-sdk = { workspace = true, optional = true }
 
 [build-dependencies]

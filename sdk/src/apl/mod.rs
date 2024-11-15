@@ -4,7 +4,6 @@ pub mod file_apl;
 pub mod redis_apl;
 
 use crate::AuthData;
-use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -15,11 +14,11 @@ pub enum AplType {
 }
 
 #[async_trait]
-pub trait APL: Send + Sync + std::fmt::Debug {
-    async fn get(&self, saleor_api_url: &str) -> Result<AuthData>;
-    async fn set(&self, auth_data: AuthData) -> Result<()>;
-    async fn delete(&self, saleor_api_url: &str) -> Result<()>;
-    async fn get_all(&self) -> Result<Vec<AuthData>>;
-    async fn is_ready(&self) -> Result<()>;
-    async fn is_configured(&self) -> Result<()>;
+pub trait APL<E>: Send + Sync + std::fmt::Debug {
+    async fn get(&self, saleor_api_url: &str) -> Result<AuthData, E>;
+    async fn set(&self, auth_data: AuthData) -> Result<(), E>;
+    async fn delete(&self, saleor_api_url: &str) -> Result<(), E>;
+    async fn get_all(&self) -> Result<Vec<AuthData>, E>;
+    async fn is_ready(&self) -> Result<(), E>;
+    async fn is_configured(&self) -> Result<(), E>;
 }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 pub mod extension;
+use strum_macros::EnumString;
 use thiserror::Error;
 
 use crate::{config::Config, webhooks::WebhookManifest};
@@ -48,6 +49,59 @@ pub enum AppExtensionMount {
     OrderDetailsMoreActions,
     OrderOverviewCreate,
     OrderOverviewMoreActions,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, EnumString)]
+#[strum(serialize_all = "lowercase")]
+pub enum LocaleCode {
+    Ar,
+    Az,
+    Bg,
+    Bn,
+    Ca,
+    Cs,
+    Da,
+    De,
+    El,
+    En,
+    Es,
+    EsCO,
+    Et,
+    Fa,
+    Fr,
+    Hi,
+    Hu,
+    Hy,
+    Id,
+    Is,
+    It,
+    Ja,
+    Ko,
+    Mn,
+    Nb,
+    Nl,
+    Pl,
+    Pt,
+    PtBR,
+    Ro,
+    Ru,
+    Sk,
+    Sl,
+    Sq,
+    Sr,
+    Sv,
+    Th,
+    Tr,
+    Uk,
+    Vi,
+    ZhHans,
+    ZhHant,
+}
+
+impl Default for LocaleCode {
+    fn default() -> Self {
+        Self::En
+    }
 }
 impl Default for AppExtensionMount {
     fn default() -> Self {

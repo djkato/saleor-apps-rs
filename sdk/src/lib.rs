@@ -3,15 +3,15 @@ pub mod apl;
 pub mod bridge;
 pub mod config;
 pub mod headers;
-pub mod locales;
 pub mod manifest;
 #[cfg(feature = "middleware")]
 pub mod middleware;
+#[cfg(feature = "settings_manager")]
+pub mod settings_manager;
 pub mod webhooks;
 
-use anyhow::bail;
-
-use apl::{AplType, APL};
+#[cfg(feature = "redis_apl")]
+use apl::{AplError, AplType, APL};
 use config::Config;
 use serde::{Deserialize, Serialize};
 
@@ -54,36 +54,44 @@ pub struct SaleorApp {
     pub apl: Box<dyn APL>,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum CreateSaleorAppError {
+    #[error("Feature needed to use this APL is not enabled in cargo.toml")]
+    MissingFeature(String),
+    #[cfg(feature = "redis_apl")]
+    #[error("failed creating APL, {0}")]
+    AplError(#[from] AplError),
+}
+
 impl SaleorApp {
-    pub fn new(config: &Config) -> anyhow::Result<SaleorApp> {
+    pub fn new(config: &Config) -> Result<SaleorApp, CreateSaleorAppError> {
         use AplType::{File, Redis};
-        fn decide_apl(config: &Config) -> anyhow::Result<Box<dyn APL>> {
+        fn decide_apl<E>(config: &Config) -> Result<Box<dyn APL>, AplError> {
             match config.apl {
                 Redis => {
                     #[cfg(feature = "redis_apl")]
-                    return Ok(Box::new(RedisApl::new(
-                        &config.apl_url,
-                        &config.app_api_base_url,
-                    )?));
+                    return Ok(
+                        Box::new(RedisApl::new(&config.apl_url, &config.app_api_base_url)?).into(),
+                    );
 
                     #[cfg(not(feature = "redis_apl"))]
                     {
-                        bail!("Tried starting app with apl that wasn't present at compile time (cargo feature missing)")
+                        return CreateSaleorAppError ::MissingFeature("Tried starting app with redis apl that wasn't present at compile time (cargo feature missing)");
                     }
                 }
                 File => {
                     #[cfg(feature = "file_apl")]
-                    return Ok(Box::new(FileApl {
+                    return Box::new(FileApl {
                         path: config.apl_url.to_owned(),
-                    }));
+                    });
                     #[cfg(not(feature = "file_apl"))]
                     {
-                        bail!("Tried starting app with apl that wasn't present at compile time (cargo feature missing)")
+                        return CreateSaleorAppError ::MissingFeature("Tried starting app with file apl that wasn't present at compile time (cargo feature missing)");
                     }
                 }
             }
         }
-        let apl = decide_apl(config)?;
+        let apl = decide_apl(config);
         Ok(SaleorApp { apl })
     }
 }

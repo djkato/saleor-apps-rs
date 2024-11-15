@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 pub mod extension;
+use strum_macros::EnumString;
+use thiserror::Error;
 
 use crate::{config::Config, webhooks::WebhookManifest};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AppPermission {
     ManageUsers,
@@ -47,6 +49,59 @@ pub enum AppExtensionMount {
     OrderDetailsMoreActions,
     OrderOverviewCreate,
     OrderOverviewMoreActions,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, EnumString)]
+#[strum(serialize_all = "lowercase")]
+pub enum LocaleCode {
+    Ar,
+    Az,
+    Bg,
+    Bn,
+    Ca,
+    Cs,
+    Da,
+    De,
+    El,
+    En,
+    Es,
+    EsCO,
+    Et,
+    Fa,
+    Fr,
+    Hi,
+    Hu,
+    Hy,
+    Id,
+    Is,
+    It,
+    Ja,
+    Ko,
+    Mn,
+    Nb,
+    Nl,
+    Pl,
+    Pt,
+    PtBR,
+    Ro,
+    Ru,
+    Sk,
+    Sl,
+    Sq,
+    Sr,
+    Sv,
+    Th,
+    Tr,
+    Uk,
+    Vi,
+    ZhHans,
+    ZhHant,
+}
+
+impl Default for LocaleCode {
+    fn default() -> Self {
+        Self::En
+    }
 }
 impl Default for AppExtensionMount {
     fn default() -> Self {
@@ -213,9 +268,26 @@ impl AppManifestBuilder {
         }
         self
     }
-    pub fn build(self) -> AppManifest {
-        self.manifest
+    pub fn build(self) -> Result<AppManifest, AppManifestBuilderError> {
+        if let Some(ext) = self
+            .manifest
+            .extensions
+            .as_ref()
+            .map(|exts| exts.iter().flat_map(|e| &e.permissions).collect::<Vec<_>>())
+        {
+            match ext.iter().all(|e| self.manifest.permissions.contains(e)) {
+                true => Ok(self.manifest),
+                false => Err(AppManifestBuilderError::MismatchedPermissions),
+            }
+        } else {
+            Ok(self.manifest)
+        }
     }
+}
+#[derive(Error, Debug)]
+pub enum AppManifestBuilderError {
+    #[error("manifest.permissions doesn't list all permissions needed in manifest.extensions.permissions")]
+    MismatchedPermissions,
 }
 pub struct CargoInfo {
     pub name: String,

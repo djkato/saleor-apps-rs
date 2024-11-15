@@ -76,7 +76,9 @@ async fn main() -> anyhow::Result<()> {
                 .build(),
         )
         .add_permission(AppPermission::ManageProducts)
-        .build();
+        .build()
+        .expect("Manifest has invalid parameters");
+
     let app_state = AppState {
         manifest: app_manifest,
         config: config.clone(),

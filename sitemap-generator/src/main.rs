@@ -84,7 +84,9 @@ async fn create_app(config: &Config, sitemap_config: SitemapConfig) -> Router {
                 ])
                 .build(),
         )
-        .build();
+        .build()
+        .expect("Manifest has invalid parameters");
+
     debug!("Created AppManifest...");
 
     let (sender, receiver) = tokio::sync::mpsc::channel(100);

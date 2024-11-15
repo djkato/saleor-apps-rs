@@ -12,7 +12,6 @@ documentation = "https://github.com/djkato/saleor-apps-rs"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-anyhow = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 serde_json = { workspace = true }
@@ -50,6 +49,12 @@ wasm-bindgen = { workspace = true, optional = true }
 serde-wasm-bindgen = { version = "0.6.5", optional = true }
 # bus = { version = "2.4.1", optional = true }
 
+## Needed for settings_manager
+surf = { workspace = true, optional = true }
+cynic = { workspace = true, optional = true, features = ["http-surf"] }
+cynic-codegen.workspace = true
+serde_with = { optional = true, version = "3.11.0" }
+
 [dependencies.web-sys]
 optional = true
 workspace = true
@@ -65,6 +70,10 @@ features = [
 
 [dev-dependencies]
 
+## Needed for settings_manager
+[build-dependencies]
+cynic-codegen.workspace = true
+
 [features]
 recommended = ["tracing", "redis_apl", "webhook_utils", "middleware"]
 default = []
@@ -79,9 +88,5 @@ redis_apl = ["dep:redis"]
 file_apl = []
 webhook_utils = ["dep:http"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
-bridge = [
-  "dep:wasm-bindgen",
-  # "dep:bus",
-  "dep:serde-wasm-bindgen",
-  "dep:web-sys",
-]
+settings_manager = ["dep:cynic", "dep:surf", "dep:serde_with"]
+bridge = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen", "dep:web-sys"]

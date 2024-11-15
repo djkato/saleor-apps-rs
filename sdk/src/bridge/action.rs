@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::manifest::AppPermission;
 
+/**
+ Actions are what the dashboard receives and app sends on `window.parent`
+*/
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(tag = "type", content = "payload")]
 #[serde(rename_all = "camelCase")]
@@ -16,7 +19,8 @@ pub enum Action {
 #[serde(rename_all = "camelCase")]
 pub struct PayloadRequestPermissions {
     pub permissions: Vec<AppPermission>,
-    pub redirect_path: String,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect_path: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Default)]

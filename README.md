@@ -2,12 +2,14 @@
 
 This repo contains the following members:
 
-| Crate                                                                                                                | Description                                                                                         |
-| -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [**saleor-app-sdk**](https://crates.io/crates/saleor-app-sdk)                                                        | Types and utilities for making Saleor Apps                                                          |
-| [**saleor-app-template**](https://github.com/djkato/saleor-apps-rs/tree/master/app-template)                         | Simple template for making Saleor apps using axum                                                   |
-| [**saleor-app-sitemap**](https://github.com/djkato/saleor-apps-rs/tree/master/sitemap-generator)                     | Saleor App for keeping sitemap.xml uptodate                                                         |
-| [**saleor-app-simple-payment-gateway**](https://github.com/djkato/saleor-apps-rs/tree/master/simple-payment-gateway) | Saleor App that adds payment methods: Cash on delivery, Cash on warehouse pickup, bank tranfer etc. |
+| Crate                                                                                                     | Description                                                                                         |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [**sdk**](https://crates.io/crates/saleor-app-sdk)                                                        | Types and utilities for making Saleor Apps                                                          |
+| [**app-template**](https://github.com/djkato/saleor-apps-rs/tree/master/app-template)                     | Simple template for making Saleor apps using axum                                                   |
+| [**app-template-ui**](https://github.com/djkato/saleor-apps-rs/tree/master/app-template-ui)               | Advanced template for Saleor apps that work inside the Dashboard, using Leptos (WASM)               |
+| [**sitemap-generator**](https://github.com/djkato/saleor-apps-rs/tree/master/sitemap-generator)           | Saleor App for keeping sitemap.xml uptodate                                                         |
+| [**simple-payment-gateway**](https://github.com/djkato/saleor-apps-rs/tree/master/simple-payment-gateway) | Saleor App that adds payment methods: Cash on delivery, Cash on warehouse pickup, bank tranfer etc. |
+| [**bulk-price-manipulator**](https://github.com/djkato/saleor-apps-rs/tree/master/bulk-price-manipulator) | Saleor App which Runs a user defined expression to change all variant prices                        |
 
 # Using the apps
 
@@ -27,10 +29,10 @@ services:
     depends_on:
       - redis-apl
     ports:
-      - 3001:3001
+      - 3001:3000
 
   app-sitemap-generator:
-    image: ghcr.io/djkato/saleor-app-sitemap-generator:0.1.0
+    image: ghcr.io/djkato/saleor-app-sitemap-generator:1.0.0
     env_file:
       - docker-sitemap.env
     networks:
@@ -38,7 +40,7 @@ services:
     depends_on:
       - redis-apl
     ports:
-      - 3002:3002
+      - 3002:3000
     volumes:
       - sitemaps:/sitemaps
 
@@ -73,7 +75,7 @@ networks:
     driver: bridge
 ```
 
-and set all necessary env variables in `app-simple-gateway.env` according to the `env.example` file.
+and set all necessary env variables according to the `env.example` file.
 
 # Using this repo
 
@@ -81,19 +83,18 @@ To use, you need to have [Rust environment prepared](https://rustup.rs/).
 Every folder represents a different workspace. To add a new lib, do `cargo new <project-name> --lib` or `cargo new <project-name>` for binary apps. It should appear as a new member under root `Cargo.toml`
 To run apps propery, use `cargo run -c <crate name>`
 
-# Unofficial Saleor App SDK
+## Unofficial Saleor App SDK
 
 SDK for building [Saleor Apps](https://github.com/saleor/apps)
 to use in your project outside this repo: `cargo add saleor-app-sdk`
 to use in your project inside this repo, create a new workspace member and add `saleor-app-sdk.workspace = true` to the members `Cargo.toml`
 
-# Unofficial Saleor App Template
+## Unofficial Saleor App Template
 
-## Creating a new Saleor App from template
+If using the `app-template`, create a new workspace member `cargo new <project-name>`,`rm -rf <project-name>/*` then `cp -r app-template/* <project-name>/`.
+If using the `app-template-ui`, create a new workspace member `cargo new <project-name>`,`rm -rf <project-name>/*` then `cp -r app-template-ui/* <project-name>/`.
 
-If using the `saleor-app-template`, create a new workspace member `cargo new <project-name>`,`rm -rf <project-name>/*` then `cp -r app-template/* <project-name>/`.
-
-## Adding new dependencies
+### Adding new dependencies
 
 Workspace dependencies need to be managed manually. If you wanna add a new dependency to a single member do `cargo add <dep> --package <project-name>`.
 If you want to use a shared dependency, add it to the root level `Cargo.toml`,
@@ -102,6 +103,7 @@ then inside your member `Cargo.toml`add it under depencency like: `<dependency> 
 ## Developing
 
 To have the app rebuild during development, install bacon `cargo install bacon`, then run `bacon run -- <app-name>` to have bacon watch your code and rerun it on save!
+If developing with leptos, use `cargo-leptos` CLI, like `cargo leptos watch`.
 
 ## License
 

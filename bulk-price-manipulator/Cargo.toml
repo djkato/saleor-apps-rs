@@ -1,6 +1,6 @@
 [package]
 name = "bulk-price-manipulator"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["Djkáťo <djkatovfx@gmail.com>"]
 description = "Runs a user defined expression to change all variant prices"

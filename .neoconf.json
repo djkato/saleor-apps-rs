@@ -1,7 +1,12 @@
 {
   "lspconfig": {
     "rust_analyzer": {
-      "rust-analyzer.cargo.features": "all"
+      "rust-analyzer.cargo.features": "all",
+      // "rust-analyzer.cargo.extraArgs": [
+      //   "+nightly"
+      // ],
+      // "rust-analyzer.check.command": "clippy",
+      "rust-analyzer.check.extraArgs": ["--all-features"]
       /*
         use this only when working with leptos
       */

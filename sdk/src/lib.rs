@@ -66,13 +66,14 @@ pub enum CreateSaleorAppError {
 impl SaleorApp {
     pub fn new(config: &Config) -> Result<SaleorApp, CreateSaleorAppError> {
         use AplType::{File, Redis};
-        fn decide_apl<E>(config: &Config) -> Result<Box<dyn APL>, AplError> {
+        fn decide_apl(config: &Config) -> Result<Box<dyn APL>, AplError> {
             match config.apl {
                 Redis => {
                     #[cfg(feature = "redis_apl")]
-                    return Ok(
-                        Box::new(RedisApl::new(&config.apl_url, &config.app_api_base_url)?).into(),
-                    );
+                    return Ok(Box::new(RedisApl::new(
+                        &config.apl_url,
+                        &config.app_api_base_url,
+                    )?));
 
                     #[cfg(not(feature = "redis_apl"))]
                     {
@@ -81,9 +82,9 @@ impl SaleorApp {
                 }
                 File => {
                     #[cfg(feature = "file_apl")]
-                    return Box::new(FileApl {
+                    return Ok(Box::new(FileApl {
                         path: config.apl_url.to_owned(),
-                    });
+                    }));
                     #[cfg(not(feature = "file_apl"))]
                     {
                         return CreateSaleorAppError ::MissingFeature("Tried starting app with file apl that wasn't present at compile time (cargo feature missing)");
@@ -91,7 +92,9 @@ impl SaleorApp {
                 }
             }
         }
-        let apl = decide_apl(config);
-        Ok(SaleorApp { apl })
+        match decide_apl(config) {
+            Ok(apl) => Ok(SaleorApp { apl }),
+            Err(e) => Err(e.into()),
+        }
     }
 }

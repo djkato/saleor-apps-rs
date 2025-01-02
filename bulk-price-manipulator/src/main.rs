@@ -63,7 +63,8 @@ async fn create_app(config: &Config, manipulator_config: ManipulatorConfig) -> R
             AppPermission::ManageChannels,
             AppPermission::ManageProductTypesAndAttributes,
         ])
-        .build();
+        .build()
+        .expect("Failed building app manifest, contact app support plz");
     debug!("Created AppManifest...");
 
     let app_state = AppState {

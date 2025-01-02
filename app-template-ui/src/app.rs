@@ -54,7 +54,7 @@ pub fn App() -> impl IntoView {
                     }
                 }
                 Event::Redirect(payload) => {
-                    console_log(&payload.path);
+                    console_log(&payload.to);
                 }
                 Event::Theme(payload) => {
                     if let Some(mut bridge) = bridge_read.get_untracked() {

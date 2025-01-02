@@ -109,17 +109,12 @@ pub enum AppIframeParams {
     Locale,
 }
 
-#[derive(Debug, Serialize, Deserialize, EnumString, Clone)]
+#[derive(Debug, Serialize, Deserialize, EnumString, Clone, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ThemeType {
+    #[default]
     Light,
     Dark,
-}
-
-impl Default for ThemeType {
-    fn default() -> Self {
-        ThemeType::Light
-    }
 }
 
 impl AppBridge {
@@ -132,11 +127,8 @@ impl AppBridge {
             return Err(AppBridgeError::WindowIsUndefined);
         }
         let referrer = web_sys::window().and_then(|w| {
-            w.document().and_then(|d| {
-                web_sys::Url::new(&d.referrer())
-                    .ok()
-                    .and_then(|u| Some(u.origin()))
-            })
+            w.document()
+                .and_then(|d| web_sys::Url::new(&d.referrer()).ok().map(|u| u.origin()))
         });
         if referrer.is_none() {
             // warn!("Referrer origin is none");
@@ -184,8 +176,8 @@ pub fn listen_to_events(
     }) as Box<dyn FnMut(JsValue)>);
 
     window
-        .add_event_listener_with_callback("message", &cb.as_ref().unchecked_ref())
-        .map_err(|e| AppBridgeError::JsValue(e))?;
+        .add_event_listener_with_callback("message", cb.as_ref().unchecked_ref())
+        .map_err(AppBridgeError::JsValue)?;
     Ok(cb)
 }
 
@@ -200,7 +192,7 @@ pub fn dispatch_event(action: Action) -> Result<(), AppBridgeError> {
     web_sys::console::log_1(&message);
     parent
         .post_message(&message, "*")
-        .map_err(|e| AppBridgeError::JsValue(e))?;
+        .map_err(AppBridgeError::JsValue)?;
     Ok(())
 }
 

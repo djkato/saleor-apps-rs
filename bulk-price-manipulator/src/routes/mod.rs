@@ -1,7 +1,7 @@
 use axum::{
     handler::HandlerWithoutStateExt,
     http::StatusCode,
-    routing::{any, get, post},
+    routing::{get, post},
     Router,
 };
 
@@ -32,8 +32,6 @@ pub fn create_routes(state: AppState) -> Router {
     // dev-only workaround
     #[cfg(debug_assertions)]
     let serve_dir = ServeDir::new("./bulk-price-manipulator/public").not_found_service(service);
-    //TODO: Query for everything using the app auth token
-    //TODO: "Failed fetching initial products: More than one channel exists, please spocify which one"
     let r = Router::new();
 
     #[cfg(not(debug_assertions))]

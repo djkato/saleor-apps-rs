@@ -113,15 +113,15 @@ impl<
         {
             Ok(response) => {
                 if let Some(res_errors) = response.errors {
-                    if let Some(e) = res_errors.get(0).cloned() {
+                    if let Some(e) = res_errors.first().cloned() {
                         return Err(e.into());
                     }
                 }
-                return Ok(());
+                Ok(())
             }
             Err(e) => {
                 debug!("{:?}", e);
-                return Err(MetadataSettingsManagerError::HttpRequestError(e));
+                Err(MetadataSettingsManagerError::HttpRequestError(e))
             }
         }
     }
@@ -145,15 +145,15 @@ impl<
         {
             Ok(response) => {
                 if let Some(res_errors) = response.errors {
-                    if let Some(e) = res_errors.get(0).cloned() {
+                    if let Some(e) = res_errors.first().cloned() {
                         return Err(e.into());
                     }
                 }
-                return Ok(());
+                Ok(())
             }
             Err(e) => {
                 debug!("{:?}", e);
-                return Err(MetadataSettingsManagerError::HttpRequestError(e));
+                Err(MetadataSettingsManagerError::HttpRequestError(e))
             }
         }
     }
@@ -174,7 +174,7 @@ impl<
         {
             Ok(response) => {
                 if let Some(res_errors) = response.errors {
-                    if let Some(e) = res_errors.get(0).cloned() {
+                    if let Some(e) = res_errors.first().cloned() {
                         return Err(e.into());
                     }
                 }
@@ -193,11 +193,11 @@ impl<
                     }
                 }
                 self.metadata = Metadata(HashMap::new());
-                return Ok(self);
+                Ok(self)
             }
             Err(e) => {
                 debug!("{:?}", e);
-                return Err(MetadataSettingsManagerError::HttpRequestError(e));
+                Err(MetadataSettingsManagerError::HttpRequestError(e))
             }
         }
     }

@@ -135,7 +135,7 @@ async fn update_event_updates_correctly() {
         //no nice way to do this, I control the templates in test anyways so whatever
         let q_2 = update_2.clone().into_event_updated_body("_UPDATED");
         debug!("{:?}", &q_2);
-        app = create_query(
+        create_query(
             app,
             q_2.0,
             EitherWebhookType::Async(AsyncWebhookEventType::CategoryUpdated),

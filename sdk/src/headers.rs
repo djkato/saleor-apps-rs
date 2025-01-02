@@ -12,15 +12,15 @@ pub struct SaleorHeaders<'a> {
     #[serde(rename = "saleor-domain")]
     #[serde(alias = "x-saleor-domain")]
     domain: Option<&'a str>,
-    #[serde(rename = "saleor-domain")]
-    #[serde(alias = "x-saleor-domain")]
+    #[serde(rename = "authorization-bearer")]
     authorization_bearer: Option<&'a str>,
-    #[serde(rename = "saleor-domain")]
-    #[serde(alias = "x-saleor-domain")]
+    #[serde(rename = "saleor-signature")]
+    #[serde(alias = "x-saleor-signature")]
     signature: Option<&'a str>,
-    #[serde(rename = "saleor-domain")]
-    #[serde(alias = "x-saleor-domain")]
+    #[serde(rename = "saleor-event")]
+    #[serde(alias = "x-saleor-event")]
     event: Option<&'a str>,
+    #[serde(rename = "saleor-api-url")]
     saleor_api_url: Option<&'a str>,
     #[serde(rename = "content-length")]
     content_length: u16,

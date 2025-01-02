@@ -17,13 +17,12 @@ pub fn hydrate() {
     use leptos::leptos_dom::logging::{console_error, console_log};
     console_log("starting main");
     use saleor_app_sdk::bridge::{
-        event::{Event, PayloadRedirect},
-        AppBridge,
+        action::Action, action::PayloadRedirect, dispatch_event, AppBridge,
     };
-    match AppBridge::new(Some(true)) {
-        Ok(mut app_bridge) => {
+    match AppBridge::new(true) {
+        Ok(mut _app_bridge) => {
             console_log("App Bridge connected");
-            _ = app_bridge.dispatch_event(Event::Redirect(PayloadRedirect {
+            _ = dispatch_event(Action::Redirect(PayloadRedirect {
                 to: "/orders".to_owned(),
                 new_context: None,
             }));

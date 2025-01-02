@@ -53,12 +53,12 @@ impl UrlSet {
     }
 
     pub fn flush_related(&mut self, id: &str) {
-        self.retain(|u| u.data.id != id && u.related.as_ref().map_or(true, |ud| ud.id != id));
+        self.retain(|u| u.data.id != id && u.related.as_ref().is_some_and(|ud| ud.id != id));
     }
 
     pub fn find_related(&mut self, id: &str) -> Vec<&mut Url> {
         self.iter_mut()
-            .filter(|u| u.data.id == id || u.related.as_ref().map_or(false, |ud| ud.id == id))
+            .filter(|u| u.data.id == id || u.related.as_ref().is_some_and(|ud| ud.id == id))
             .collect()
     }
 
@@ -75,7 +75,7 @@ impl UrlSet {
                 (u.data.id == id && u.data.slug != slug)
                     || u.related
                         .as_ref()
-                        .map_or(false, |r| (r.id == id && r.slug != slug))
+                        .is_some_and(|r| (r.id == id && r.slug != slug))
             })
             .map(|u| match u.data.id == id {
                 true => AffectedType::Data(u),

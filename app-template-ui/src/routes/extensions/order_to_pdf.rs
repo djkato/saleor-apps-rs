@@ -11,7 +11,7 @@ pub fn OrderToPdf(bridge: ReadSignal<Option<AppBridge>>) -> impl IntoView {
                 match bridge.state.ready{
                     true => view!{
                         <div>
-                        <button on:click=move |ev|{
+                        <button on:click=move |_|{
                             dispatch_event(saleor_app_sdk::bridge::action::Action::Redirect(PayloadRedirect{
                                 to: format!("/apps/{}/app", bridge.state.id),
                                 new_context: None

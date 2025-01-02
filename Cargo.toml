@@ -5,6 +5,7 @@ members = [
   "app-template-ui",
   "sitemap-generator",
   "simple-payment-gateway",
+  "bulk-price-manipulator",
 ]
 resolver = "2"
 
@@ -35,7 +36,7 @@ iso_currency = { version = "0.4.4", features = ["with-serde", "iterator"] }
 pulldown-cmark = "0.11.0"
 http = "1"
 thiserror = "1.0.61"
-wasm-bindgen = "=0.2.93"
+wasm-bindgen = "=0.2.99"
 console_error_panic_hook = "0.1"
 leptos = { version = "0.6", features = ["nightly"] }
 leptos_axum = { version = "0.6" }

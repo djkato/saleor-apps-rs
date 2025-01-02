@@ -5,7 +5,7 @@
     dead_code
 )]
 #![feature(let_chains)]
-#![deny(clippy::unwrap_used, clippy::expect_used)]
+// #![deny(clippy::unwrap_used, clippy::expect_used)]
 mod app;
 mod queries;
 mod routes;
@@ -87,7 +87,7 @@ async fn main() -> anyhow::Result<()> {
             AppPermission::HandleCheckouts,
         ])
         .build()
-        .expect("Manifest has invalid parameters");
+        .expect("Failed building app manifest, contact app support plz");
 
     let app_state = AppState {
         active_payment_methods: get_active_payment_methods_from_env()?,

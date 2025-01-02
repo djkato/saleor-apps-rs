@@ -4,11 +4,15 @@ use axum::{
 };
 use enum_iterator::{all, Sequence};
 use iso_currency::Currency;
+use saleor_app_sdk::{
+    config::Config,
+    manifest::{AppManifest, LocaleCode},
+    SaleorApp,
+};
 use std::{str::FromStr, sync::Arc};
 use tracing::{debug, level_filters::LevelFilter};
 use tracing_subscriber::EnvFilter;
 
-use saleor_app_sdk::{config::Config, locales::LocaleCode, manifest::AppManifest, SaleorApp};
 use serde::{Deserialize, Serialize};
 // Make our own error that wraps `anyhow::Error`.
 pub struct AppError(pub anyhow::Error);

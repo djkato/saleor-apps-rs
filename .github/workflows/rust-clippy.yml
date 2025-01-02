@@ -15,5 +15,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: clippy
-        run: cargo clippy  -- -Dwarnings
+        run: cargo +nightly clippy --all-features -- -Dwarnings
         continue-on-error: false

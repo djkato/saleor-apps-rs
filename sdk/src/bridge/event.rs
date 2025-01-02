@@ -1,5 +1,5 @@
-use crate::manifest::{AppPermission, LocaleCode};
 use super::ThemeType;
+use crate::manifest::{AppPermission, LocaleCode};
 use serde::{Deserialize, Serialize};
 
 /**
@@ -31,6 +31,7 @@ pub struct PayloadNotification {
     pub title: Option<String>,
     pub text: Option<String>,
     pub api_message: Option<String>,
+}
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "lowercase")]

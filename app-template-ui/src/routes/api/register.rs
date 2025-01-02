@@ -7,8 +7,7 @@ use axum::{
 use saleor_app_sdk::{AuthData, AuthToken};
 use tracing::{debug, error, info};
 
-use crate::{app::AppState, error_template::{self, AxumError}};
-
+use crate::{app::AppState, error_template::AxumError};
 
 pub async fn register(
     headers: HeaderMap,
@@ -34,11 +33,11 @@ pub async fn register(
         app_id: state.manifest.id,
         saleor_api_url: saleor_api_url.clone(),
     };
-   if let Err(e) =  app.apl.set(auth_data).await{
-        error!("{:?}",e);
-        return Err(error_template::AxumError::Anyhow(e))
+    if let Err(e) = app.apl.set(auth_data).await {
+        error!("{:?}", e);
+        return Err(e.into());
     };
 
-    info!("registered app for{:?}", &saleor_api_url);
+    info!("registered app for {:?}", &saleor_api_url);
     Ok(StatusCode::OK)
 }

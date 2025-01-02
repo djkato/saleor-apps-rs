@@ -5,6 +5,7 @@ use axum::response::{IntoResponse, Response};
 #[cfg(feature = "ssr")]
 use http::header::ToStrError;
 use http::status::StatusCode;
+use saleor_app_sdk::apl::AplError;
 use thiserror::Error;
 
 /* ERROR STUFF FOR AXUM */
@@ -20,6 +21,8 @@ pub enum AxumError {
     MissingHeader(String),
     #[error("Internal server error, `{0}`")]
     InternalServerError(String),
+    #[error("Internal server error with APL, `{0}`")]
+    AplError(#[from] AplError),
 }
 
 // Tell axum how to convert `AppError` into a response.

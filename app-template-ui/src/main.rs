@@ -21,23 +21,20 @@ mod routes;
 async fn main() -> Result<(), std::io::Error> {
     use app::*;
     use axum::{
-        middleware,
         routing::{get, post},
         Router,
     };
     use fileserv::file_and_error_handler;
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
+    use saleor_app_sdk::manifest::{
+        extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget,
+    };
     use saleor_app_sdk::{
         cargo_info,
         config::Config,
         manifest::{AppManifestBuilder, AppPermission},
-        webhooks::{AsyncWebhookEventType, WebhookManifestBuilder},
         SaleorApp,
-    };
-    use saleor_app_sdk::{
-        manifest::{extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget},
-        middleware::verify_webhook_signature::webhook_signature_verifier,
     };
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -74,7 +71,7 @@ async fn main() -> Result<(), std::io::Error> {
                 .build(),
         )
         .build()
-        .expect("Manifest has invalid parameters");
+        .expect("Failed building app manifest, contact app support plz");
 
     let app_state = AppState {
         manifest: app_manifest,
@@ -94,12 +91,11 @@ async fn main() -> Result<(), std::io::Error> {
         .fallback(file_and_error_handler)
         .route(
             "/api/webhooks",
-            post(webhooks)//.route_layer(middleware::from_fn(webhook_signature_verifier)),
+            post(webhooks), //.route_layer(middleware::from_fn(webhook_signature_verifier)),
         )
         .route(
             "/api/register",
-            post(register)//.route_layer(middleware::from_fn(webhook_signature_verifier)),
-
+            post(register), //.route_layer(middleware::from_fn(webhook_signature_verifier)),
         )
         .route("/api/manifest", get(manifest))
         .with_state(app_state.clone());
@@ -126,10 +122,10 @@ pub fn main() {
     console_log("starting main");
     use saleor_app_sdk::bridge::AppBridge;
     match AppBridge::new(Some(true)) {
-        Ok(app_bridge ) => {
+        Ok(app_bridge) => {
             console_log("App Bridge connected");
         }
-        Err(e) => console_error(e)
+        Err(e) => console_error(e),
     };
     // no client-side main function
     // unless we want this to work with e.g., Trunk for a purely client-side app

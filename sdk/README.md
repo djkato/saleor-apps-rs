@@ -4,16 +4,16 @@ SDK for building [Saleor Apps](https://github.com/saleor/apps), inspired by The 
 
 This repo is very likely to introduce breaking changes as it's very early in development. Made specifically for the [Saleor App Template for Rust](https://github.com/djkato/saleor-apps-rs)
 
-Current Coverage: ~20%
+Current Coverage: ~80%
 
 - [x] Base Types (Manifest, Webhooks, SaleorApp, Auth etc.)
-- [x] APLs (Only redis currently implemented)
+- [x] APLs (Only redis and file apl currently implemented)
 - [x] Webhook utilities (Axum middleware for payload signature verification)
-- [ ] JWT Management
-- [ ] Settings Manager
-- [ ] App Bridge
-- [ ] Handlers
+- [x] JWT Management
+- [ ] Settings Manager (in progress rn)
+- [x] App Bridge (uses web_sys, wasm_bindgen and similar, is front-end framework agnostic)
+- [x] Handlers
 
 ## Usage
 
-Check the git repo for example use in saleor-app-template
+Check the git repo for example use in app-template

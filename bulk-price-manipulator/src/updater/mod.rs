@@ -35,7 +35,7 @@ pub async fn update_prices(state: AppState, saleor_api_url: String) -> anyhow::R
                 match (
                     eval_float_with_context(
                         &state.manipulator.price_expression,
-                        &create_context_map(variant.clone()).unwrap(),
+                        &create_context_map(variant.clone(), channel_id.inner()).unwrap(),
                     ),
                     eval_float_with_context(
                         &state
@@ -43,7 +43,7 @@ pub async fn update_prices(state: AppState, saleor_api_url: String) -> anyhow::R
                             .cost_price_expression
                             .clone()
                             .unwrap_or("".into()),
-                        &create_context_map(variant.clone()).unwrap(),
+                        &create_context_map(variant.clone(), channel_id.inner()).unwrap(),
                     ),
                 ) {
                     (Ok(price), Ok(cost_price)) => {
@@ -223,7 +223,10 @@ pub async fn get_channel_id(
     bail!("Failed getting channel ID")
 }
 
-pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapContext> {
+pub fn create_context_map(
+    variant: ProductVariant,
+    current_channel_id: &str,
+) -> anyhow::Result<HashMapContext> {
     let mut context = HashMapContext::new();
     context.set_value(
         "variant.id".into(),
@@ -261,6 +264,90 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
         ),
     )?;
     context.set_value(
+        "variant.pricing.price.gross.amount".into(),
+        Value::from_float(
+            variant
+                .pricing
+                .as_ref()
+                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.gross.amount.clone())))
+                .unwrap_or(0.),
+        ),
+    )?;
+    context.set_value(
+        "variant.pricing.price.net.amount".into(),
+        Value::from_float(
+            variant
+                .pricing
+                .as_ref()
+                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.net.amount.clone())))
+                .unwrap_or(0.),
+        ),
+    )?;
+    context.set_value(
+        "variant.pricing.price.tax.amount".into(),
+        Value::from_float(
+            variant
+                .pricing
+                .as_ref()
+                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.tax.amount.clone())))
+                .unwrap_or(0.),
+        ),
+    )?;
+
+    context.set_value(
+        "variant.pricing.on_sale".into(),
+        Value::from(
+            variant
+                .pricing
+                .as_ref()
+                .and_then(|p| p.on_sale)
+                .unwrap_or(false),
+        ),
+    )?;
+    context.set_value(
+        "variant.current_channel_listing.price.amount".into(),
+        Value::from_float(
+            variant
+                .channel_listings
+                .as_ref()
+                .and_then(|c| {
+                    c.iter()
+                        .find(|c| c.id.inner() == current_channel_id)
+                        .and_then(|c| c.price.as_ref().and_then(|p| Some(p.amount)))
+                })
+                .unwrap_or(0.),
+        ),
+    )?;
+    context.set_value(
+        "variant.current_channel_listing.cost_price.amount".into(),
+        Value::from_float(
+            variant
+                .channel_listings
+                .as_ref()
+                .and_then(|c| {
+                    c.iter()
+                        .find(|c| c.id.inner() == current_channel_id)
+                        .and_then(|c| c.cost_price.as_ref().and_then(|p| Some(p.amount)))
+                })
+                .unwrap_or(0.),
+        ),
+    )?;
+    context.set_value(
+        "variant.current_channel_listing.price.currency".into(),
+        Value::from(
+            variant
+                .channel_listings
+                .as_ref()
+                .and_then(|c| {
+                    c.iter()
+                        .find(|c| c.id.inner() == current_channel_id)
+                        .and_then(|c| c.price.as_ref().and_then(|p| Some(p.currency.clone())))
+                })
+                .unwrap_or("".into()),
+        ),
+    )?;
+
+    context.set_value(
         "variant.pricing.undiscounted.net.amount".into(),
         Value::from_float(
             variant
@@ -280,11 +367,7 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
             variant
                 .pricing
                 .as_ref()
-                .and_then(|v| {
-                    v.price_undiscounted
-                        .as_ref()
-                        .and_then(|t| Some(t.gross.amount))
-                })
+                .and_then(|v| v.price_undiscounted.as_ref().map(|t| t.gross.amount))
                 .unwrap_or(0.),
         ),
     )?;
@@ -293,7 +376,7 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
         Value::from_float(
             variant
                 .pricing
-                .and_then(|v| v.price_undiscounted.and_then(|t| Some(t.tax.amount)))
+                .and_then(|v| v.price_undiscounted.map(|t| t.tax.amount))
                 .unwrap_or(0.),
         ),
     )?;
@@ -308,7 +391,7 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
                 .product
                 .tax_class
                 .as_ref()
-                .and_then(|c| Some(c.id.inner().to_owned()))
+                .map(|c| c.id.inner().to_owned())
                 .unwrap_or("".into()),
         ),
     )?;
@@ -319,7 +402,7 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
                 .product
                 .tax_class
                 .as_ref()
-                .and_then(|c| Some(c.name.clone()))
+                .map(|c| c.name.clone())
                 .unwrap_or("".into()),
         ),
     )?;
@@ -384,7 +467,7 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
                 .product
                 .category
                 .as_ref()
-                .and_then(|c| Some(c.id.inner().to_owned()))
+                .map(|c| c.id.inner().to_owned())
                 .unwrap_or("".into()),
         ),
     )?;
@@ -395,7 +478,7 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
                 .product
                 .category
                 .as_ref()
-                .and_then(|c| Some(c.name.clone()))
+                .map(|c| c.name.clone())
                 .unwrap_or("".into()),
         ),
     )?;
@@ -406,7 +489,7 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
                 .product
                 .category
                 .as_ref()
-                .and_then(|c| Some(c.slug.clone()))
+                .map(|c| c.slug.clone())
                 .unwrap_or("".into()),
         ),
     )?;
@@ -439,7 +522,7 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
                 .product
                 .category
                 .as_ref()
-                .and_then(|c| Some(c.level))
+                .map(|c| c.level)
                 .unwrap_or(0) as i64,
         ),
     )?;
@@ -464,26 +547,22 @@ pub fn create_context_map(variant: ProductVariant) -> anyhow::Result<HashMapCont
         Value::from(
             variant
                 .digital_content
-                .and_then(|c| Some(c.id.inner().to_owned()))
+                .map(|c| c.id.inner().to_owned())
                 .unwrap_or("".into()),
         ),
     )?;
     context.set_value(
         "variant.weight".into(),
         Value::from_float(
-            variant.weight.and_then(|w| Some(w.value)).unwrap_or(
-                variant
-                    .product
-                    .weight
-                    .and_then(|w| Some(w.value))
-                    .unwrap_or(
-                        variant
-                            .product
-                            .product_type
-                            .weight
-                            .and_then(|w| Some(w.value))
-                            .unwrap_or(0.),
-                    ),
+            variant.weight.map(|w| w.value).unwrap_or(
+                variant.product.weight.map(|w| w.value).unwrap_or(
+                    variant
+                        .product
+                        .product_type
+                        .weight
+                        .map(|w| w.value)
+                        .unwrap_or(0.),
+                ),
             ),
         ),
     )?;

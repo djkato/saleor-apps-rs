@@ -1,5 +1,6 @@
 use super::{AppExtension, AppExtensionMount, AppExtensionTarget, AppPermission};
 
+#[derive(Default)]
 pub struct AppExtensionBuilder {
     pub extension: AppExtension,
 }

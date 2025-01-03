@@ -57,7 +57,6 @@ pub struct SaleorApp {
 pub enum CreateSaleorAppError {
     #[error("Feature needed to use this APL is not enabled in cargo.toml")]
     MissingFeature(String),
-    #[cfg(feature = "redis_apl")]
     #[error("failed creating APL, {0}")]
     AplError(#[from] AplError),
 }

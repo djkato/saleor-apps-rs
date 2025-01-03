@@ -16,64 +16,7 @@ This repo contains the following members:
 To use on bare-metal, clone this repo and just run build and run the apps.
 
 To use with Docker/k8s, you can find prebuilt docker images on the right sidebar next to the code tree under "Packages".
-Simply add the package to your `docker-compose.yml`, for example like so:
-
-```yml
-services:
-  app-payment-gateway:
-    image: ghcr.io/djkato/saleor-app-simple-payment-gateway:0.1.1
-    env_file:
-      - docker-gateway.env
-    networks:
-      - saleor-app-tier
-    depends_on:
-      - redis-apl
-    ports:
-      - 3001:3000
-
-  app-sitemap-generator:
-    image: ghcr.io/djkato/saleor-app-sitemap-generator:1.0.0
-    env_file:
-      - docker-sitemap.env
-    networks:
-      - saleor-app-tier
-    depends_on:
-      - redis-apl
-    ports:
-      - 3002:3000
-    volumes:
-      - sitemaps:/sitemaps
-
-  redis-apl:
-    image: bitnami/redis:latest
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - DISABLE_COMMANDS=FLUSHDB,FLUSHALL,CONFIG
-    ports:
-      - 6380:6379
-    networks:
-      - saleor-app-tier
-    volumes:
-      - redis-apl:/bitnami/redis/data
-
-volumes:
-  redis-apl:
-    driver: local
-    driver_opts:
-      type: none
-      device: ./temp/volumes/redis/
-      o: bind
-  sitemaps:
-    driver: local
-    driver_opts:
-      type: none
-      device: ./temp/docker-sitemaps/
-      o: bind
-
-networks:
-  saleor-app-tier:
-    driver: bridge
-```
+Simply add the package to your `docker-compose.yml`, for example check `docker-compose.yml` file in this repo. 
 
 and set all necessary env variables according to the `env.example` file.
 

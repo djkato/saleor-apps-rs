@@ -2,7 +2,7 @@
 
 SDK for building [Saleor Apps](https://github.com/saleor/apps), inspired by The [Official Saleor SDK](https://github.com/saleor/apps)
 
-This repo is very likely to introduce breaking changes as it's very early in development. Made specifically for the [Saleor App Template for Rust](https://github.com/djkato/saleor-apps-rs)
+This repo is very likely to introduce breaking changes as it's early in development. Made specifically for the [Saleor App Template for Rust](https://github.com/djkato/saleor-apps-rs)
 
 Current Coverage: ~80%
 
@@ -16,4 +16,4 @@ Current Coverage: ~80%
 
 ## Usage
 
-Check the git repo for example use in app-template
+Check the git repo for example use in app-template or app-template-ui

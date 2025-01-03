@@ -24,7 +24,9 @@ query getProductsNext($after: String, $channel: String) {
               currency
             }
             margin
-            id
+            channel {
+              id
+            }
             preorderThreshold {
               quantity
               soldUnits
@@ -236,8 +238,13 @@ pub struct ProductVariantChannelListing {
     pub price: Option<Money2>,
     pub cost_price: Option<Money2>,
     pub margin: Option<i32>,
-    pub id: cynic::Id,
+    pub channel: Channel,
     pub preorder_threshold: Option<PreorderThreshold>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+pub struct Channel {
+    pub id: cynic::Id,
 }
 
 #[derive(cynic::QueryFragment, Clone, Debug)]

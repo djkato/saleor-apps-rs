@@ -20,12 +20,13 @@ pub async fn update_prices(state: AppState, saleor_api_url: String) -> anyhow::R
     debug!("fetching all products");
     let app = state.saleor_app.lock().await;
     let auth_data = app.apl.get(&saleor_api_url).await?;
-    let products =
+    let mut products =
         get_all_products(&saleor_api_url, &state.target_channel, &auth_data.token).await?;
     let channel_id =
         get_channel_id(&saleor_api_url, &auth_data.token, &state.target_channel).await?;
     debug!("found {} products", products.len(),);
     // dbg!(&products);
+    products.reverse();
     for product in products {
         debug!("Working on product {}", product.name);
         if let Some(variants) = product.variants {
@@ -160,7 +161,10 @@ async fn get_all_products(
                 .collect::<Vec<_>>(),
         );
         //Keep fetching next page
-        debug!("fetched first products, eg: {:?}", products.edges.first());
+        debug!(
+            "fetched first products, eg: {:?}",
+            products.edges.first().map(|p| &p.node.name)
+        );
         let mut next_cursor = products.page_info.end_cursor.clone();
         while let Some(cursor) = &mut next_cursor {
             let res = surf::post(saleor_api_url)
@@ -182,7 +186,10 @@ async fn get_all_products(
                         .map(|p| p.node)
                         .collect::<Vec<_>>(),
                 );
-                debug!("fetched next products, eg: {:?}", products.edges.first());
+                debug!(
+                    "fetched next products, eg: {:?}",
+                    products.edges.first().map(|p| &p.node.name)
+                );
                 next_cursor.clone_from(&products.page_info.end_cursor);
             } else {
                 error!("Failed fetching initial products! {:?}", &res);
@@ -256,7 +263,8 @@ pub fn create_context_map(
                 .as_ref()
                 .and_then(|p| {
                     p.price_undiscounted
-                        .as_ref().map(|n| n.net.currency.clone())
+                        .as_ref()
+                        .map(|n| n.net.currency.clone())
                 })
                 .unwrap_or("".into()),
         ),
@@ -310,7 +318,7 @@ pub fn create_context_map(
                 .as_ref()
                 .and_then(|c| {
                     c.iter()
-                        .find(|c| c.id.inner() == current_channel_id)
+                        .find(|c| c.channel.id.inner() == current_channel_id)
                         .and_then(|c| c.price.as_ref().map(|p| p.amount))
                 })
                 .unwrap_or(0.),
@@ -324,7 +332,7 @@ pub fn create_context_map(
                 .as_ref()
                 .and_then(|c| {
                     c.iter()
-                        .find(|c| c.id.inner() == current_channel_id)
+                        .find(|c| c.channel.id.inner() == current_channel_id)
                         .and_then(|c| c.cost_price.as_ref().map(|p| p.amount))
                 })
                 .unwrap_or(0.),
@@ -338,7 +346,7 @@ pub fn create_context_map(
                 .as_ref()
                 .and_then(|c| {
                     c.iter()
-                        .find(|c| c.id.inner() == current_channel_id)
+                        .find(|c| c.channel.id.inner() == current_channel_id)
                         .and_then(|c| c.price.as_ref().map(|p| p.currency.clone()))
                 })
                 .unwrap_or("".into()),
@@ -351,10 +359,7 @@ pub fn create_context_map(
             variant
                 .pricing
                 .as_ref()
-                .and_then(|v| {
-                    v.price_undiscounted
-                        .as_ref().map(|t| t.net.amount)
-                })
+                .and_then(|v| v.price_undiscounted.as_ref().map(|t| t.net.amount))
                 .unwrap_or(0.),
         ),
     )?;

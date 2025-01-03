@@ -4,6 +4,8 @@ temp
 temp/**.*
 volumes/
 node_modules
+apl.json
+apl.toml
 
 # Allow
 !.env.example

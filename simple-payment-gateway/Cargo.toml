@@ -1,6 +1,6 @@
 [package]
 name = "simple-payment-gateway"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Djkáťo <djkatovfx@gmail.com>"]
 description = "Payment gateway that adds payment methods that don't need actual verification: Cash on delivery, Cash on warehouse pickup, bank tranfer."

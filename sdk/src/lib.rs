@@ -10,7 +10,6 @@ pub mod middleware;
 pub mod settings_manager;
 pub mod webhooks;
 
-#[cfg(feature = "redis_apl")]
 use apl::{AplError, AplType, APL};
 use config::Config;
 use serde::{Deserialize, Serialize};

@@ -17,7 +17,7 @@ docker build --rm --target chef-sitemap-generator . -t ghcr.io/djkato/saleor-app
 workspace = false
 script = '''
 PKG_VER=$(cargo pkgid --package=bulk-price-manipulator | cut -d "#" -f2)
-docker build --rm --target chef-bulk-price-manipulator . -t ghcr.io/djkato/saleor-app-bulk-price-generator:${PKG_VER}
+docker build --rm --target chef-bulk-price-manipulator . -t ghcr.io/djkato/saleor-app-bulk-price-manipulator:${PKG_VER}
 '''
 
 

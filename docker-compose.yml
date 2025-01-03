@@ -1,6 +1,6 @@
 services:
   app-bulk-price-manipulator:
-    image: ghcr.io/djkato/saleor-app-bulk-price-navigator:1.0.0
+    image: ghcr.io/djkato/saleor-app-bulk-price-manipulator:1.0.1
     restart: unless-stopped
     stdin_open: true
     env_file:
@@ -13,7 +13,7 @@ services:
       - 30003:3000
 
   app-payment-gateway:
-    image: ghcr.io/djkato/saleor-app-simple-payment-gateway:0.1.1
+    image: ghcr.io/djkato/saleor-app-simple-payment-gateway:0.1.2
     tty: true
     restart: unless-stopped
     stdin_open: true
@@ -30,7 +30,7 @@ services:
     tty: true
     restart: unless-stopped
     stdin_open: true
-    image: ghcr.io/djkato/saleor-app-sitemap-generator:1.0.0
+    image: ghcr.io/djkato/saleor-app-sitemap-generator:1.0.1
     env_file:
       - docker-sitemap.env
     networks:

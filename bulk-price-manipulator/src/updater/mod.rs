@@ -98,8 +98,7 @@ async fn set_variant_price(
     let operation = UpdatePrice::build(UpdatePriceVariables {
         channel,
         variant,
-        cost_price: cost_price
-            .and_then(|d| Some(PositiveDecimal(Decimal::from_f32(d).unwrap().round_dp(2)))),
+        cost_price: cost_price.map(|d| PositiveDecimal(Decimal::from_f32(d).unwrap().round_dp(2))),
         price: PositiveDecimal(Decimal::from_f64(price).unwrap().round_dp(2)),
     });
     // dbg!(&operation.query, &operation.variables);
@@ -257,8 +256,7 @@ pub fn create_context_map(
                 .as_ref()
                 .and_then(|p| {
                     p.price_undiscounted
-                        .as_ref()
-                        .and_then(|n| Some(n.net.currency.clone()))
+                        .as_ref().map(|n| n.net.currency.clone())
                 })
                 .unwrap_or("".into()),
         ),
@@ -269,7 +267,7 @@ pub fn create_context_map(
             variant
                 .pricing
                 .as_ref()
-                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.gross.amount.clone())))
+                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.gross.amount)))
                 .unwrap_or(0.),
         ),
     )?;
@@ -279,7 +277,7 @@ pub fn create_context_map(
             variant
                 .pricing
                 .as_ref()
-                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.net.amount.clone())))
+                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.net.amount)))
                 .unwrap_or(0.),
         ),
     )?;
@@ -289,7 +287,7 @@ pub fn create_context_map(
             variant
                 .pricing
                 .as_ref()
-                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.tax.amount.clone())))
+                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.tax.amount)))
                 .unwrap_or(0.),
         ),
     )?;
@@ -313,7 +311,7 @@ pub fn create_context_map(
                 .and_then(|c| {
                     c.iter()
                         .find(|c| c.id.inner() == current_channel_id)
-                        .and_then(|c| c.price.as_ref().and_then(|p| Some(p.amount)))
+                        .and_then(|c| c.price.as_ref().map(|p| p.amount))
                 })
                 .unwrap_or(0.),
         ),
@@ -327,7 +325,7 @@ pub fn create_context_map(
                 .and_then(|c| {
                     c.iter()
                         .find(|c| c.id.inner() == current_channel_id)
-                        .and_then(|c| c.cost_price.as_ref().and_then(|p| Some(p.amount)))
+                        .and_then(|c| c.cost_price.as_ref().map(|p| p.amount))
                 })
                 .unwrap_or(0.),
         ),
@@ -341,7 +339,7 @@ pub fn create_context_map(
                 .and_then(|c| {
                     c.iter()
                         .find(|c| c.id.inner() == current_channel_id)
-                        .and_then(|c| c.price.as_ref().and_then(|p| Some(p.currency.clone())))
+                        .and_then(|c| c.price.as_ref().map(|p| p.currency.clone()))
                 })
                 .unwrap_or("".into()),
         ),
@@ -355,8 +353,7 @@ pub fn create_context_map(
                 .as_ref()
                 .and_then(|v| {
                     v.price_undiscounted
-                        .as_ref()
-                        .and_then(|t| Some(t.net.amount))
+                        .as_ref().map(|t| t.net.amount)
                 })
                 .unwrap_or(0.),
         ),

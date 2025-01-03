@@ -8,6 +8,7 @@ use crate::AuthData;
 use super::{AplError, APL};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "tracing")]
 use tracing::debug;
 
 #[derive(Clone, Debug)]
@@ -22,6 +23,7 @@ pub struct FileApl {
 impl APL for FileApl {
     async fn set(&self, auth_data: crate::AuthData) -> Result<(), AplError> {
         let path = std::path::Path::new(&self.path);
+#[cfg(feature = "tracing")]
         debug!("reading from {:?}", &path);
         let mut auths: FileStructure;
         match path.is_file() {
@@ -36,6 +38,7 @@ impl APL for FileApl {
 
         auths.insert(auth_data.saleor_api_url.clone(), auth_data);
 
+#[cfg(feature = "tracing")]
         debug!("writing to {:?}", &path);
         std::fs::write(
             path,
@@ -49,6 +52,7 @@ impl APL for FileApl {
 
     async fn get(&self, saleor_api_url: &str) -> Result<crate::AuthData, AplError> {
         let path = std::path::Path::new(&self.path);
+#[cfg(feature = "tracing")]
         debug!("reading from {:?}", &path);
         let auth_data: FileStructure = serde_json::from_str(
             &std::fs::read_to_string(path).map_err(|e| AplError::IO(e.to_string()))?,
@@ -64,6 +68,7 @@ impl APL for FileApl {
 
     async fn get_all(&self) -> Result<Vec<crate::AuthData>, AplError> {
         let path = std::path::Path::new(&self.path);
+#[cfg(feature = "tracing")]
         debug!("reading from {:?}", &path);
         let auth_data: FileStructure = serde_json::from_str(
             &std::fs::read_to_string(path).map_err(|e| AplError::IO(e.to_string()))?,
@@ -74,6 +79,7 @@ impl APL for FileApl {
 
     async fn delete(&self, saleor_api_url: &str) -> Result<(), AplError> {
         let path = std::path::Path::new(&self.path);
+#[cfg(feature = "tracing")]
         debug!("reading from {:?}", &path);
         let mut auths: FileStructure = serde_json::from_str(
             &std::fs::read_to_string(path).map_err(|e| AplError::IO(e.to_string()))?,
@@ -81,6 +87,7 @@ impl APL for FileApl {
         .map_err(|e| AplError::Serialization(e.to_string()))?;
         auths.remove(saleor_api_url);
 
+#[cfg(feature = "tracing")]
         debug!("writing to {:?}", &path);
         std::fs::write(
             path,

@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use std::time::Duration;
 
 use redis::AsyncCommands;
+#[cfg(feature = "tracing")]
 use tracing::{debug, info};
 
 use super::{AplError, APL};
@@ -16,6 +17,7 @@ pub struct RedisApl {
 #[async_trait]
 impl APL for RedisApl {
     async fn get(&self, saleor_api_url: &str) -> Result<AuthData, AplError> {
+        #[cfg(feature = "tracing")]
         debug!("get()");
         let mut conn = self
             .client
@@ -28,11 +30,13 @@ impl APL for RedisApl {
             .map_err(|e| AplError::Connection(e.to_string()))?;
         let val: AuthData =
             serde_json::from_str(&val).map_err(|e| AplError::Serialization(e.to_string()))?;
+        #[cfg(feature = "tracing")]
         info!("sucessful get");
 
         Ok(val)
     }
     async fn set(&self, auth_data: AuthData) -> Result<(), AplError> {
+        #[cfg(feature = "tracing")]
         debug!("set()");
         let mut conn = self
             .client
@@ -46,10 +50,12 @@ impl APL for RedisApl {
         )
         .await
         .map_err(|e| AplError::Connection(e.to_string()))?;
+        #[cfg(feature = "tracing")]
         info!("sucessful set");
         Ok(())
     }
     async fn delete(&self, saleor_api_url: &str) -> Result<(), AplError> {
+        #[cfg(feature = "tracing")]
         debug!("delete(), {}", saleor_api_url);
         let mut conn = self
             .client
@@ -61,11 +67,14 @@ impl APL for RedisApl {
             .await
             .map_err(|e| AplError::Connection(e.to_string()))?;
 
+        #[cfg(feature = "tracing")]
         debug!("sucessful delete(), {}", val);
+        #[cfg(feature = "tracing")]
         info!("sucessful del");
         Ok(())
     }
     async fn is_ready(&self) -> Result<(), AplError> {
+        #[cfg(feature = "tracing")]
         debug!("is_ready()");
         let mut conn = self
             .client
@@ -78,11 +87,14 @@ impl APL for RedisApl {
             .await
             .map_err(|e| AplError::Connection(e.to_string()))?;
 
+        #[cfg(feature = "tracing")]
         debug!("sucessful is_ready(), info: {}", val);
+        #[cfg(feature = "tracing")]
         info!("sucessful is_ready");
         Ok(())
     }
     async fn is_configured(&self) -> Result<(), AplError> {
+        #[cfg(feature = "tracing")]
         debug!("is_configured()");
         let mut conn = self
             .client
@@ -95,7 +107,9 @@ impl APL for RedisApl {
             .await
             .map_err(|e| AplError::Connection(e.to_string()))?;
 
+        #[cfg(feature = "tracing")]
         debug!("sucessful is_configured(), info: {}", val);
+        #[cfg(feature = "tracing")]
         info!("sucessful is_configured");
         Ok(())
     }
@@ -108,6 +122,7 @@ impl APL for RedisApl {
 
 impl RedisApl {
     pub fn new(redis_url: &str, app_api_base_url: &str) -> Result<Self, AplError> {
+        #[cfg(feature = "tracing")]
         debug!("creating redis apl with {redis_url}...");
         let client =
             redis::Client::open(redis_url).map_err(|e| AplError::Connection(e.to_string()))?;

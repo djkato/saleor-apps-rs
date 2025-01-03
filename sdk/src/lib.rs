@@ -64,7 +64,7 @@ pub enum CreateSaleorAppError {
 impl SaleorApp {
     pub fn new(config: &Config) -> Result<SaleorApp, CreateSaleorAppError> {
         use AplType::{File, Redis};
-        fn decide_apl(config: &Config) -> Result<Box<dyn APL>, AplError> {
+        fn decide_apl(config: &Config) -> Result<Box<dyn APL>, CreateSaleorAppError> {
             match config.apl {
                 Redis => {
                     #[cfg(feature = "redis_apl")]
@@ -75,7 +75,7 @@ impl SaleorApp {
 
                     #[cfg(not(feature = "redis_apl"))]
                     {
-                        return CreateSaleorAppError ::MissingFeature("Tried starting app with redis apl that wasn't present at compile time (cargo feature missing)");
+                        return Err(CreateSaleorAppError ::MissingFeature("Tried starting app with redis apl that wasn't present at compile time (cargo feature missing)".to_string()));
                     }
                 }
                 File => {
@@ -85,7 +85,7 @@ impl SaleorApp {
                     }));
                     #[cfg(not(feature = "file_apl"))]
                     {
-                        return CreateSaleorAppError ::MissingFeature("Tried starting app with file apl that wasn't present at compile time (cargo feature missing)");
+                        return Err(CreateSaleorAppError ::MissingFeature("Tried starting app with file apl that wasn't present at compile time (cargo feature missing)".to_string()));
                     }
                 }
             }

@@ -48,11 +48,23 @@ pub async fn update_prices(state: AppState, saleor_api_url: String) -> anyhow::R
                     ),
                 ) {
                     (Ok(price), Ok(cost_price)) => {
+                        let mut used_cost_price = None;
+                        if variant.channel_listings.is_some_and(|c| {
+                            c.iter()
+                                .find(|f| {
+                                    f.cost_price.is_some()
+                                        && f.channel.id.inner() == channel_id.inner()
+                                })
+                                .is_some()
+                        }) {
+                            used_cost_price = Some(cost_price as f32);
+                        };
+
                         set_variant_price(
                             &variant.id,
                             &channel_id,
                             price,
-                            Some(cost_price as f32),
+                            used_cost_price,
                             &saleor_api_url,
                             &auth_data.token,
                         )

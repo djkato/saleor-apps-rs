@@ -150,7 +150,7 @@ async fn update_event_updates_correctly() {
     }
     evn.iter_mut().for_each(|u| {
         if u.1.data.typ == ItemType::Product
-            && u.1.related.as_ref().map_or(false, |c| c.id == affected_id)
+            && u.1.related.as_ref().is_some_and(|c| c.id == affected_id)
         {
             u.1.url = format!("https://example.com/{}/{}", affected_slug, &u.1.data.slug);
         }

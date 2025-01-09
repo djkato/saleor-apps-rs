@@ -11,7 +11,8 @@ use cynic::{GraphQlError, MutationBuilder};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::{Hash, RandomState};
+use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use tracing::debug;
 
@@ -19,6 +20,21 @@ use tracing::debug;
 pub struct Metadata<K: Hash + Eq + FromStr + ToString, V: Serialize + DeserializeOwned>(
     pub HashMap<K, V>,
 );
+
+impl<K: Hash + Eq + FromStr + ToString, V: Serialize + DeserializeOwned> Deref for Metadata<K, V> {
+    type Target = HashMap<K, V, RandomState>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<K: Hash + Eq + FromStr + ToString, V: Serialize + DeserializeOwned> DerefMut
+    for Metadata<K, V>
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct MetadataSettingsManager<
@@ -215,3 +231,34 @@ impl<
         Ok(mngr)
     }
 }
+
+// #[cfg(test)]
+// mod metadata_tests {
+//     use crate::AuthData;
+//
+//     use super::MetadataSettingsManager;
+//
+//     #[derive(Eq, PartialEq, Hash)]
+//     pub enum Key {
+//         Cool,
+//         Stuff,
+//     }
+//
+//     #[derive(Eq, PartialEq)]
+//     pub enum Val {
+//         Cool(String),
+//         Stuff(String),
+//     }
+//
+//     async fn can_create() {
+//         let sett: MetadataSettingsManager<Key, Val> = MetadataSettingsManager::new(AuthData {
+//             domain: Some("".into()),
+//             token: "".into(),
+//             saleor_api_url: "".into(),
+//             app_id: "".into(),
+//             jwks: None,
+//         })
+//         .await
+//         .unwrap();
+//     }
+// }

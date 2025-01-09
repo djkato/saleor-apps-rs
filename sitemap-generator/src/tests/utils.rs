@@ -297,18 +297,15 @@ pub fn gen_random_url_set(
                 let mut is_using_existing_category = false;
                 // new one
                 if res.iter().any(|r| r.1.data.typ == ItemType::Category) {
-                    match rand::random::<bool>() {
-                        true => loop {
-                            let r = res.choose(&mut rand::thread_rng()).unwrap().clone();
-                            if r.1.data.typ == ItemType::Category {
-                                rel_slug = r.1.data.slug;
-                                rel_id = cynic::Id::new(r.1.data.id);
-                                is_using_existing_category = true;
-                                break;
-                            }
-                        },
-                        false => (),
-                    };
+                    if rand::random::<bool>() == true { loop {
+                        let r = res.choose(&mut rand::thread_rng()).unwrap().clone();
+                        if r.1.data.typ == ItemType::Category {
+                            rel_slug = r.1.data.slug;
+                            rel_id = cynic::Id::new(r.1.data.id);
+                            is_using_existing_category = true;
+                            break;
+                        }
+                    } };
                 }
                 let product_updated = ProductUpdated {
                     product: Some(Product {

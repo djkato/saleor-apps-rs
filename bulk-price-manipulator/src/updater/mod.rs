@@ -287,7 +287,7 @@ pub fn create_context_map(
             variant
                 .pricing
                 .as_ref()
-                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.gross.amount)))
+                .and_then(|p| p.price.as_ref().map(|n| n.gross.amount))
                 .unwrap_or(0.),
         ),
     )?;
@@ -297,7 +297,7 @@ pub fn create_context_map(
             variant
                 .pricing
                 .as_ref()
-                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.net.amount)))
+                .and_then(|p| p.price.as_ref().map(|n| n.net.amount))
                 .unwrap_or(0.),
         ),
     )?;
@@ -307,7 +307,7 @@ pub fn create_context_map(
             variant
                 .pricing
                 .as_ref()
-                .and_then(|p| p.price.as_ref().and_then(|n| Some(n.tax.amount)))
+                .and_then(|p| p.price.as_ref().map(|n| n.tax.amount))
                 .unwrap_or(0.),
         ),
     )?;

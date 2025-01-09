@@ -92,7 +92,7 @@ impl SaleorApp {
         }
         match decide_apl(config) {
             Ok(apl) => Ok(SaleorApp { apl }),
-            Err(e) => Err(e.into()),
+            Err(e) => Err(e),
         }
     }
 }

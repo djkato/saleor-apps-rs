@@ -23,7 +23,11 @@ tracing-subscriber.workspace = true
 tracing-test = "0.2.5"
 dotenvy.workspace = true
 axum.workspace = true
-saleor-app-sdk = { workspace = true, features = ["file_apl", "tracing"] }
+saleor-app-sdk = { workspace = true, features = [
+  "file_apl",
+  "tracing",
+  "recommended",
+] }
 tower = { workspace = true, features = ["util"] }
 tower-http = { workspace = true, features = ["fs", "trace"] }
 surf.workspace = true

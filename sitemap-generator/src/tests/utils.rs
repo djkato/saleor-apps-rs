@@ -296,8 +296,9 @@ pub fn gen_random_url_set(
                 // If there is a category url already, use that for relation instead of always a
                 let mut is_using_existing_category = false;
                 // new one
-                if res.iter().any(|r| r.1.data.typ == ItemType::Category) {
-                    if rand::random::<bool>() == true { loop {
+                if res.iter().any(|r| r.1.data.typ == ItemType::Category) && rand::random::<bool>()
+                {
+                    loop {
                         let r = res.choose(&mut rand::thread_rng()).unwrap().clone();
                         if r.1.data.typ == ItemType::Category {
                             rel_slug = r.1.data.slug;
@@ -305,7 +306,7 @@ pub fn gen_random_url_set(
                             is_using_existing_category = true;
                             break;
                         }
-                    } };
+                    }
                 }
                 let product_updated = ProductUpdated {
                     product: Some(Product {

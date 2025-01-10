@@ -14,12 +14,10 @@ pub async fn webhook_signature_verifier(request: Request, next: Next) -> Respons
 
     let jwks_url = request
         .headers()
-        .get(SALEOR_API_URL_HEADER).and_then(|h| {
-            h.to_str()
-                .map_or(None, |h| url::Url::parse(h).ok())
-        });
+        .get(SALEOR_API_URL_HEADER)
+        .and_then(|h| h.to_str().map_or(None, |h| url::Url::parse(h).ok()));
 
-    debug!("request came from {:?}",jwks_url);
+    debug!("request came from {:?}", jwks_url);
     //get jwk from saleor api
     let jwks: Value = 'block: {
         if let Some(mut jwks_url) = jwks_url {

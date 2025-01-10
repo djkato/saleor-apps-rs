@@ -50,12 +50,9 @@ pub async fn update_prices(state: AppState, saleor_api_url: String) -> anyhow::R
                     (Ok(price), Ok(cost_price)) => {
                         let mut used_cost_price = None;
                         if variant.channel_listings.is_some_and(|c| {
-                            c.iter()
-                                .find(|f| {
-                                    f.cost_price.is_some()
-                                        && f.channel.id.inner() == channel_id.inner()
-                                })
-                                .is_some()
+                            c.iter().any(|f| {
+                                f.cost_price.is_some() && f.channel.id.inner() == channel_id.inner()
+                            })
                         }) {
                             used_cost_price = Some(cost_price as f32);
                         };

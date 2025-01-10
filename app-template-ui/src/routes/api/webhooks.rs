@@ -4,7 +4,7 @@ use axum::{
 };
 use cynic::{http::SurfExt, MutationBuilder};
 use saleor_app_sdk::{
-    headers::{SALEOR_API_URL_HEADER,SALEOR_EVENT_HEADER},
+    headers::{SALEOR_API_URL_HEADER, SALEOR_EVENT_HEADER},
     webhooks::{
         utils::{get_webhook_event_type, EitherWebhookType},
         AsyncWebhookEventType,
@@ -14,7 +14,15 @@ use saleor_app_sdk::{
 use tracing::{debug, info};
 
 use crate::{
-    app::AppState, error_template::AxumError, queries::{event_products_updated::ProductUpdated, product_metadata_update::{MetadataInput, UpdateProductMetadata, UpdateProductMetadataVariables}} };
+    app::AppState,
+    error_template::AxumError,
+    queries::{
+        event_products_updated::ProductUpdated,
+        product_metadata_update::{
+            MetadataInput, UpdateProductMetadata, UpdateProductMetadataVariables,
+        },
+    },
+};
 
 pub async fn webhooks(
     headers: HeaderMap,
@@ -27,8 +35,10 @@ pub async fn webhooks(
     debug!("headers: {:?}", headers);
 
     let url = headers
-        .get(SALEOR_API_URL_HEADER).ok_or(AxumError::MissingHeader(SALEOR_API_URL_HEADER.to_owned()))?;
-    let event_type = get_webhook_event_type(&headers).map_err(|_|AxumError::MissingHeader(SALEOR_EVENT_HEADER.to_owned()))?;
+        .get(SALEOR_API_URL_HEADER)
+        .ok_or(AxumError::MissingHeader(SALEOR_API_URL_HEADER.to_owned()))?;
+    let event_type = get_webhook_event_type(&headers)
+        .map_err(|_| AxumError::MissingHeader(SALEOR_EVENT_HEADER.to_owned()))?;
     if let EitherWebhookType::Async(a) = event_type {
         match a {
             AsyncWebhookEventType::ProductUpdated

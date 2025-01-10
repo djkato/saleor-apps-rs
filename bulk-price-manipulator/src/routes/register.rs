@@ -45,10 +45,11 @@ pub async fn register(
     info!("Starting caching and generation process");
     let cloned_state = state.clone();
 
-    let _ = tokio::task::spawn(async {
+    std::mem::drop(tokio::task::spawn(async {
         if let Err(e) = update_prices(cloned_state, saleor_api_url).await {
             error!("{:?}", e);
         }
-    });
+    }));
+
     Ok(StatusCode::OK)
 }

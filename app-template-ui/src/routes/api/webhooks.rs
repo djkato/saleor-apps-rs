@@ -39,15 +39,13 @@ pub async fn webhooks(
         .ok_or(AxumError::MissingHeader(SALEOR_API_URL_HEADER.to_owned()))?;
     let event_type = get_webhook_event_type(&headers)
         .map_err(|_| AxumError::MissingHeader(SALEOR_EVENT_HEADER.to_owned()))?;
-    if let EitherWebhookType::Async(a) = event_type {
-        match a {
-            AsyncWebhookEventType::ProductUpdated
-            | AsyncWebhookEventType::ProductCreated
-            | AsyncWebhookEventType::ProductDeleted => {
-                update_product(product, url.to_str()?, state).await?
-            }
-            _ => (),
-        }
+    if let EitherWebhookType::Async(
+        AsyncWebhookEventType::ProductUpdated
+        | AsyncWebhookEventType::ProductCreated
+        | AsyncWebhookEventType::ProductDeleted,
+    ) = event_type
+    {
+        update_product(product, url.to_str()?, state).await?
     }
 
     info!("got webhooks!");

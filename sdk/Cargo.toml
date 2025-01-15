@@ -19,8 +19,8 @@ envy = { workspace = true }
 dotenvy = { workspace = true }
 rust_decimal = { workspace = true, features = ["serde-float"] }
 iso_currency = { workspace = true, features = ["with-serde", "iterator"] }
-strum = { version = "0.26.2" }
-strum_macros = { version = "0.26.2" }
+strum.workspace = true
+strum_macros.workspace = true
 async-trait = { version = "0.1.80" }
 
 ## Needed for middleware
@@ -88,4 +88,10 @@ file_apl = []
 webhook_utils = ["dep:http"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 settings_manager = ["dep:cynic", "dep:surf", "dep:serde_with"]
-bridge = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen", "dep:web-sys"]
+bridge = [
+  "dep:wasm-bindgen",
+  "dep:serde-wasm-bindgen",
+  "dep:web-sys",
+  "dep:jsonwebtoken",
+  "dep:reqwest",
+]

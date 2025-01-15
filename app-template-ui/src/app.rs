@@ -8,7 +8,9 @@ use leptos_router::*;
 use saleor_app_sdk::bridge::action::PayloadRequestPermissions;
 use saleor_app_sdk::bridge::event::Event;
 use saleor_app_sdk::bridge::{dispatch_event, listen_to_events, AppBridge};
-use saleor_app_sdk::manifest::AppPermission;
+use saleor_app_sdk::manifest::{AppPermission, LocaleCode};
+use serde::{Deserialize, Serialize};
+use strum_macros::EnumString;
 
 #[derive(Params, PartialEq)]
 pub struct UrlAppParams {
@@ -37,46 +39,80 @@ pub fn App() -> impl IntoView {
 
     create_effect(move |_| {
         listen_to_events(move |event_res| match event_res {
-            Ok(event) => match event {
-                Event::Handshake(payload) => {
-                    if let Some(mut bridge) = bridge_read.get_untracked() {
-                        bridge.state.token = Some(payload.token);
-                        bridge.state.dashboard_version = payload.dashboard_version;
-                        bridge.state.saleor_version = payload.saleor_version;
-                        bridge_set(Some(bridge))
+            Ok(event) => {
+                match event {
+                    Event::Handshake(payload) => {
+                        if let Some(mut bridge) = bridge_read.get_untracked() {
+                            let payload2 = payload.clone();
+                            let (tx, rx) = std::sync::mpsc::sync_channel(5);
+                            spawn_local(async move {
+                                match payload2.token_into_user().await {
+                                    Ok(user) => {
+                                        console_log(&format!(
+                                            "bridge user updated to:\n {:?}",
+                                            &user
+                                        ));
+                                        _ = tx.send(Some(user));
+                                    }
+                                    Err(e) => {
+                                        console_error(&format!(
+                                            "failed converting JWT into user data, {e:?}"
+                                        ));
+                                        _ = tx.send(None);
+                                    }
+                                };
+                            });
+
+                            let mut attempts = 0;
+                            //TODO: God someone give me a better solution please. rx.recv() blocks
+                            //and halts the whole wasm app
+                            loop {
+                                attempts += 1;
+                                if let Ok(user) = rx.try_recv() {
+                                    bridge.state.user = user;
+                                };
+                                if attempts > 1000000 {
+                                    break;
+                                }
+                            }
+                            bridge.state.token = Some(payload.clone().token);
+                            bridge.state.dashboard_version = payload.dashboard_version;
+                            bridge.state.saleor_version = payload.saleor_version;
+                            bridge_set(Some(bridge))
+                        }
+                    }
+                    Event::Response(_) => {
+                        // console_log(&format!("front::App: {:?}", payload.ok));
+                        if let Some(mut bridge) = bridge_read.get_untracked() {
+                            bridge.state.ready = true;
+                            bridge_set(Some(bridge))
+                        }
+                    }
+                    Event::Redirect(payload) => {
+                        console_log(&payload.path);
+                    }
+                    Event::Theme(payload) => {
+                        if let Some(mut bridge) = bridge_read.get_untracked() {
+                            bridge.state.theme = payload.theme;
+                            bridge_set(Some(bridge))
+                        }
+                    }
+                    Event::LocaleChanged(payload) => {
+                        if let Some(mut bridge) = bridge_read.get_untracked() {
+                            bridge.state.locale = payload.locale;
+                            bridge_set(Some(bridge))
+                        }
+                    }
+                    Event::TokenRefreshed(payload) => {
+                        if let Some(mut bridge) = bridge_read.get_untracked() {
+                            bridge.state.token = Some(payload.token);
+                            bridge_set(Some(bridge))
+                        }
                     }
                 }
-                Event::Response(_) => {
-                    // console_log(&format!("front::App: {:?}", payload.ok));
-                    if let Some(mut bridge) = bridge_read.get_untracked() {
-                        bridge.state.ready = true;
-                        bridge_set(Some(bridge))
-                    }
-                }
-                Event::Redirect(payload) => {
-                    console_log(&payload.to);
-                }
-                Event::Theme(payload) => {
-                    if let Some(mut bridge) = bridge_read.get_untracked() {
-                        bridge.state.theme = payload.theme;
-                        bridge_set(Some(bridge))
-                    }
-                }
-                Event::LocaleChanged(payload) => {
-                    if let Some(mut bridge) = bridge_read.get_untracked() {
-                        bridge.state.locale = payload.locale;
-                        bridge_set(Some(bridge))
-                    }
-                }
-                Event::TokenRefreshed(payload) => {
-                    if let Some(mut bridge) = bridge_read.get_untracked() {
-                        bridge.state.token = Some(payload.token);
-                        bridge_set(Some(bridge))
-                    }
-                }
-            },
+            }
             Err(e) => {
-                console_error(&format!("front::App: {:?}", e));
+                console_warn(&format!("front::App: {:?}", e));
             }
         })
     });
@@ -103,6 +139,8 @@ pub fn App() -> impl IntoView {
         </Router>
     }
 }
+#[cfg(feature = "ssr")]
+use saleor_app_sdk::settings_manager::metadata::MetadataSettingsManager;
 
 #[cfg(feature = "ssr")]
 #[derive(Debug, Clone, axum::extract::FromRef)]
@@ -110,5 +148,36 @@ pub struct AppState {
     pub saleor_app: std::sync::Arc<tokio::sync::Mutex<saleor_app_sdk::SaleorApp>>,
     pub config: saleor_app_sdk::config::Config,
     pub manifest: saleor_app_sdk::manifest::AppManifest,
+    pub settings: std::sync::Arc<
+        tokio::sync::Mutex<Option<MetadataSettingsManager<AppSettingsKey, AppSettings>>>,
+    >,
     pub leptos_options: LeptosOptions,
+}
+
+#[cfg(feature = "ssr")]
+#[derive(Hash, PartialEq, Eq, Debug, Clone, EnumString, strum_macros::Display)]
+pub enum AppSettingsKey {
+    Locale,
+    ActiveFields,
+}
+
+#[cfg(feature = "ssr")]
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub enum AppSettings {
+    Locale(LocaleCode),
+    ActiveFields(Vec<OrderDetailField>),
+}
+
+#[cfg(feature = "ssr")]
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub enum OrderDetailField {
+    VariantName,
+    ProductName,
+    VariantSKU,
+    VariantOrderAmount,
+    VariantWarehouseAmount,
+    VariantPriceSingleGross,
+    LinePriceGross,
+    ObtainmentMethod,
+    PaymentMethod,
 }

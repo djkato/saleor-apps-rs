@@ -85,17 +85,22 @@ impl AppBridgeState {
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Deserialize)]
 pub struct AppBridgeUser {
-    /**
-     * Original permissions of the user that is using the app.
-     * *Not* the same permissions as the app itself.
-     *
-     * Can be used by app to check if user is authorized to perform
-     * domain specific actions
-     */
-    pub permissions: Vec<AppPermission>,
+    pub iat: u32,
+    pub owner: String,
+    pub iss: String,
+    pub exp: u32,
+    pub token: String,
     pub email: String,
+    #[serde(alias = "type")]
+    pub typ: String,
+    pub user_id: String,
+    pub is_staff: bool,
+    pub app: String,
+    pub permissions: Vec<AppPermission>,
+    pub user_permissions: Vec<AppPermission>,
+    pub app_extension: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, EnumString, IntoStaticStr)]
@@ -206,7 +211,7 @@ pub enum AppBridgeError {
     WindowParentIsUndefined,
     #[error("Window is typeof undefined. Probably means AppBridge::new() is being called outside of a browser")]
     WindowIsUndefined,
-    #[error("JS error")]
+    #[error("JS error: {0:?}")]
     JsValue(JsValue),
 }
 

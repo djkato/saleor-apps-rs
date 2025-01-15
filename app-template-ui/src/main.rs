@@ -27,14 +27,15 @@ async fn main() -> Result<(), std::io::Error> {
     use fileserv::file_and_error_handler;
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use saleor_app_sdk::manifest::{
-        extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget,
-    };
     use saleor_app_sdk::{
         cargo_info,
         config::Config,
         manifest::{AppManifestBuilder, AppPermission},
         SaleorApp,
+    };
+    use saleor_app_sdk::{
+        manifest::{extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget},
+        settings_manager::metadata::MetadataSettingsManager,
     };
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -78,6 +79,7 @@ async fn main() -> Result<(), std::io::Error> {
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),
         leptos_options,
+        settings: Arc::new(Mutex::new(None)),
     };
 
     let state_1 = app_state.clone();

@@ -1,4 +1,4 @@
-use super::ThemeType;
+use super::{AppBridgeUser, ThemeType};
 use crate::manifest::{AppPermission, LocaleCode};
 use serde::{Deserialize, Serialize};
 
@@ -42,13 +42,48 @@ pub enum NotificationStatus {
     Error,
 }
 
-#[derive(Deserialize, Serialize, Debug, Default)]
+#[derive(Deserialize, Serialize, Debug, Default, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadHanshake {
     pub token: String,
     pub version: i32,
     pub saleor_version: Option<String>,
     pub dashboard_version: Option<String>,
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum TokenIntoUserError {
+    #[error("Failed fetching public key to validate JWK, {0}")]
+    RequestError(#[from] reqwest::Error),
+    #[error("Failed parsing public key, {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
+    #[error("Failed validating or parsing JWT, {0}")]
+    CryptoError(#[from] jsonwebtoken::errors::Error),
+    #[error("missing member in public key")]
+    MissingKeyField,
+}
+
+impl PayloadHanshake {
+    pub async fn token_into_user(&self) -> Result<AppBridgeUser, TokenIntoUserError> {
+        use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
+        use serde_json::Value;
+
+        let jwks: Value = {
+            let get_res = reqwest::get("http://localhost:8000/.well-known/jwks.json").await?;
+            get_res.json::<Value>().await?
+        };
+        let nstr = jwks["keys"][0]["n"]
+            .as_str()
+            .ok_or(TokenIntoUserError::MissingKeyField)?;
+        let estr = jwks["keys"][0]["e"]
+            .as_str()
+            .ok_or(TokenIntoUserError::MissingKeyField)?;
+
+        let pubkey = DecodingKey::from_rsa_components(nstr, estr)?;
+        let validation = Validation::new(Algorithm::RS256);
+        let user = decode::<AppBridgeUser>(&self.token, &pubkey, &validation)?.claims;
+        Ok(user)
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -61,7 +96,7 @@ pub struct PayloadResponse {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadRedirect {
-    pub to: String,
+    pub path: String,
     pub new_context: Option<bool>,
 }
 
@@ -72,10 +107,10 @@ pub struct PayloadTheme {
 }
 
 #[derive(Deserialize, Serialize, Debug, Default)]
-#[serde(rename_all = "camelCase")]
 pub struct PayloadLocaleChanged {
     pub locale: LocaleCode,
 }
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PayloadTokenRefreshed {

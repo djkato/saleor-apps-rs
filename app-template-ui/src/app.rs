@@ -20,7 +20,7 @@ pub struct UrlAppParams {
 #[component]
 pub fn App() -> impl IntoView {
     let (bridge_read, bridge_set) = create_signal::<Option<AppBridge>>(None);
-
+    let context = use_context::<AppState>();
     create_effect(move |_| match AppBridge::new(true) {
         Ok(bridge) => bridge_set(Some(bridge)),
         Err(e) => console_error(&format!("{:?}", e)),
@@ -44,41 +44,29 @@ pub fn App() -> impl IntoView {
                     Event::Handshake(payload) => {
                         if let Some(mut bridge) = bridge_read.get_untracked() {
                             let payload2 = payload.clone();
-                            let (tx, rx) = std::sync::mpsc::sync_channel(5);
                             spawn_local(async move {
                                 match payload2.token_into_user().await {
                                     Ok(user) => {
                                         console_log(&format!(
-                                            "bridge user updated to:\n {:?}",
+                                            "setting bridge user to:\n {:?}",
                                             &user
                                         ));
-                                        _ = tx.send(Some(user));
+                                        bridge.state.user = Some(user);
                                     }
                                     Err(e) => {
                                         console_error(&format!(
                                             "failed converting JWT into user data, {e:?}"
                                         ));
-                                        _ = tx.send(None);
+                                        bridge.state.user = None;
                                     }
                                 };
+                                bridge.state.token = Some(payload.clone().token);
+                                bridge.state.dashboard_version = payload.dashboard_version;
+                                bridge.state.saleor_version = payload.saleor_version;
+                                //if for some reason it unsets sometimes
+                                bridge.state.ready = true;
+                                bridge_set(Some(bridge));
                             });
-
-                            let mut attempts = 0;
-                            //TODO: God someone give me a better solution please. rx.recv() blocks
-                            //and halts the whole wasm app
-                            loop {
-                                attempts += 1;
-                                if let Ok(user) = rx.try_recv() {
-                                    bridge.state.user = user;
-                                };
-                                if attempts > 1000000 {
-                                    break;
-                                }
-                            }
-                            bridge.state.token = Some(payload.clone().token);
-                            bridge.state.dashboard_version = payload.dashboard_version;
-                            bridge.state.saleor_version = payload.saleor_version;
-                            bridge_set(Some(bridge))
                         }
                     }
                     Event::Response(_) => {
@@ -130,6 +118,19 @@ pub fn App() -> impl IntoView {
             outside_errors.insert_with_default_key(AppError::NotFound);
             view! { <ErrorTemplate outside_errors /> }.into_view()
         }>
+            <header class="h-12">
+                <div class="h-full bg-default1 border-b-[1px] border-default1 px-4 py-2 flex justify-between items-center">
+                    <h2 class="">
+                        { context.map_or("[Cool App]".to_owned(), |c| c.manifest.name)}
+                    </h2>
+                    <span class="">
+                        {move || match bridge_read.get() {
+                            Some(bridge) => bridge.state.user.map_or("[Loading bridge...]".into(), |u|"Welcome, ".to_owned()+ &u.email),
+                            None => "[Not authenticated]".into()
+                        }}
+                    </span>
+                </div>
+            </header>
             <main class="p-4 md:p-8 md:px-16">
                 <Routes>
                     <Route path="/" view=Home />
@@ -142,33 +143,44 @@ pub fn App() -> impl IntoView {
 #[cfg(feature = "ssr")]
 use saleor_app_sdk::settings_manager::metadata::MetadataSettingsManager;
 
-#[cfg(feature = "ssr")]
-#[derive(Debug, Clone, axum::extract::FromRef)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "ssr", derive(axum::extract::FromRef))]
 pub struct AppState {
-    pub saleor_app: std::sync::Arc<tokio::sync::Mutex<saleor_app_sdk::SaleorApp>>,
+    pub leptos_options: LeptosOptions,
     pub config: saleor_app_sdk::config::Config,
     pub manifest: saleor_app_sdk::manifest::AppManifest,
+    #[cfg(feature = "ssr")]
+    pub saleor_app: std::sync::Arc<tokio::sync::Mutex<saleor_app_sdk::SaleorApp>>,
+    #[cfg(feature = "ssr")]
     pub settings: std::sync::Arc<
         tokio::sync::Mutex<Option<MetadataSettingsManager<AppSettingsKey, AppSettings>>>,
     >,
-    pub leptos_options: LeptosOptions,
 }
 
-#[cfg(feature = "ssr")]
 #[derive(Hash, PartialEq, Eq, Debug, Clone, EnumString, strum_macros::Display)]
 pub enum AppSettingsKey {
-    Locale,
-    ActiveFields,
+    Global,
+    //ID
+    User(String),
 }
 
-#[cfg(feature = "ssr")]
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum AppSettings {
-    Locale(LocaleCode),
-    ActiveFields(Vec<OrderDetailField>),
+    Global(GlobalAppSettings),
+    UserSettings(UserAppSettings),
 }
 
-#[cfg(feature = "ssr")]
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct GlobalAppSettings {
+    idk: bool,
+}
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub struct UserAppSettings {
+    pub locale: Option<LocaleCode>,
+    pub active_pdf_fields: Vec<OrderDetailField>,
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum OrderDetailField {
     VariantName,

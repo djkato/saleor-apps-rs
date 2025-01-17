@@ -3511,10 +3511,11 @@ checksum = "f3cb5ba0dc43242ce17de99c180e96db90b235b8a9fdc9543c96d2209116bd9f"
 
 [[package]]
 name = "saleor-app-sdk"
-version = "0.6.2"
+version = "0.6.4"
 dependencies = [
  "async-trait",
  "axum",
+ "base64 0.22.1",
  "cynic",
  "cynic-codegen",
  "dotenvy",

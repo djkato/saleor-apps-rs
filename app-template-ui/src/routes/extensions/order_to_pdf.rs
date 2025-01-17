@@ -8,7 +8,7 @@ pub fn OrderToPdf(bridge: ReadSignal<Option<AppBridge>>) -> impl IntoView {
 
         {move || match bridge() {
             Some(bridge) => {
-                match bridge.state.ready{
+                match bridge.state.ready {
                     true => view!{
                         <div>
                         <button on:click=move |_|{

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::{AppBridgeUser, ThemeType};
 use crate::manifest::{AppPermission, LocaleCode};
 use serde::{Deserialize, Serialize};
@@ -59,19 +61,38 @@ pub enum TokenIntoUserError {
     SerdeJsonError(#[from] serde_json::Error),
     #[error("Failed validating or parsing JWT, {0}")]
     CryptoError(#[from] jsonwebtoken::errors::Error),
-    #[error("missing member in public key")]
+    #[error("Failed converting issuer to url, {0}")]
+    UrlError(#[from] url::ParseError),
+    #[error("missing member in public key or wrong JWK format, can't separate into 3 parts with split('.')")]
     MissingKeyField,
 }
 
 impl PayloadHanshake {
     pub async fn token_into_user(&self) -> Result<AppBridgeUser, TokenIntoUserError> {
+        use base64::prelude::*;
         use jsonwebtoken::{decode, Algorithm, DecodingKey, Validation};
         use serde_json::Value;
 
+        //godda get the issuer (`iss` field) out of the JWT beforehand, rip
+        let data_part = self
+            .token
+            .split(".")
+            .nth(1)
+            .ok_or(TokenIntoUserError::MissingKeyField)?
+            .to_owned();
+
+        let decoded_user: AppBridgeUser =
+            serde_json::from_slice(&BASE64_URL_SAFE_NO_PAD.decode(data_part).unwrap()).unwrap();
+
+        let mut url = url::Url::parse(&decoded_user.iss)?;
+        url.set_path(".well-known/jwks.json");
+
+        //now fetch remote stuff and validate along the way
         let jwks: Value = {
-            let get_res = reqwest::get("http://localhost:8000/.well-known/jwks.json").await?;
+            let get_res = reqwest::get(url).await?;
             get_res.json::<Value>().await?
         };
+
         let nstr = jwks["keys"][0]["n"]
             .as_str()
             .ok_or(TokenIntoUserError::MissingKeyField)?;

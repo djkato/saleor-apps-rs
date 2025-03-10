@@ -1,11 +1,12 @@
 [workspace]
 members = [
-  "sdk",
+  "libs/sdk",
+  "libs/heureka-xml-feed",
   "app-template",
   "app-template-ui",
-  "sitemap-generator",
-  "simple-payment-gateway",
-  "bulk-price-manipulator",
+  "apps/sitemap-generator",
+  "apps/simple-payment-gateway",
+  "apps/bulk-price-manipulator",
 ]
 resolver = "2"
 
@@ -29,25 +30,31 @@ tracing-serde = "0.1.3"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 dotenvy = "0.15.7"
 axum = "0.7.5"
-saleor-app-sdk = { path = "sdk" }
+saleor-app-sdk = { path = "libs/sdk" }
 tower = { version = "0.4.13", features = ["util"] }
 tower-http = { version = "0.5.2", features = ["fs", "trace"] }
 cynic-codegen = "3.5.1"
-rust_decimal = { version = "1.35.0", features = ["serde-float"] }
+rust_decimal = { version = "1.35.0", features = ["serde-float", "serde"] }
 iso_currency = { version = "0.4.4", features = ["with-serde", "iterator"] }
 pulldown-cmark = "0.11.0"
-http = "1"
 thiserror = "1.0.61"
 wasm-bindgen = "=0.2.100"
 wasm-bindgen-futures = "0.4.50"
 console_error_panic_hook = "0.1"
-leptos = { version = "0.6", features = ["nightly"] }
-leptos_axum = { version = "0.6" }
-leptos_meta = { version = "0.6", features = ["nightly"] }
-leptos_router = { version = "0.6", features = ["nightly"] }
+leptos = { version = "0.7.7", features = ["nightly"] }
+leptos_axum = { version = "0.7.7" }
+leptos_meta = { version = "0.7.7", features = ["ssr"] }
+leptos_router = { version = "0.7.7", features = ["nightly"] }
+log = "0.4.25"
+simple_logger = "5.0.0"
 web-sys = "0.3.69"
 rstest = "0.21.0"
 async-std = { version = "1.5", features = ["attributes"] }
+url = { version = "2.5.4", features = ["serde"] }
+reqwest = { version = "0.12.3", features = ["json"] }
+http = { version = "1.1.0" }
+rand = "0.9.0"
+heureka-xml-feed = { path = "libs/heureka-xml-feed" }
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

@@ -1,21 +1,13 @@
 {
   "lspconfig": {
     "rust_analyzer": {
+      "rust-analyzer.check.features": "all",
       "rust-analyzer.cargo.features": "all",
-      "rust-analyzer.check.features": "all"
-      // "rust-analyzer.cargo.extraArgs": [
-      //   "+nightly"
-      // ],
-      // "rust-analyzer.check.command": "clippy",
-      // "rust-analyzer.check.extraArgs": ["--all-features"]
-      /*
-        use this only when working with leptos
-      */
-      // "rust-analyzer.rustfmt.overrideCommand": [
-      //   "leptosfmt",
-      //   "--stdin",
-      //   "--rustfmt"
-      // ]
+      "rust-analyzer.rustfmt.overrideCommand": [
+        "leptosfmt",
+        "--stdin",
+        "--rustfmt"
+      ]
     }
   }
 }

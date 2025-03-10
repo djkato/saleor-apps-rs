@@ -27,9 +27,9 @@ base64 = { optional = true, version = "0.22.1" }
 ## Needed for middleware
 axum = { workspace = true, optional = true }
 jsonwebtoken = { version = "9.3.0", optional = true }
-url = { version = "2.5.0", optional = true }
-reqwest = { version = "0.12.3", features = ["json"], optional = true }
-http = { version = "1.1.0", optional = true }
+url = { workspace = true, optional = true }
+reqwest = { workspace = true, features = ["json"], optional = true }
+http = { workspace = true, optional = true }
 
 ## Needed for APLs
 redis = { workspace = true, features = [

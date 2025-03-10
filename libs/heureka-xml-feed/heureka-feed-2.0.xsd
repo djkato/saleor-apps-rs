@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  >
+
+  <xs:complexType name="DeliveryType">
+    <xs:all>
+      <xs:element name="DELIVERY_ID">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="CESKA_POSTA"/>
+            <xs:enumeration value="SLOVENSKA_POSTA"/>
+            <xs:enumeration value="CESKA_POSTA_DOPORUCENA_ZASILKA"/>
+            <xs:enumeration value="CSAD_LOGISTIK_OSTRAVA"/>
+            <xs:enumeration value="DPD"/>
+            <xs:enumeration value="DHL"/>
+            <xs:enumeration value="DSV"/>
+            <xs:enumeration value="FOFR"/>
+            <xs:enumeration value="EXPRES_KURIER"/>
+            <xs:enumeration value="GEBRUDER_WEISS"/>
+            <xs:enumeration value="GEIS"/>
+            <xs:enumeration value="GLS"/>
+            <xs:enumeration value="HDS"/>
+            <xs:enumeration value="PPL"/>
+            <xs:enumeration value="SEEGMULLER"/>
+            <xs:enumeration value="EXPRESS_ONE"/>
+            <xs:enumeration value="TNT"/>
+            <xs:enumeration value="TOPTRANS"/>
+            <xs:enumeration value="UPS"/>
+            <xs:enumeration value="DEPO"/>
+            <xs:enumeration value="FEDEX"/>
+            <xs:enumeration value="RABEN_LOGISTICS"/>
+            <xs:enumeration value="ZASILKOVNA_NA_ADRESU"/>
+            <xs:enumeration value="SDS"/>
+            <xs:enumeration value="SPS"/>
+            <xs:enumeration value="123KURIER"/>
+            <xs:enumeration value="PACKETA_DOMOV"/>
+            <xs:enumeration value="WEDO_HOME"/>
+            <xs:enumeration value="RHENUS_LOGISTICS"/>
+            <xs:enumeration value="MESSENGER"/>
+            <xs:enumeration value="PALET_EXPRESS"/>
+            <xs:enumeration value="SLOVENSKA_POSTA_NAPOSTU_DEPOTAPI"/>
+            <xs:enumeration value="ZASILKOVNA"/>
+            <xs:enumeration value="DPD_PICKUP"/>
+            <xs:enumeration value="BALIKOVNA_DEPOTAPI"/>
+            <xs:enumeration value="PACKETA"/>
+            <xs:enumeration value="WEDO_POINT"/>
+            <xs:enumeration value="BALIKOVO"/>
+            <xs:enumeration value="CESKA_POSTA_NAPOSTU"/>
+            <xs:enumeration value="PPL_PARCELSHOP"/>
+            <xs:enumeration value="GLS_PARCELSHOP"/>
+            <xs:enumeration value="ALZAPOINT"/>
+            <xs:enumeration value="DPD_BOX"/>
+            <xs:enumeration value="Z_BOX"/>
+            <xs:enumeration value="WEDO_BOX"/>
+            <xs:enumeration value="PPL_PARCELBOX"/>
+            <xs:enumeration value="BALIKOVNA_BOX"/>
+            <xs:enumeration value="BALIKO_BOX"/>
+            <xs:enumeration value="GLS_PARCELLOCKER"/>
+            <xs:enumeration value="ALZABOX"/>
+            <xs:enumeration value="ONLINE"/>
+            <xs:enumeration value="VLASTNI_PREPRAVA"/>          
+            <xs:enumeration value="VLASTNA_PREPRAVA"/>          
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="DELIVERY_PRICE" type="xs:decimal"/>
+      <xs:element name="DELIVERY_PRICE_COD" type="xs:decimal"/>
+    </xs:all>
+  </xs:complexType>
+
+  <xs:complexType name="ParamType">
+    <xs:all>
+      <xs:element name="PARAM_NAME" type="xs:string"/>
+      <xs:element name="VAL" type="xs:string"/>
+    </xs:all>
+  </xs:complexType>
+
+  <xs:complexType name="ExtendedWarrantyType">
+    <xs:all>
+      <xs:element name="VAL" type="xs:int"/>
+      <xs:element name="DESC" type="xs:string"/>
+    </xs:all>
+  </xs:complexType>
+
+  <xs:simpleType name="DateOrDays">
+    <xs:union memberTypes="xs:int xs:date"/>
+  </xs:simpleType>
+
+  <xs:complexType name="SalesVoucherType">
+    <xs:all>
+      <xs:element name="CODE" type="xs:string"/>
+      <xs:element name="DESC" type="xs:string"/>
+    </xs:all>
+  </xs:complexType>
+
+  <xs:simpleType name="Percent">
+      <xs:restriction base="xs:string">
+        <xs:pattern value="\d+%"/>
+      </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="SHOP">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SHOPITEM" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="ITEM_ID" type="xs:string">
+                <xs:annotation>
+                  <xs:documentation>ITEM_ID can only contain characters: [ _ - 0-9 a-z A-Z ] and be a maximum of 36 characters long.</xs:documentation>
+                  <xs:appinfo>
+                    <xs:pattern value="[a-zA-Z0-9_-]+"/>
+                    <xs:maxLength value="36"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="ITEMGROUP_ID" type="xs:string" minOccurs="0">
+                <xs:annotation>
+                  <xs:documentation>ITEMGROUP_ID can only contain characters: [ _ - 0-9 a-z A-Z ] and be a maximum of 36 characters long.</xs:documentation>
+                  <xs:appinfo>
+                    <xs:pattern value="[a-zA-Z0-9_-]+"/>
+                    <xs:maxLength value="36"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="PRODUCTNAME" type="xs:string">
+                <xs:annotation>
+                  <xs:documentation>PRODUCTNAME can be a maximum of 200 characters long.</xs:documentation>
+                  <xs:appinfo>
+                    <xs:maxLength value="200"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="PRODUCT" type="xs:string" minOccurs="0"/>
+              <xs:element name="DESCRIPTION" type="xs:string" minOccurs="0"/>
+              
+              <xs:element name="URL" type="xs:anyURI" minOccurs="0">
+                <xs:annotation>
+                  <xs:documentation>URL can be a maximum of 255 characters long.</xs:documentation>
+                  <xs:appinfo>
+                    <xs:maxLength value="255"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              
+              <xs:element name="IMGURL" type="xs:anyURI" minOccurs="0">
+                <xs:annotation>
+                  <xs:documentation>IMGURL can be a maximum of 255 characters long.</xs:documentation>
+                  <xs:appinfo>
+                    <xs:maxLength value="255"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+              
+              <xs:element name="IMGURL_ALTERNATIVE" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded">
+                <xs:annotation>
+                  <xs:documentation>IMGURL_ALTERNATIVE can be a maximum of 255 characters long.</xs:documentation>
+                  <xs:appinfo>
+                    <xs:maxLength value="255"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="VIDEO_URL" type="xs:anyURI" minOccurs="0"/>
+              <xs:element name="VAT" type="Percent" minOccurs="0" />
+              <xs:element name="PRICE_VAT" type="xs:decimal"/>
+              <xs:element name="ITEM_TYPE" type="xs:string" minOccurs="0"/>
+              <xs:element name="HEUREKA_CPC" type="xs:decimal" minOccurs="0"/>
+              <xs:element name="MANUFACTURER" type="xs:string" minOccurs="0"/>
+              <xs:element name="CATEGORYTEXT" type="xs:string"/>
+              <xs:element name="EAN" type="xs:string" minOccurs="0"/>
+              <xs:element name="ISBN" type="xs:string" minOccurs="0"/>
+              <xs:element name="PRODUCTNO" type="xs:string" minOccurs="0"/>
+              <xs:element name="PARAM" maxOccurs="unbounded" type="ParamType" minOccurs="0"/>
+              <xs:element name="DELIVERY_DATE" type="DateOrDays" minOccurs="0"/>
+              <xs:element name="DELIVERY" maxOccurs="unbounded" type="DeliveryType" minOccurs="0"/>
+              <xs:element name="ACCESSORY" type="xs:string" minOccurs="0" maxOccurs="10"/>
+              <xs:element name="DUES" type="xs:string" minOccurs="0"/>
+              <xs:element name="GIFT" type="xs:string" minOccurs="0"/>
+              <xs:element name="GIFT_ID" type="xs:string" minOccurs="0"/>
+              <xs:element name="EXTENDED_WARRANTY" type="ExtendedWarrantyType" minOccurs="0"/>
+              <xs:element name="SPECIAL_SERVICE" type="xs:string" minOccurs="0" maxOccurs="5">
+                <xs:annotation>
+                  <xs:documentation>SPECIAL_SERVICE can be a maximum of 128 characters long.</xs:documentation>
+                  <xs:appinfo>
+                    <xs:maxLength value="128"/>
+                  </xs:appinfo>
+                </xs:annotation>
+              </xs:element>
+
+              <xs:element name="SALES_VOUCHER" type="SalesVoucherType" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

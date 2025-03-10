@@ -1,0 +1,55 @@
+[package]
+name = "heureka-xml-feed"
+authors = ["Djkáťo <djkatovfx@gmail.com>"]
+description = "Unofficial Heureka feed library for creating and validating xml."
+version = "1.0.0"
+edition = "2024"
+keywords = ["Heureka", "feed", "xml"]
+categories = ["api-bindings"]
+homepage = "https://github.com/djkato/saleor-apps-rs"
+repository = "https://github.com/djkato/saleor-apps-rs"
+documentation = "https://github.com/djkato/saleor-apps-rs"
+license = "MIT OR Apache-2.0"
+
+
+# [lib]
+# # The name of the native library. This is the name which will be used in Python to import the
+# # library (i.e. `import string_sum`). If you change this, you must also change the name of the
+# # `#[pymodule]` in `src/lib.rs`.
+# name = "heureka_xml_feed"
+# # "cdylib" is necessary to produce a shared library for Python to import from.
+# #
+# # Downstream Rust code (including code in `bin/`, `examples/`, and `tests/`) will not be able
+# # to `use string_sum;` unless the "rlib" or "lib" crate type is also included, e.g.:
+# # crate-type = ["cdylib", "rlib"]
+# crate-type = ["cdylib"]
+
+[dependencies]
+datetime = { version = "0.5.2", features = ["parse"] }
+pyo3 = { version = "0.23.4", features = ["auto-initialize"] }
+quick-xml = { version = "0.37.2", features = [
+  "serialize",
+  "escape-html",
+  "document-features",
+  "overlapped-lists",
+  # "serde-types",
+] }
+rust_decimal = { workspace = true, features = ["serde"] }
+serde = { workspace = true, features = ["derive"] }
+serde_with = { version = "3.12.0", features = ["chrono"] }
+thiserror.workspace = true
+url = { workspace = true, features = ["serde"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+
+[dev-dependencies]
+rand.workspace = true
+fake = { version = "4.0.0", features = [
+  "http",
+  "random_color",
+  "chrono",
+  "derive",
+  "geo",
+  "rust_decimal",
+  "uuid",
+  "dummy",
+] }

@@ -7,7 +7,7 @@
 #![feature(let_chains)]
 
 #[cfg(feature = "ssr")]
-mod fileserv;
+mod fallback;
 #[cfg(feature = "ssr")]
 mod queries;
 
@@ -24,8 +24,8 @@ async fn main() -> Result<(), std::io::Error> {
         routing::{get, post},
         Router,
     };
-    use fileserv::file_and_error_handler;
-    use leptos::*;
+    use fallback::file_and_error_handler;
+    use leptos::{config::get_configuration, prelude::provide_context};
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use saleor_app_sdk::manifest::{
         extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget,
@@ -42,8 +42,9 @@ async fn main() -> Result<(), std::io::Error> {
     use crate::routes::api::{manifest::manifest, register::register, webhooks::webhooks};
 
     //Leptos stuff
-    let conf = get_configuration(None).await.unwrap();
+    let conf = get_configuration(None).unwrap();
     let leptos_options = conf.leptos_options;
+    let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
 
     // Saleor stuff
@@ -77,7 +78,7 @@ async fn main() -> Result<(), std::io::Error> {
         manifest: app_manifest,
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),
-        leptos_options,
+        leptos_options:leptos_options.clone(),
         settings: Arc::new(Mutex::new(None)),
     };
 
@@ -87,7 +88,7 @@ async fn main() -> Result<(), std::io::Error> {
             &app_state,
             routes,
             move || provide_context(state_1.clone()),
-            App,
+            move || shell(leptos_options.clone()),
         )
         .fallback(file_and_error_handler)
         .route(
@@ -117,21 +118,21 @@ async fn main() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-#[cfg(not(feature = "ssr"))]
-pub fn main() {
-    use leptos::leptos_dom::logging::{console_error, console_log};
-    console_log("starting main");
-    use saleor_app_sdk::bridge::AppBridge;
-    match AppBridge::new(Some(true)) {
-        Ok(app_bridge) => {
-            console_log("App Bridge connected");
-        }
-        Err(e) => console_error(e),
-    };
-    // no client-side main function
-    // unless we want this to work with e.g., Trunk for a purely client-side app
-    // see lib.rs for hydration function instead
-}
+// #[cfg(not(feature = "ssr"))]
+// pub fn main() {
+//     use leptos::leptos_dom::logging::{console_error, console_log};
+//     console_log("starting main");
+//     use saleor_app_sdk::bridge::AppBridge;
+//     match AppBridge::new(Some(true)) {
+//         Ok(app_bridge) => {
+//             console_log("App Bridge connected");
+//         }
+//         Err(e) => console_error(e),
+//     };
+//     // no client-side main function
+//     // unless we want this to work with e.g., Trunk for a purely client-side app
+//     // see lib.rs for hydration function instead
+// }
 
 #[cfg(feature = "ssr")]
 use saleor_app_sdk::config::Config;

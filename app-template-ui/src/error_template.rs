@@ -1,10 +1,9 @@
-use leptos::*;
-
 #[cfg(feature = "ssr")]
 use axum::response::{IntoResponse, Response};
 #[cfg(feature = "ssr")]
 use http::header::ToStrError;
 use http::status::StatusCode;
+use leptos::prelude::*;
 use saleor_app_sdk::apl::AplError;
 use thiserror::Error;
 
@@ -61,7 +60,7 @@ pub fn ErrorTemplate(
     #[prop(optional)] errors: Option<RwSignal<Errors>>,
 ) -> impl IntoView {
     let errors = match outside_errors {
-        Some(e) => create_rw_signal(e),
+        Some(e) => RwSignal::new(e),
         None => match errors {
             Some(e) => e,
             None => panic!("No Errors found and we expected errors!"),

@@ -1,16 +1,18 @@
-use crate::error_template::{AppError, ErrorTemplate};
 use crate::routes::extensions::order_to_pdf::OrderToPdf;
 use crate::routes::home::Home;
-use leptos::*;
-use leptos_dom::logging::{console_error, console_log};
-use leptos_meta::*;
-use leptos_router::*;
+use leptos::leptos_dom::logging::{console_error, console_log, console_warn};
+use leptos::prelude::*;
+use leptos::task::spawn_local;
+use leptos_meta::{provide_meta_context, MetaTags};
 use saleor_app_sdk::bridge::action::PayloadRequestPermissions;
 use saleor_app_sdk::bridge::event::Event;
 use saleor_app_sdk::bridge::{dispatch_event, listen_to_events, AppBridge};
-use saleor_app_sdk::manifest::{AppPermission, LocaleCode};
+use saleor_app_sdk::manifest::LocaleCode;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
+use leptos_router:: params::Params;
+use leptos_router::components::*;
+use leptos_router::*;
 
 #[derive(Params, PartialEq)]
 pub struct UrlAppParams {
@@ -19,17 +21,18 @@ pub struct UrlAppParams {
 
 #[component]
 pub fn App() -> impl IntoView {
-    let (bridge_read, bridge_set) = create_signal::<Option<AppBridge>>(None);
+    let (bridge_read, bridge_set) =  signal::<Option<AppBridge>>(None);
     let context = use_context::<AppState>();
-    create_effect(move |_| match AppBridge::new(true) {
+    Effect::new(move |_| match AppBridge::new(true) {
         Ok(bridge) => bridge_set(Some(bridge)),
         Err(e) => console_error(&format!("{:?}", e)),
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
+    let manifest = use_context::<AppState>();
         if let Err(e) = dispatch_event(saleor_app_sdk::bridge::action::Action::RequestPermissions(
             PayloadRequestPermissions {
-                permissions: vec![AppPermission::ManageOrders, AppPermission::ManageProducts],
+                permissions: manifest.map(|m|m.manifest.permissions).unwrap_or(vec![]),
                 redirect_path: None,
             },
         )) {
@@ -37,7 +40,7 @@ pub fn App() -> impl IntoView {
         };
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         listen_to_events(move |event_res| match event_res {
             Ok(event) => {
                 match event {
@@ -107,34 +110,34 @@ pub fn App() -> impl IntoView {
 
     provide_meta_context();
     view! {
-        <Stylesheet id="leptos" href="/pkg/saleor-app-template-ui.css" />
-
-        // sets the document title
-        <Title text="Example UI App template in Rust" />
-
         // content for this welcome page
-        <Router fallback=|| {
-            let mut outside_errors = Errors::default();
-            outside_errors.insert_with_default_key(AppError::NotFound);
-            view! { <ErrorTemplate outside_errors /> }.into_view()
-        }>
+        <Router>
             <header class="h-12">
                 <div class="h-full bg-default1 border-b-[1px] border-default1 px-4 py-2 flex justify-between items-center">
-                    <h2 class="">
-                        { context.map_or("[Cool App]".to_owned(), |c| c.manifest.name)}
-                    </h2>
+                    <h2 class="">{context.map_or("[Cool App]".to_owned(), |c| c.manifest.name)}</h2>
                     <span class="">
                         {move || match bridge_read.get() {
-                            Some(bridge) => bridge.state.user.map_or("[Loading bridge...]".into(), |u|"Welcome, ".to_owned()+ &u.email),
-                            None => "[Not authenticated]".into()
+                            Some(bridge) => {
+                                bridge
+                                    .state
+                                    .user
+                                    .map_or(
+                                        "[Loading bridge...]".into(),
+                                        |u| "Welcome, ".to_owned() + &u.email,
+                                    )
+                            }
+                            None => "[Not authenticated]".into(),
                         }}
                     </span>
                 </div>
             </header>
             <main class="p-4 md:p-8 md:px-16">
-                <Routes>
-                    <Route path="/" view=Home />
-                    <Route path="/extensions/order_to_pdf" view=move || view!{<OrderToPdf bridge=bridge_read />}/>
+                <Routes fallback=|| view! { <p>"Page not found"</p> }>
+                    <Route path=path!("/") view=Home />
+                    <Route
+                        path=path!("/extensions/order_to_pdf")
+                        view=move || view! { <OrderToPdf bridge=bridge_read /> }
+                    />
                 </Routes>
             </main>
         </Router>
@@ -142,6 +145,26 @@ pub fn App() -> impl IntoView {
 }
 #[cfg(feature = "ssr")]
 use saleor_app_sdk::settings_manager::metadata::MetadataSettingsManager;
+
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <AutoReload options=options.clone() />
+                <HydrationScripts options islands=true />
+                <link rel="stylesheet" id="leptos" href="/pkg/portfolio.css" />
+                <link rel="shortcut icon" type="image/ico" href="/favicon.ico" />
+                <MetaTags />
+            </head>
+            <body>
+                <App />
+            </body>
+        </html>
+    }
+}
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "ssr", derive(axum::extract::FromRef))]

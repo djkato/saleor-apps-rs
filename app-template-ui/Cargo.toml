@@ -16,11 +16,13 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 axum = { workspace = true, optional = true, features = ["macros"] }
+log = { workspace = true }
+simple_logger = { workspace = true }
 console_error_panic_hook = { workspace = true }
 leptos = { workspace = true, features = ["nightly"] }
 anyhow = { workspace = true, optional = true }
 leptos_axum = { workspace = true, optional = true }
-leptos_meta = { workspace = true, features = ["nightly"] }
+leptos_meta = { workspace = true }
 leptos_router = { workspace = true, features = ["nightly"] }
 tokio = { version = "1.0", features = [
     "macros",
@@ -75,13 +77,7 @@ ssr = [
     "saleor-app-sdk/bridge",
     "saleor-app-sdk/settings_manager",
 ]
-hydrate = [
-    "leptos/hydrate",
-    "leptos_meta/hydrate",
-    "leptos_router/hydrate",
-    "dep:saleor-app-sdk",
-    "saleor-app-sdk/bridge",
-]
+hydrate = ["leptos/hydrate", "dep:saleor-app-sdk", "saleor-app-sdk/bridge"]
 
 
 [package.metadata.leptos]

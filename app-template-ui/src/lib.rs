@@ -1,7 +1,7 @@
 pub mod app;
 pub mod error_template;
 #[cfg(feature = "ssr")]
-pub mod fileserv;
+pub mod fallback;
 #[cfg(feature = "ssr")]
 pub mod queries;
 
@@ -13,7 +13,7 @@ pub mod routes;
 pub fn hydrate() {
     use crate::app::*;
     console_error_panic_hook::set_once();
-    leptos::mount_to_body(App);
+    leptos::mount::mount_to_body(App);
     // use leptos::leptos_dom::logging::{console_error, console_log};
     // console_log("starting main");
     // use saleor_app_sdk::bridge::{

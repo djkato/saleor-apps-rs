@@ -4,7 +4,7 @@ use leptos::leptos_dom::logging::{console_error, console_log, console_warn};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos_meta::{provide_meta_context, MetaTags};
-use saleor_app_sdk::bridge::action::PayloadRequestPermissions;
+use saleor_app_sdk::bridge::action::{PayloadRedirect, PayloadRequestPermissions};
 use saleor_app_sdk::bridge::event::Event;
 use saleor_app_sdk::bridge::{dispatch_event, listen_to_events, AppBridge};
 use saleor_app_sdk::manifest::LocaleCode;
@@ -108,14 +108,31 @@ pub fn App() -> impl IntoView {
         })
     });
 
-    provide_meta_context();
     view! {
         // content for this welcome page
         <Router>
             <header class="h-12">
                 <div class="h-full bg-default1 border-b-[1px] border-default1 px-4 py-2 flex justify-between items-center">
-                    <h2 class="">{context.map_or("[Cool App]".to_owned(), |c| c.manifest.name)}</h2>
-                    <span class="">
+                    // <h2 class="">{context.map_or("[Cool App]".to_owned(), |c| c.manifest.name)}</h2>
+                    <div>
+                        <button on:click=move |_| {
+                            dispatch_event(
+                                    saleor_app_sdk::bridge::action::Action::Redirect(PayloadRedirect {
+                                        to: format!(
+                                            "/apps/{}/app",
+                                            bridge_read
+                                                .get()
+                                                .map_or("undefined".to_owned(), |b| b.state.id),
+                                        ),
+                                        new_context: None,
+                                    }),
+                                )
+                                .expect("failed sending redirect action");
+                        }>Settings</button>
+
+                    </div>
+                    <div class="">
+
                         {move || match bridge_read.get() {
                             Some(bridge) => {
                                 bridge
@@ -128,7 +145,7 @@ pub fn App() -> impl IntoView {
                             }
                             None => "[Not authenticated]".into(),
                         }}
-                    </span>
+                    </div>
                 </div>
             </header>
             <main class="p-4 md:p-8 md:px-16">
@@ -147,6 +164,7 @@ pub fn App() -> impl IntoView {
 use saleor_app_sdk::settings_manager::metadata::MetadataSettingsManager;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
+    provide_meta_context();
     view! {
         <!DOCTYPE html>
         <html lang="en">
@@ -154,8 +172,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <AutoReload options=options.clone() />
-                <HydrationScripts options islands=true />
-                <link rel="stylesheet" id="leptos" href="/pkg/portfolio.css" />
+                <HydrationScripts options />
+                <link rel="stylesheet" id="leptos" href="/pkg/saleor-app-template-ui.css" />
                 <link rel="shortcut icon" type="image/ico" href="/favicon.ico" />
                 <MetaTags />
             </head>

@@ -101,7 +101,13 @@ impl PayloadHanshake {
             .ok_or(TokenIntoUserError::MissingKeyField)?;
 
         let pubkey = DecodingKey::from_rsa_components(nstr, estr)?;
-        let validation = Validation::new(Algorithm::RS256);
+        let mut validation = Validation::new(Algorithm::RS256);
+        if cfg!(debug_assertions) {
+            validation.insecure_disable_signature_validation();
+            validation.validate_exp = false;
+            validation.validate_nbf = false;
+        }
+
         let user = decode::<AppBridgeUser>(&self.token, &pubkey, &validation)?.claims;
         Ok(user)
     }

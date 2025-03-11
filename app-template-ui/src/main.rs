@@ -7,9 +7,9 @@
 #![feature(let_chains)]
 
 #[cfg(feature = "ssr")]
-mod fallback;
-#[cfg(feature = "ssr")]
 mod queries;
+#[cfg(feature ="ssr")]
+mod fallback;
 
 mod app;
 mod components;
@@ -26,7 +26,7 @@ async fn main() -> Result<(), std::io::Error> {
     };
     use fallback::file_and_error_handler;
     use leptos::{config::get_configuration, prelude::provide_context};
-    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use leptos_axum::{file_and_error_handler_with_context, generate_route_list, LeptosRoutes};
     use saleor_app_sdk::manifest::{
         extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget,
     };
@@ -90,7 +90,6 @@ async fn main() -> Result<(), std::io::Error> {
             move || provide_context(state_1.clone()),
             move || shell(leptos_options.clone()),
         )
-        .fallback(file_and_error_handler)
         .route(
             "/api/webhooks",
             post(webhooks), //.route_layer(middleware::from_fn(webhook_signature_verifier)),
@@ -100,7 +99,9 @@ async fn main() -> Result<(), std::io::Error> {
             post(register), //.route_layer(middleware::from_fn(webhook_signature_verifier)),
         )
         .route("/api/manifest", get(manifest))
+        .fallback(file_and_error_handler)
         .with_state(app_state.clone());
+        // leptos_axum::file_and_error_handler(shell)
 
     let listener = tokio::net::TcpListener::bind(
         "0.0.0.0:".to_owned()
@@ -118,21 +119,21 @@ async fn main() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-// #[cfg(not(feature = "ssr"))]
-// pub fn main() {
-//     use leptos::leptos_dom::logging::{console_error, console_log};
-//     console_log("starting main");
-//     use saleor_app_sdk::bridge::AppBridge;
-//     match AppBridge::new(Some(true)) {
-//         Ok(app_bridge) => {
-//             console_log("App Bridge connected");
-//         }
-//         Err(e) => console_error(e),
-//     };
-//     // no client-side main function
-//     // unless we want this to work with e.g., Trunk for a purely client-side app
-//     // see lib.rs for hydration function instead
-// }
+#[cfg(not(feature = "ssr"))]
+pub fn main() {
+    // use leptos::leptos_dom::logging::{console_error, console_log};
+    // console_log("starting main");
+    // use saleor_app_sdk::bridge::AppBridge;
+    // match AppBridge::new(Some(true)) {
+    //     Ok(app_bridge) => {
+    //         console_log("App Bridge connected");
+    //     }
+    //     Err(e) => console_error(e),
+    // };
+    // no client-side main function
+    // unless we want this to work with e.g., Trunk for a purely client-side app
+    // see lib.rs for hydration function instead
+}
 
 #[cfg(feature = "ssr")]
 use saleor_app_sdk::config::Config;

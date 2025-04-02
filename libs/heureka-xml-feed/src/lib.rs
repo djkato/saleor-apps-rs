@@ -5,7 +5,7 @@ use fake::Rng;
 #[cfg(test)]
 use fake::{Dummy, Fake, faker::lorem::en::Word, faker::lorem::en::Words, faker::name::en::Name};
 use schema::{XmlSchemaValidationError, validate_xml};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use std::str::FromStr;
 #[cfg(test)]
@@ -15,7 +15,7 @@ pub mod schema;
 #[cfg(test)]
 pub mod tests;
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
 #[serde(rename_all(serialize = "SCREAMING_SNAKE_CASE"))]
 #[serde(rename = "SHOP")]
@@ -35,7 +35,7 @@ impl Shop {
     }
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
 #[serde(rename_all(serialize = "SCREAMING_SNAKE_CASE"))]
 #[serde(rename = "SHOPITEM")]
@@ -141,7 +141,7 @@ pub struct ShopItem {
     pub special_service: Vec<String>,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
 #[serde(untagged)]
 pub enum DateOrDays {
@@ -149,7 +149,7 @@ pub enum DateOrDays {
     Days(u16),
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
 #[serde(rename_all(serialize = "SCREAMING_SNAKE_CASE"))]
 pub struct Param {
@@ -167,7 +167,7 @@ pub struct Param {
 ///     }
 /// }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
 #[serde(rename_all(serialize = "SCREAMING_SNAKE_CASE"))]
 pub struct Delivery {
@@ -178,7 +178,7 @@ pub struct Delivery {
     pub delivery_price_cod: rust_decimal::Decimal,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
 #[serde(rename_all(serialize = "SCREAMING_SNAKE_CASE"))]
 pub enum DeliveryCourierId {
@@ -251,7 +251,7 @@ pub enum DeliveryCourierId {
     VlastniPreprava,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
 #[serde(rename_all(serialize = "SCREAMING_SNAKE_CASE"))]
 pub struct ExtendedWarranty {

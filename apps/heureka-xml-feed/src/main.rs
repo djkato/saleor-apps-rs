@@ -11,6 +11,9 @@ mod fallback;
 #[cfg(feature = "ssr")]
 mod queries;
 
+#[cfg(feature = "ssr")]
+mod server;
+
 mod app;
 mod components;
 mod error_template;
@@ -24,12 +27,12 @@ async fn main() -> Result<(), std::io::Error> {
         routing::{get, post},
         Router,
     };
+
     use fallback::file_and_error_handler;
     use leptos::{config::get_configuration, prelude::provide_context};
-    use leptos_axum::{file_and_error_handler_with_context, generate_route_list, LeptosRoutes};
-    use saleor_app_sdk::manifest::{
-        extension::AppExtensionBuilder, AppExtensionMount, AppExtensionTarget,
-    };
+    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use queries::event_products_updated::EVENTS_QUERY;
+    use saleor_app_sdk::webhooks::{AsyncWebhookEventType, WebhookManifestBuilder};
     use saleor_app_sdk::{
         cargo_info,
         config::Config,
@@ -55,26 +58,45 @@ async fn main() -> Result<(), std::io::Error> {
     let app_manifest = AppManifestBuilder::new(&config, cargo_info!())
         .add_permissions(vec![
             AppPermission::ManageProducts,
-            AppPermission::ManageOrders,
             AppPermission::ManageProductTypesAndAttributes,
         ])
-        .add_extension(
-            AppExtensionBuilder::new()
-                .set_url("/extensions/order_to_pdf")
-                .set_label("Order to PDF")
-                .add_permissions(vec![
-                    AppPermission::ManageOrders,
-                    AppPermission::ManageProducts,
-                    AppPermission::ManageProductTypesAndAttributes,
+        .add_webhook(
+            WebhookManifestBuilder::new(&config)
+                .set_query(EVENT_QUERY)
+                .add_async_events(vec![
+                    AsyncWebhookEventType::ProductCreated,
+                    AsyncWebhookEventType::ProductUpdated,
+                    AsyncWebhookEventType::ProductDeleted,
+                    AsyncWebhookEventType::CategoryCreated,
+                    AsyncWebhookEventType::CategoryUpdated,
+                    AsyncWebhookEventType::CategoryDeleted,
+                    AsyncWebhookEventType::ProductVariantCreated,
+                    AsyncWebhookEventType::ProductVariantUpdated,
+                    AsyncWebhookEventType::ProductVariantDeleted,
                 ])
-                .set_mount(AppExtensionMount::OrderDetailsMoreActions)
-                .set_target(AppExtensionTarget::Popup)
                 .build(),
         )
         .build()
         .expect("Failed building app manifest, contact app support plz");
 
+    let (sender, receiver) = tokio::sync::mpsc::channel(100);
+
+    EventHandler::start(sitemap_config.clone(), receiver);
+
+    let conn = surrealdb::Surreal::new::<surrealdb::engine::any::Any>("./temp/db".to_owned())
+        .await
+        .expect("Failed creating DB connection");
     let app_state = AppState {
+        db_handle: Arc::new(Mutex::new(conn)),
+        task_queue_sender: sender,
+        target_channel: match dotenvy::var("CHANNEL_SLUG") {
+            Ok(v) => v,
+            Err(_) => {
+                error!("Missing channel slug, Saleor will soon deprecate product queries without channel specified.");
+                "".to_string()
+            }
+        },
+
         manifest: app_manifest,
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),

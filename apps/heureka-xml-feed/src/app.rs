@@ -10,9 +10,7 @@ use leptos_router::*;
 use saleor_app_sdk::bridge::action::{PayloadRedirect, PayloadRequestPermissions};
 use saleor_app_sdk::bridge::event::Event;
 use saleor_app_sdk::bridge::{dispatch_event, listen_to_events, AppBridge};
-use saleor_app_sdk::manifest::LocaleCode;
 use serde::{Deserialize, Serialize};
-use strum_macros::EnumString;
 
 #[derive(Params, PartialEq)]
 pub struct UrlAppParams {
@@ -160,8 +158,6 @@ pub fn App() -> impl IntoView {
         </Router>
     }
 }
-#[cfg(feature = "ssr")]
-use saleor_app_sdk::settings_manager::metadata::MetadataSettingsManager;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     provide_meta_context();
@@ -184,53 +180,49 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
     }
 }
 
+#[cfg(feature = "ssr")]
+use surrealdb::engine::local::RocksDb;
+#[cfg(feature = "ssr")]
+use surrealdb::opt::IntoEndpoint;
+#[cfg(feature = "ssr")]
+use surrealdb::Surreal;
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "ssr", derive(axum::extract::FromRef))]
 pub struct AppState {
     pub leptos_options: LeptosOptions,
     pub config: saleor_app_sdk::config::Config,
     pub manifest: saleor_app_sdk::manifest::AppManifest,
+    pub target_channel: String,
+    #[cfg(feature = "ssr")]
+    pub task_queue_sender: tokio::sync::mpsc::Sender<crate::server::task_handler::Event>,
     #[cfg(feature = "ssr")]
     pub saleor_app: std::sync::Arc<tokio::sync::Mutex<saleor_app_sdk::SaleorApp>>,
     #[cfg(feature = "ssr")]
-    pub settings: std::sync::Arc<
-        tokio::sync::Mutex<Option<MetadataSettingsManager<AppSettingsKey, AppSettings>>>,
-    >,
+    pub settings: AppSettings,
+    #[cfg(feature = "ssr")]
+    pub db_handle:
+        std::sync::Arc<tokio::sync::Mutex<Surreal<<String as IntoEndpoint<RocksDb>>::Client>>>,
 }
 
-#[derive(Hash, PartialEq, Eq, Debug, Clone, EnumString, strum_macros::Display)]
-pub enum AppSettingsKey {
-    Global,
-    //ID
-    User(String),
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AppSettings {
+    #[serde(rename = "heureka_target_folder")]
+    pub target_folder: String,
+    #[serde(rename = "heureka_allowed_host")]
+    pub allowed_host: String,
+    #[serde(rename = "heureka_variant_url_template")]
+    pub variant_url_template: String,
+    //eg. 23%
+    #[serde(rename = "heureka_tax_rate")]
+    pub tax_rate : String,
+    #[serde(rename = "heureka_delivery_types")]
+    pub delivery_types: Vec<heureka_xml_feed::Delivery>
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug)]
-pub enum AppSettings {
-    Global(GlobalAppSettings),
-    UserSettings(UserAppSettings),
-}
-
-#[derive(Clone, Deserialize, Serialize, Debug)]
-pub struct GlobalAppSettings {
-    idk: bool,
-}
-
-#[derive(Clone, Deserialize, Serialize, Debug)]
-pub struct UserAppSettings {
-    pub locale: Option<LocaleCode>,
-    pub active_pdf_fields: Vec<OrderDetailField>,
-}
-
-#[derive(Clone, Deserialize, Serialize, Debug)]
-pub enum OrderDetailField {
-    VariantName,
-    ProductName,
-    VariantSKU,
-    VariantOrderAmount,
-    VariantWarehouseAmount,
-    VariantPriceSingleGross,
-    LinePriceGross,
-    ObtainmentMethod,
-    PaymentMethod,
+impl AppSettings {
+    pub fn load() -> Result<Self, envy::Error> {
+        _ = dotenvy::dotenv();
+        envy::from_env::<AppSettings>()
+    }
 }

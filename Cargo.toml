@@ -5,6 +5,8 @@ members = [
   "app-template",
   "app-template-ui",
   "apps/sitemap-generator",
+  "apps/heureka-xml-feed",
+  "apps/order-analytics",
   "apps/simple-payment-gateway",
   "apps/bulk-price-manipulator",
 ]
@@ -55,6 +57,8 @@ reqwest = { version = "0.12.3", features = ["json"] }
 http = { version = "1.1.0" }
 rand = "0.9.0"
 heureka-xml-feed = { path = "libs/heureka-xml-feed" }
+surrealdb = { version = "2.2.1", features = ["kv-rocksdb"] }
+tinytemplate = { version = "1.2.1" }
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

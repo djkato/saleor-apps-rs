@@ -1,0 +1,154 @@
+[package]
+name = "saleor-app-heureka-xml-feed"
+version = "0.1.0"
+edition = "2021"
+authors = ["Djkáťo <djkatovfx@gmail.com>"]
+description = "A rust app template for Saleor using axum and leptos"
+homepage = "https://github.com/djkato/saleor-apps-rs"
+repository = "https://github.com/djkato/saleor-apps-rs"
+documentation = "https://github.com/djkato/saleor-apps-rs"
+keywords = ["saleor", "sdk", "plugin", "template"]
+categories = ["api-bindings", "web-programming::http-server"]
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+axum = { workspace = true, optional = true, features = ["macros"] }
+log = { workspace = true }
+simple_logger = { workspace = true }
+console_error_panic_hook = { workspace = true }
+leptos = { workspace = true, features = ["nightly"] }
+anyhow = { workspace = true, optional = true }
+leptos_axum = { workspace = true, optional = true }
+leptos_meta = { workspace = true }
+leptos_router = { workspace = true, features = ["nightly"] }
+tokio = { version = "1.0", features = [
+    "macros",
+    "rt-multi-thread",
+], optional = true }
+tower = { workspace = true, optional = true }
+tower-http = { workspace = true, features = ["fs"], optional = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures.workspace = true
+tracing = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+thiserror = { workspace = true }
+http = { workspace = true }
+pulldown-cmark = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+dotenvy = { workspace = true }
+envy = { workspace = true }
+cynic = { workspace = true, features = ["http-surf"], optional = true }
+surf = { workspace = true, optional = true }
+strum.workspace = true
+strum_macros.workspace = true
+surrealdb = { workspace = true, features = ["kv-rocksdb"], optional = true }
+url = { workspace = true, features = ["serde"], optional = true }
+tinytemplate = { workspace = true, optional = true }
+rust_decimal = { workspace = true, features = ["serde"], optional = true }
+
+saleor-app-sdk = { workspace = true, optional = true }
+heureka-xml-feed = { workspace = true, optional = true }
+
+[build-dependencies]
+cynic-codegen = { workspace = true, optional = true }
+
+
+[features]
+ssr = [
+    "dep:axum",
+    "dep:tokio",
+    "dep:tower",
+    "dep:tower-http",
+    "dep:leptos_axum",
+    "dep:tracing",
+    "dep:saleor-app-sdk",
+    "dep:heureka-xml-feed",
+    "dep:surrealdb",
+    "dep:url",
+    "dep:tinytemplate",
+    "dep:rust_decimal",
+    "saleor-app-sdk/file_apl",
+    "saleor-app-sdk/redis_apl",
+    "saleor-app-sdk/tracing",
+    "saleor-app-sdk/middleware",
+    "saleor-app-sdk/webhook_utils",
+    "dep:tracing-subscriber",
+    "dep:anyhow",
+    "dep:cynic",
+    "dep:cynic-codegen",
+    "dep:surf",
+    "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_router/ssr",
+    "saleor-app-sdk/bridge",
+    "saleor-app-sdk/settings_manager",
+]
+hydrate = ["leptos/hydrate", "dep:saleor-app-sdk", "saleor-app-sdk/bridge"]
+
+
+[package.metadata.leptos]
+# The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
+output-name = "saleor-app-template-ui"
+
+# The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
+site-root = "target/site"
+
+# The site-root relative folder where all compiled output (JS, WASM and CSS) is written
+# Defaults to pkg
+site-pkg-dir = "pkg"
+
+# [Optional] The source CSS file. If it ends with .sass or .scss then it will be compiled by dart-sass into CSS. The CSS is optimized by Lightning CSS before being written to <site-root>/<site-pkg>/app.css
+# style-file = "style/main.scss"
+# Assets source dir. All files found here will be copied and synchronized to site-root.
+tailwind-input-file = "style/base.css"
+# The assets-dir cannot have a sub directory with the same name/path as site-pkg-dir.
+#
+# Optional. Env: LEPTOS_ASSETS_DIR.
+assets-dir = "public"
+
+# The IP and port (ex: 127.0.0.1:3000) where the server serves the content. Use it in your server setup.
+site-addr = "0.0.0.0:3000"
+
+# The port to use for automatic reload monitoring
+reload-port = 3001
+
+# [Optional] Command to use when running end2end tests. It will run in the end2end dir.
+#   [Windows] for non-WSL use "npx.cmd playwright test"
+#   This binary name can be checked in Powershell with Get-Command npx
+end2end-cmd = "npx playwright test"
+end2end-dir = "end2end"
+
+#  The browserlist query used for optimizing the CSS.
+browserquery = "defaults"
+
+# The environment Leptos will run in, usually either "DEV" or "PROD"
+env = "DEV"
+
+# The features to use when compiling the bin target
+#
+# Optional. Can be over-ridden with the command line parameter --bin-features
+bin-features = ["ssr"]
+
+# If the --no-default-features flag should be used when compiling the bin target
+#
+# Optional. Defaults to false.
+bin-default-features = false
+
+# The features to use when compiling the lib target
+#
+# Optional. Can be over-ridden with the command line parameter --lib-features
+lib-features = ["hydrate"]
+
+# If the --no-default-features flag should be used when compiling the lib target
+#
+# Optional. Defaults to false.
+lib-default-features = false
+
+# The profile to use for the lib target when compiling for release
+#
+# Optional. Defaults to "release".
+lib-profile-release = "wasm-release"

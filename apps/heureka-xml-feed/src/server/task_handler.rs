@@ -1,25 +1,11 @@
-use serde::Serialize;
-use std::{
-    fs::{self},
-    io::ErrorKind,
-};
-
 use crate::{
     app::{AppSettings, AppState},
     queries::event_products_updated::{
-        CategoryCreated, CategoryDeleted, CategoryUpdated, Product, Product2, ProductCreated,
-        ProductDeleted, ProductUpdated, ProductVariantCreated, ProductVariantDeleted,
-        ProductVariantUpdated,
+        Category, CategoryCreated, CategoryDeleted, CategoryUpdated, Product2, ProductCreated, ProductDeleted, ProductUpdated, ProductVariant, ProductVariantCreated, ProductVariantDeleted, ProductVariantUpdated, ShippingZone, ShippingZoneCreated, ShippingZoneDeleted, ShippingZoneUpdated
     },
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
-use tracing::{debug, error, info, warn};
-
-// 10k links google says, but there's also a size limit and my custom params might be messing with
-// that? Rather split prematurely to be sure.
-const MAX_URL_IN_SET: usize = 50_000;
-const DB_FILE_NAME: &str = "db.cbor";
-const SITEMAP_FILE_NAME: &str = "sitemap.txt";
+use tracing::{debug,  info, warn};
 
 pub struct EventHandler {
     receiver: Receiver<Event>,
@@ -37,6 +23,9 @@ pub enum Event {
     ProductVariantCreated(ProductVariantCreated),
     ProductVariantUpdated(ProductVariantUpdated),
     ProductVariantDeleted(ProductVariantDeleted),
+    ShippingZoneCreated(ShippingZoneCreated),
+    ShippingZoneUpdated(ShippingZoneUpdated),
+    ShippingZoneDeleted(ShippingZoneDeleted),
     Regenerate(RegenerateEvent),
     Unknown,
 }
@@ -59,21 +48,21 @@ impl EventHandler {
             match message {
                 Event::ProductCreated(product_created) => {
                     if let Some(product) = product_created.clone().product {
-                        product_updated_or_created(product_created, &self.settings).await;
+                        self.product_updated_or_created(product).await;
                     } else {
                         warn!("Event::ProductCreated/Updated missing data");
                     }
                 }
                 Event::ProductUpdated(product_updated) => {
                     if let Some(product) = product_updated.clone().product {
-                        product_updated_or_created(product_updated, &self.settings).await;
+                        self.product_updated_or_created(product).await;
                     } else {
                         warn!("Event::ProductCreated/Updated missing data");
                     }
                 }
                 Event::ProductDeleted(product) => {
                     if let Some(product) = product.product {
-                        delete(product.id.inner(), &self.settings).await;
+                        self.any_deleted(&product.id,AnyDeletedType::Product).await;
                     } else {
                         warn!("Event::ProductDeleted missing data");
                     }
@@ -81,7 +70,7 @@ impl EventHandler {
 
                 Event::CategoryCreated(category_created) => {
                     if let Some(category) = category_created.clone().category {
-                        category_updated_or_created(category_created, category, &self.settings)
+                        self.category_updated_or_created(category)
                             .await;
                     } else {
                         warn!("Event::CategoryCreated/Updated missing data");
@@ -89,7 +78,7 @@ impl EventHandler {
                 }
                 Event::CategoryUpdated(category_updated) => {
                     if let Some(category) = category_updated.clone().category {
-                        category_updated_or_created(category_updated, category, &self.settings)
+                        self.category_updated_or_created( category)
                             .await;
                     } else {
                         warn!("Event::CategoryCreated/Updated missing data");
@@ -97,19 +86,39 @@ impl EventHandler {
                 }
                 Event::CategoryDeleted(category) => {
                     if let Some(category) = category.category {
-                        delete(category.id.inner(), &self.settings).await;
+                        self.any_deleted(&category.id, AnyDeletedType::Category).await;
                     } else {
                         warn!("Event::CategoryDeleted missing data");
                     }
                 }
                 Event::ProductVariantCreated(variant) => {
                     if let Some(variant) = variant.product_variant {
-                        product_updated_or_created(variant, &self.settings).await;
+                        self.variant_updated_or_created (variant).await;
                     }
                 }
                 Event::ProductVariantUpdated(variant) => {
                     if let Some(variant) = variant.product_variant {
-                        product_updated_or_created(variant, &self.settings).await;
+                        self.variant_updated_or_created (variant).await;
+                    }
+                }
+                Event::ProductVariantDeleted(variant) => {
+                    if let Some(variant) = variant.product_variant {
+                        self.any_deleted(&variant.id, AnyDeletedType::Variant).await;
+                    }
+                }
+                Event::ShippingZoneCreated(shipping_zone) => {
+                    if let Some(shipping_zone) = shipping_zone.shipping_zone {
+                        self.shipping_zone_updated_or_created(shipping_zone).await;
+                    }
+                }
+                Event::ShippingZoneUpdated(shipping_zone) => {
+                    if let Some(shipping_zone) = shipping_zone.shipping_zone {
+                        self.shipping_zone_updated_or_created(shipping_zone).await;
+                    }
+                }
+                Event::ShippingZoneDeleted(shipping_zone) => {
+                    if let Some(shipping_zone) = shipping_zone.shipping_zone {
+                        self.any_deleted(&shipping_zone.id, AnyDeletedType::ShippingZone).await;
                     }
                 }
 
@@ -126,5 +135,32 @@ impl EventHandler {
 }
 
 /* =============== Event handlers =============== */
+impl EventHandler {
+    async fn product_updated_or_created(&self, data: Product2) {
+        info!("called!")
+    }
 
-fn product_updated_or_created<T: Serialize + Clone>(data: T, settings: &AppSettings) {}
+    async fn variant_updated_or_created (&self, data: ProductVariant) {
+        info!("called!")
+    }
+
+    async fn any_deleted(&self, id: &cynic::Id, typ:AnyDeletedType ) {
+        info!("called!")
+    }
+
+    async fn category_updated_or_created(&self, data:Category) { 
+        info!("called!")
+    }
+    async fn shipping_zone_updated_or_created(&self, data: ShippingZone) {
+        info!("called!")
+    }
+}
+
+enum AnyDeletedType {
+    Product,
+    Category,
+    Variant,
+    ShippingZone
+}
+
+

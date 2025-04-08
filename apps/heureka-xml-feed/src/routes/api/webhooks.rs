@@ -1,8 +1,7 @@
 use axum::{
-    extract::{Json, State},
+    extract::State,
     http::{HeaderMap, StatusCode},
 };
-use cynic::{http::SurfExt, MutationBuilder};
 use saleor_app_sdk::{
     headers::{SALEOR_API_URL_HEADER, SALEOR_EVENT_HEADER},
     webhooks::{
@@ -19,6 +18,7 @@ use crate::{
     queries::event_products_updated::{
         CategoryCreated, CategoryDeleted, CategoryUpdated, ProductCreated, ProductDeleted,
         ProductUpdated, ProductVariantCreated, ProductVariantDeleted, ProductVariantUpdated,
+        ShippingZoneCreated, ShippingZoneDeleted, ShippingZoneUpdated,
     },
     server::task_handler::Event,
 };
@@ -111,35 +111,31 @@ pub async fn webhooks(
                     .send(Event::ProductVariantDeleted(variant))
                     .await?;
             }
+            AsyncWebhookEventType::ShippingZoneCreated => {
+                let shipping_zone: ShippingZoneCreated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::ShippingZoneCreated(shipping_zone))
+                    .await?;
+            }
+            AsyncWebhookEventType::ShippingZoneUpdated => {
+                let shipping_zone: ShippingZoneUpdated = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::ShippingZoneUpdated(shipping_zone))
+                    .await?;
+            }
+            AsyncWebhookEventType::ShippingZoneDeleted => {
+                let shipping_zone: ShippingZoneDeleted = serde_json::from_str(&data)?;
+                state
+                    .task_queue_sender
+                    .send(Event::ShippingZoneDeleted(shipping_zone))
+                    .await?;
+            }
             _ => (),
         }
     }
 
     info!("webhook proccessed");
     Ok(StatusCode::OK)
-}
-
-async fn update_product(
-    product: ProductUpdated,
-    saleor_api_url: &str,
-    state: AppState,
-) -> Result<(), anyhow::Error> {
-    debug!("Product got changed!");
-    if let Some(product) = product.product {
-        let operation = UpdateProductMetadata::build(UpdateProductMetadataVariables {
-            product_id: &product.id,
-            metadata: Some(vec![MetadataInput {
-                key: "helloloo",
-                value: "hiiiihii",
-            }]),
-        });
-        let saleor_app = state.saleor_app.lock().await;
-        let auth_data = saleor_app.apl.get(saleor_api_url).await?;
-        let result = surf::post(saleor_api_url)
-            .header("Authorization", format!("bearer {}", auth_data.token))
-            .run_graphql(operation)
-            .await;
-        debug!("update product result : {:?}", result);
-    }
-    Ok(())
 }

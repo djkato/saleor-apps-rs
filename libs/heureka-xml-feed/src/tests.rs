@@ -1,6 +1,6 @@
 use super::*;
-use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
+use rust_decimal::Decimal;
 
 pub struct UrlFaker;
 
@@ -118,7 +118,7 @@ fn heureka_example_serializes_and_validates() {
             manufacturer: Some("Adidas".into()),
             categorytext: "Obuv | Dámska obuv".into(),
             ean: Some("5051571703857".into()),
-            productno: "G43755".into(),
+            productno: Some("G43755".to_owned()),
             param: vec![Param {
                 param_name: "Farba".into(),
                 val: "čierna".into(),
@@ -136,7 +136,7 @@ fn heureka_example_serializes_and_validates() {
                     delivery_price: Decimal::from_u8(3).unwrap(),
                 },
             ],
-            itemgroup_id: "EF789".into(),
+            itemgroup_id: Some("EF789".to_owned()),
             accessory: vec!["CD456".into()],
             gift: Some("Púzdro zadarmo".into()),
             extended_warranty: Some(ExtendedWarranty {

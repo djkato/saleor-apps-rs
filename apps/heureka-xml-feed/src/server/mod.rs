@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use heureka_xml_feed::ShopItem;
+use heureka_xml_feed::{Delivery, ShopItem};
 use rust_decimal::{prelude::FromPrimitive, Decimal};
 use serde::Serialize;
 use tinytemplate::TinyTemplate;
@@ -13,29 +13,33 @@ use crate::{app::AppSettings, queries::event_products_updated::Product2};
 
 pub mod task_handler;
 
-fn try_shopitem_from_product<'a, T: Serialize>(
+pub fn try_shopitem_from_product<'a, T: Serialize>(
     product: Product2,
+    delivery: Delivery,
     url_template: String,
     url_context: &T,
     settings: AppSettings,
 ) -> Result<Vec<ShopItem>, TryIntoShopItemError> {
-    match product.variants {
+    match product.clone().variants {
         None => Err(TryIntoShopItemError::MissingVariants),
         Some(variants) => {
+            let mut shopitems: Vec<ShopItem> = vec![];
             for v in variants.into_iter() {
                 let media = v
                     .media
+                    .clone()
                     .and_then(|m| {
-                        m.into_iter()
+                        Some(m.into_iter()
                             .map(|u| u.url)
                             .collect::<Vec<_>>()
-                            .split_first()
+                        )
                     })
                     .ok_or(TryIntoShopItemError::MissingVariants)?;
-
+                let media = media.split_first().ok_or(TryIntoShopItemError::MissingVariants)?;
+                shopitems.push(
                 ShopItem {
                     item_id: v.id.into_inner(),
-                    url: Some(VariantUrl::from_template(url_template, url_context)?.0),
+                    url: Some(VariantUrl::from_template(url_template.clone(), url_context)?.0),
                     productname: v.name,
                     product: None,
                     price_vat: v
@@ -45,7 +49,7 @@ fn try_shopitem_from_product<'a, T: Serialize>(
                                 .and_then(|p| Decimal::from_f32(p.gross.amount as f32))
                         })
                         .ok_or(TryIntoShopItemError::PricingMissingOrFailed)?,
-                    vat: Some(settings.tax_rate),
+                    vat: Some(settings.clone().tax_rate),
                     ean: None,
                     isbn: None,
                     dues: None,
@@ -58,20 +62,26 @@ fn try_shopitem_from_product<'a, T: Serialize>(
                         .map(|m| Url::from_str(m))
                         .collect::<Result<Vec<_>, _>>()?,
                     gift_id: None,
-                    delivery: settings.delivery_types,
+                    delivery: delivery,
                     video_url: None,
                     item_type: None,
                     productno: v.sku,
-                    accessory: None,
-                    description: product.description,
+                    accessory: vec![],
+                    //I don't care enough to parse it :)
+                    description: product.clone().description.and_then(|d|Some(d.0)),
                     heureka_cpc: None,
                     manufacturer: None,
-                    // categorytext:
+                    categorytext:get_category_text_from_product(product.clone()).unwrap_or("".to_owned()),
+                    delivery_date: None,
+                    itemgroup_id: None,
+                    extended_warranty: None,
+                    special_service: vec![]
                 }
-            }
+                );
+            };
+            Ok(shopitems)
         }
     }
-    todo!()
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -92,7 +102,7 @@ pub enum TryIntoShopItemError {
 pub struct VariantUrl(url::Url);
 
 impl VariantUrl {
-    fn from_template<'a, T: Serialize>(
+    pub fn from_template<'a, T: Serialize>(
         url_template: String,
         context: &'a T,
     ) -> Result<Self, TryUrlFromTemplateError> {
@@ -125,26 +135,58 @@ pub enum TryUrlFromTemplateError {
     UrlParseError(#[from] url::ParseError),
 }
 
-fn get_category_text_from_product(product: &Product2) -> Option<String> {
-    product.product_type.metafield.or_else(|| {
-        product.category.and_then(|first_c| {
-            let mut c = Box::new(first_c);
-            while let Some(c) = c.parent {
-                if let Some(metafield) = c.metafield {
-                    return Some(metafield);
-                }
-                if let Some(parent) = c.parent {
-                    c = parent;
-                } else {
-                    break;
-                };
-            }
-            None
-        })
-    })
-}
-
-trait HasMaybeParentAndMetafield {
-    fn get_metafield(self) -> Option<String>;
-    fn get_parent(self) -> Option<impl HasMaybeParentAndMetafield>;
+fn get_category_text_from_product(product: Product2) -> Option<String> {
+        product
+            .category
+            .and_then(|c| 
+                c.metafield.or_else(|| 
+                    c.parent.and_then(|c| 
+                        c.metafield.or_else(|| 
+                            c.parent.and_then(|c|
+                                c.metafield.or_else(|| 
+                                    c.parent.and_then(|c|
+                                        c.metafield.or_else(|| 
+                                            c.parent.and_then(|c| 
+                                                c.metafield.or_else(|| 
+                                                    c.parent.and_then(|c| 
+                                                        c.metafield.or_else(|| 
+                                                            c.parent.and_then(|c| 
+                                                                c.metafield.or_else(|| 
+                                                                    c.parent.and_then(|c| 
+                                                                        c.metafield.or_else(|| 
+                                                                            c.parent.and_then(|c| 
+                                                                                c.metafield.or_else(|| 
+                                                                                    c.parent.and_then(|c| 
+                                                                                        c.metafield.or_else(|| 
+                                                                                            c.parent.and_then(|c| 
+                                                                                                c.metafield.or_else(|| 
+                                                                                                    c.parent.and_then(|c| 
+                                                                                                        c.metafield.or_else(|| 
+                                                                                                            c.parent.and_then(|c| 
+                                                                                                                c.metafield
+                                                                                                            )
+                                                                                                        )
+                                                                                                    )
+                                                                                                )
+                                                                                            )
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                    )
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
 }

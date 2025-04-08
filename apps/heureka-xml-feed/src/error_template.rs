@@ -1,4 +1,6 @@
 #[cfg(feature = "ssr")]
+use crate::server::task_handler;
+#[cfg(feature = "ssr")]
 use axum::response::{IntoResponse, Response};
 #[cfg(feature = "ssr")]
 use http::header::ToStrError;
@@ -6,9 +8,8 @@ use http::status::StatusCode;
 use leptos::prelude::*;
 use saleor_app_sdk::apl::AplError;
 use thiserror::Error;
+#[cfg(feature = "ssr")]
 use tokio::sync::mpsc::error::SendError;
-
-use crate::server::task_handler;
 
 /* ERROR STUFF FOR AXUM */
 

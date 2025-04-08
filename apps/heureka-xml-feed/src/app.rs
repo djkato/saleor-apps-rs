@@ -20,7 +20,6 @@ pub struct UrlAppParams {
 #[component]
 pub fn App() -> impl IntoView {
     let (bridge_read, bridge_set) = signal::<Option<AppBridge>>(None);
-    let context = use_context::<AppState>();
     Effect::new(move |_| match AppBridge::new(true) {
         Ok(bridge) => bridge_set(Some(bridge)),
         Err(e) => console_error(&format!("{:?}", e)),
@@ -205,6 +204,7 @@ pub struct AppState {
         std::sync::Arc<tokio::sync::Mutex<Surreal<<String as IntoEndpoint<RocksDb>>::Client>>>,
 }
 
+#[cfg(feature = "ssr")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     #[serde(rename = "heureka_target_folder")]
@@ -215,11 +215,10 @@ pub struct AppSettings {
     pub variant_url_template: String,
     //eg. 23%
     #[serde(rename = "heureka_tax_rate")]
-    pub tax_rate : String,
-    #[serde(rename = "heureka_delivery_types")]
-    pub delivery_types: Vec<heureka_xml_feed::Delivery>
+    pub tax_rate: String,
 }
 
+#[cfg(feature = "ssr")]
 impl AppSettings {
     pub fn load() -> Result<Self, envy::Error> {
         _ = dotenvy::dotenv();

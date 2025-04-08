@@ -114,14 +114,16 @@ pub struct ShopItem {
     **/
     pub delivery_date: Option<DateOrDays>,
     ///
-    pub productno: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub productno: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub delivery: Vec<Delivery>,
     //TODO: WHERE IS IT IN THE DOCS? WHY IS IT GONE? IT'S IN THE SUPPORT MAIL WHAT
     //Was probably a vec<String>?
     #[cfg_attr(test, dummy(faker = "fake::uuid::UUIDv7"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// max 36 char,  [ _ - 0-9 a-z A-Z ]
-    pub itemgroup_id: String,
+    pub itemgroup_id: Option<String>,
     /// ITEM_ID, ref to other shopItem.item_id
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub accessory: Vec<String>,

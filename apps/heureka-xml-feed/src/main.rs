@@ -39,6 +39,8 @@ async fn main() -> Result<(), std::io::Error> {
         manifest::{AppManifestBuilder, AppPermission},
         SaleorApp,
     };
+    use server::task_handler::EventHandler;
+    use tracing::error;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -62,7 +64,7 @@ async fn main() -> Result<(), std::io::Error> {
         ])
         .add_webhook(
             WebhookManifestBuilder::new(&config)
-                .set_query(EVENT_QUERY)
+                .set_query(EVENTS_QUERY)
                 .add_async_events(vec![
                     AsyncWebhookEventType::ProductCreated,
                     AsyncWebhookEventType::ProductUpdated,
@@ -73,6 +75,9 @@ async fn main() -> Result<(), std::io::Error> {
                     AsyncWebhookEventType::ProductVariantCreated,
                     AsyncWebhookEventType::ProductVariantUpdated,
                     AsyncWebhookEventType::ProductVariantDeleted,
+                    AsyncWebhookEventType::ShippingZoneCreated,
+                    AsyncWebhookEventType::ShippingZoneUpdated,
+                    AsyncWebhookEventType::ShippingZoneDeleted,
                 ])
                 .build(),
         )
@@ -81,9 +86,8 @@ async fn main() -> Result<(), std::io::Error> {
 
     let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
-    EventHandler::start(sitemap_config.clone(), receiver);
 
-    let conn = surrealdb::Surreal::new::<surrealdb::engine::any::Any>("./temp/db".to_owned())
+    let conn = surrealdb::Surreal::new::<surrealdb::engine::local::RocksDb>("./temp/db".to_owned())
         .await
         .expect("Failed creating DB connection");
     let app_state = AppState {
@@ -101,8 +105,10 @@ async fn main() -> Result<(), std::io::Error> {
         config: config.clone(),
         saleor_app: Arc::new(Mutex::new(saleor_app)),
         leptos_options: leptos_options.clone(),
-        settings: Arc::new(Mutex::new(None)),
+        settings: AppSettings::load().expect("Failed getting app settings from env"),
     };
+
+    EventHandler::start(app_state.settings.clone(), receiver);
 
     let state_1 = app_state.clone();
     let app = Router::new()

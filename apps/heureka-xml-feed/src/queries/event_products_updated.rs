@@ -49,6 +49,41 @@ subscription QueryProductsChanged {
         ...CategoryData
       }
     }
+    ... on ShippingZoneCreated {
+      shippingZone {
+        ...ShippingZoneData
+      }
+    }
+    ... on ShippingZoneUpdated {
+      shippingZone {
+        ...ShippingZoneData
+      }
+    }
+    ... on ShippingZoneDeleted {
+      shippingZone {
+        ...ShippingZoneData
+      }
+    }
+  }
+}
+
+fragment ShippingZoneData on ShippingZone {
+  metafield(key: "heureka_courierid")
+  shippingMethods {
+    minimumOrderWeight {
+      value
+      unit
+    }
+    maximumOrderWeight {
+      value
+      unit
+    }
+    channelListings {
+      price {
+        currency
+        amount
+      }
+    }
   }
 }
 
@@ -69,17 +104,10 @@ fragment ProductVariantData on ProductVariant {
   product {
     name
     description
-    productType {
-      metafield(key: "heureka_categorytext")
-    }
     category {
-      metafield(key: "heureka_categorytext")
+      ...CategoryData
     }
   }
-}
-
-fragment CategoryData on Category {
-  metafield(key: "heureka_categorytext")
 }
 
 fragment ProductData on Product {
@@ -101,11 +129,74 @@ fragment ProductData on Product {
   }
   name
   description
-  productType {
-    metafield(key: "heureka_categorytext")
-  }
   category {
+    ...CategoryData
+  }
+}
+
+fragment CategoryData on Category {
+  name
+  id
+  metafield(key: "heureka_categorytext")
+  parent {
+    name
+    id
     metafield(key: "heureka_categorytext")
+    parent {
+      name
+      id
+      metafield(key: "heureka_categorytext")
+      parent {
+        name
+        id
+        metafield(key: "heureka_categorytext")
+        parent {
+          name
+          id
+          metafield(key: "heureka_categorytext")
+          parent {
+            name
+            id
+            metafield(key: "heureka_categorytext")
+            parent {
+              name
+              id
+              metafield(key: "heureka_categorytext")
+              parent {
+                name
+                id
+                metafield(key: "heureka_categorytext")
+                parent {
+                  name
+                  id
+                  metafield(key: "heureka_categorytext")
+                  parent {
+                    name
+                    id
+                    metafield(key: "heureka_categorytext")
+                    parent {
+                      name
+                      id
+                      metafield(key: "heureka_categorytext")
+                      parent {
+                        name
+                        id
+                        metafield(key: "heureka_categorytext")
+                        parent {
+                          name
+                          id
+                          metafield(key: "heureka_categorytext")
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
 "#;
@@ -114,6 +205,47 @@ fragment ProductData on Product {
 #[cynic(graphql_type = "Subscription")]
 pub struct QueryProductsChanged {
     pub event: Option<Event>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+pub struct ShippingZoneUpdated {
+    pub shipping_zone: Option<ShippingZone>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+pub struct ShippingZoneDeleted {
+    pub shipping_zone: Option<ShippingZone>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+pub struct ShippingZoneCreated {
+    pub shipping_zone: Option<ShippingZone>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+pub struct ShippingZone {
+    #[arguments(key: "heureka_courierid")]
+    pub metafield: Option<String>,
+    pub shipping_methods: Option<Vec<ShippingMethodType>>,
+    pub id: cynic::Id,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+pub struct ShippingMethodType {
+    pub minimum_order_weight: Option<Weight>,
+    pub maximum_order_weight: Option<Weight>,
+    pub channel_listings: Option<Vec<ShippingMethodChannelListing>>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+pub struct Weight {
+    pub value: f64,
+    pub unit: WeightUnitsEnum,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+pub struct ShippingMethodChannelListing {
+    pub price: Option<Money>,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
@@ -135,7 +267,6 @@ pub struct ProductVariantCreated {
 pub struct ProductVariant {
     pub id: cynic::Id,
     pub name: String,
-    pub sku: Option<String>,
     pub media: Option<Vec<ProductMedia>>,
     pub pricing: Option<VariantPricingInfo>,
     pub product: Product,
@@ -162,13 +293,14 @@ pub struct Product2 {
     pub variants: Option<Vec<ProductVariant2>>,
     pub name: String,
     pub description: Option<Jsonstring>,
-    pub product_type: ProductType,
+    pub id: cynic::Id,
     pub category: Option<Category>,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
 #[cynic(graphql_type = "ProductVariant")]
 pub struct ProductVariant2 {
+    pub sku: Option<String>,
     pub id: cynic::Id,
     pub name: String,
     pub media: Option<Vec<ProductMedia>>,
@@ -182,7 +314,7 @@ pub struct VariantPricingInfo {
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct TaxedMoney {
-    pub gross: Money,
+    pub gross: Money2,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
@@ -196,18 +328,18 @@ pub struct ProductMedia {
 pub struct Product {
     pub name: String,
     pub description: Option<Jsonstring>,
-    pub product_type: ProductType,
     pub category: Option<Category>,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
-pub struct ProductType {
-    #[arguments(key: "heureka_categorytext")]
-    pub metafield: Option<String>,
+pub struct Money {
+    pub currency: String,
+    pub amount: f64,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
-pub struct Money {
+#[cynic(graphql_type = "Money")]
+pub struct Money2 {
     pub amount: f64,
 }
 
@@ -228,6 +360,16 @@ pub struct CategoryCreated {
 
 #[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct Category {
+    pub name: String,
+    pub id: cynic::Id,
+    #[arguments(key: "heureka_categorytext")]
+    pub metafield: Option<String>,
+    pub parent: Option<Category2>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone)]
+#[cynic(graphql_type = "Category")]
+pub struct Category2 {
     pub name: String,
     pub id: cynic::Id,
     #[arguments(key: "heureka_categorytext")]
@@ -342,23 +484,6 @@ pub struct Category13 {
     pub id: cynic::Id,
     #[arguments(key: "heureka_categorytext")]
     pub metafield: Option<String>,
-    pub parent: Option<Category14>,
-}
-
-#[derive(cynic::QueryFragment, Debug, Clone)]
-#[cynic(graphql_type = "Category")]
-pub struct Category14 {
-    pub name: String,
-    pub id: cynic::Id,
-    #[arguments(key: "heureka_categorytext")]
-    pub metafield: Option<String>,
-}
-
-#[derive(cynic::QueryFragment, Debug, Clone)]
-#[cynic(graphql_type = "Category")]
-pub struct Category2 {
-    #[arguments(key: "heureka_categorytext")]
-    pub metafield: Option<String>,
 }
 
 #[derive(cynic::InlineFragments, Debug, Clone)]
@@ -372,15 +497,27 @@ pub enum Event {
     CategoryCreated(CategoryCreated),
     CategoryUpdated(CategoryUpdated),
     CategoryDeleted(CategoryDeleted),
+    ShippingZoneCreated(ShippingZoneCreated),
+    ShippingZoneUpdated(ShippingZoneUpdated),
+    ShippingZoneDeleted(ShippingZoneDeleted),
     #[cynic(fallback)]
     Unknown,
 }
 
-#[derive(cynic::Enum, Copy, Debug, Clone)]
+#[derive(cynic::Enum, Clone, Copy, Debug)]
 pub enum ThumbnailFormatEnum {
     Original,
     Avif,
     Webp,
+}
+
+#[derive(cynic::Enum, Clone, Copy, Debug)]
+pub enum WeightUnitsEnum {
+    G,
+    Lb,
+    Oz,
+    Kg,
+    Tonne,
 }
 
 #[derive(cynic::Scalar, Debug, Clone)]

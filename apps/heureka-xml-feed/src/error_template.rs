@@ -36,6 +36,7 @@ pub enum AxumError {
 #[cfg(feature = "ssr")]
 impl IntoResponse for AxumError {
     fn into_response(self) -> Response {
+        tracing::error!("{:?}", self);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Something went wrong: {:?}", self),

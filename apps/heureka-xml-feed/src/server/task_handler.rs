@@ -1,11 +1,14 @@
 use crate::{
     app::{AppSettings, AppState},
     queries::event_products_updated::{
-        Category, CategoryCreated, CategoryDeleted, CategoryUpdated, Product2, ProductCreated, ProductDeleted, ProductUpdated, ProductVariant, ProductVariantCreated, ProductVariantDeleted, ProductVariantUpdated, ShippingZone, ShippingZoneCreated, ShippingZoneDeleted, ShippingZoneUpdated
+        Category, CategoryCreated, CategoryDeleted, CategoryUpdated, Product2, ProductCreated,
+        ProductDeleted, ProductUpdated, ProductVariant, ProductVariantCreated,
+        ProductVariantDeleted, ProductVariantUpdated, ShippingZone, ShippingZoneCreated,
+        ShippingZoneDeleted, ShippingZoneUpdated,
     },
 };
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
-use tracing::{debug,  info, warn};
+use tracing::{debug, info, warn};
 
 pub struct EventHandler {
     receiver: Receiver<Event>,
@@ -62,43 +65,41 @@ impl EventHandler {
                 }
                 Event::ProductDeleted(product) => {
                     if let Some(product) = product.product {
-                        self.any_deleted(&product.id,AnyDeletedType::Product).await;
+                        self.any_deleted(&product.id, AnyDeletedType::Product).await;
                     } else {
                         warn!("Event::ProductDeleted missing data");
                     }
                 }
-
                 Event::CategoryCreated(category_created) => {
                     if let Some(category) = category_created.clone().category {
-                        self.category_updated_or_created(category)
-                            .await;
+                        self.category_updated_or_created(category).await;
                     } else {
                         warn!("Event::CategoryCreated/Updated missing data");
                     }
                 }
                 Event::CategoryUpdated(category_updated) => {
                     if let Some(category) = category_updated.clone().category {
-                        self.category_updated_or_created( category)
-                            .await;
+                        self.category_updated_or_created(category).await;
                     } else {
                         warn!("Event::CategoryCreated/Updated missing data");
                     }
                 }
                 Event::CategoryDeleted(category) => {
                     if let Some(category) = category.category {
-                        self.any_deleted(&category.id, AnyDeletedType::Category).await;
+                        self.any_deleted(&category.id, AnyDeletedType::Category)
+                            .await;
                     } else {
                         warn!("Event::CategoryDeleted missing data");
                     }
                 }
                 Event::ProductVariantCreated(variant) => {
                     if let Some(variant) = variant.product_variant {
-                        self.variant_updated_or_created (variant).await;
+                        self.variant_updated_or_created(variant).await;
                     }
                 }
                 Event::ProductVariantUpdated(variant) => {
                     if let Some(variant) = variant.product_variant {
-                        self.variant_updated_or_created (variant).await;
+                        self.variant_updated_or_created(variant).await;
                     }
                 }
                 Event::ProductVariantDeleted(variant) => {
@@ -118,10 +119,10 @@ impl EventHandler {
                 }
                 Event::ShippingZoneDeleted(shipping_zone) => {
                     if let Some(shipping_zone) = shipping_zone.shipping_zone {
-                        self.any_deleted(&shipping_zone.id, AnyDeletedType::ShippingZone).await;
+                        self.any_deleted(&shipping_zone.id, AnyDeletedType::ShippingZone)
+                            .await;
                     }
                 }
-
                 Event::Regenerate(r) => (),
                 // match regenerate(r.state, r.saleor_api_url).await {
                 //     Ok(_) => info!("regenerate: Fully created sitemap!"),
@@ -129,7 +130,7 @@ impl EventHandler {
                 // },
                 Event::Unknown => (),
             }
-            info!("Event succesfully handled");
+            debug!("Event succesfully handled");
         }
     }
 }
@@ -140,15 +141,15 @@ impl EventHandler {
         info!("called!")
     }
 
-    async fn variant_updated_or_created (&self, data: ProductVariant) {
+    async fn variant_updated_or_created(&self, data: ProductVariant) {
         info!("called!")
     }
 
-    async fn any_deleted(&self, id: &cynic::Id, typ:AnyDeletedType ) {
+    async fn any_deleted(&self, id: &cynic::Id, typ: AnyDeletedType) {
         info!("called!")
     }
 
-    async fn category_updated_or_created(&self, data:Category) { 
+    async fn category_updated_or_created(&self, data: Category) {
         info!("called!")
     }
     async fn shipping_zone_updated_or_created(&self, data: ShippingZone) {
@@ -160,7 +161,5 @@ enum AnyDeletedType {
     Product,
     Category,
     Variant,
-    ShippingZone
+    ShippingZone,
 }
-
-

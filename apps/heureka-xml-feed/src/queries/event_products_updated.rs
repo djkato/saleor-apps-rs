@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 #[cynic::schema("saleor")]
 mod schema {}
 
@@ -90,6 +92,7 @@ fragment ShippingZoneData on ShippingZone {
 fragment ProductVariantData on ProductVariant {
   id
   name
+  sku
   media {
     url(format: WEBP, size: 1024)
     alt
@@ -102,6 +105,7 @@ fragment ProductVariantData on ProductVariant {
     }
   }
   product {
+    id
     name
     description
     category {
@@ -111,6 +115,7 @@ fragment ProductVariantData on ProductVariant {
 }
 
 fragment ProductData on Product {
+  id
   variants {
     sku
     id
@@ -266,6 +271,7 @@ pub struct ProductVariantCreated {
 #[derive(cynic::QueryFragment, Debug, Clone)]
 pub struct ProductVariant {
     pub id: cynic::Id,
+    pub sku: Option<String>,
     pub name: String,
     pub media: Option<Vec<ProductMedia>>,
     pub pricing: Option<VariantPricingInfo>,
@@ -287,7 +293,7 @@ pub struct ProductCreated {
     pub product: Option<Product2>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Product")]
 pub struct Product2 {
     pub variants: Option<Vec<ProductVariant2>>,
@@ -297,7 +303,7 @@ pub struct Product2 {
     pub category: Option<Category>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "ProductVariant")]
 pub struct ProductVariant2 {
     pub sku: Option<String>,
@@ -307,25 +313,26 @@ pub struct ProductVariant2 {
     pub pricing: Option<VariantPricingInfo>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct VariantPricingInfo {
     pub price: Option<TaxedMoney>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct TaxedMoney {
     pub gross: Money2,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct ProductMedia {
     #[arguments(format: "WEBP", size: 1024)]
     pub url: String,
     pub alt: String,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct Product {
+    pub id: cynic::Id,
     pub name: String,
     pub description: Option<Jsonstring>,
     pub category: Option<Category>,
@@ -337,7 +344,7 @@ pub struct Money {
     pub amount: f64,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Money")]
 pub struct Money2 {
     pub amount: f64,
@@ -358,7 +365,7 @@ pub struct CategoryCreated {
     pub category: Option<Category>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct Category {
     pub name: String,
     pub id: cynic::Id,
@@ -367,7 +374,7 @@ pub struct Category {
     pub parent: Option<Category2>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category2 {
     pub name: String,
@@ -377,7 +384,7 @@ pub struct Category2 {
     pub parent: Option<Category3>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category3 {
     pub name: String,
@@ -387,7 +394,7 @@ pub struct Category3 {
     pub parent: Option<Category4>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category4 {
     pub name: String,
@@ -397,7 +404,7 @@ pub struct Category4 {
     pub parent: Option<Category5>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category5 {
     pub name: String,
@@ -407,7 +414,7 @@ pub struct Category5 {
     pub parent: Option<Category6>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category6 {
     pub name: String,
@@ -417,7 +424,7 @@ pub struct Category6 {
     pub parent: Option<Category7>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category7 {
     pub name: String,
@@ -427,7 +434,7 @@ pub struct Category7 {
     pub parent: Option<Category8>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category8 {
     pub name: String,
@@ -437,7 +444,7 @@ pub struct Category8 {
     pub parent: Option<Category9>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category9 {
     pub name: String,
@@ -447,7 +454,7 @@ pub struct Category9 {
     pub parent: Option<Category10>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category10 {
     pub name: String,
@@ -457,7 +464,7 @@ pub struct Category10 {
     pub parent: Option<Category11>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category11 {
     pub name: String,
@@ -467,7 +474,7 @@ pub struct Category11 {
     pub parent: Option<Category12>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category12 {
     pub name: String,
@@ -477,7 +484,7 @@ pub struct Category12 {
     pub parent: Option<Category13>,
 }
 
-#[derive(cynic::QueryFragment, Debug, Clone)]
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "Category")]
 pub struct Category13 {
     pub name: String,

@@ -1,0 +1,5 @@
+attr_value_brace_style = "WhenRequired"
+indentation_style = "Spaces"
+macro_names = ["leptos::view", "view"]
+max_width = 100
+newline_style = "Unix"

@@ -24,32 +24,34 @@ mod routes;
 async fn main() -> Result<(), std::io::Error> {
     use app::*;
     use axum::{
-        routing::{get, post},
         Router,
+        routing::{get, post},
     };
 
     use fallback::file_and_error_handler;
     use leptos::{config::get_configuration, prelude::provide_context};
-    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use leptos_axum::{LeptosRoutes, generate_route_list};
     use queries::event_products_updated::EVENTS_QUERY;
     use saleor_app_sdk::webhooks::{AsyncWebhookEventType, WebhookManifestBuilder};
     use saleor_app_sdk::{
-        cargo_info,
+        SaleorApp, cargo_info,
         config::Config,
         manifest::{AppManifestBuilder, AppPermission},
-        SaleorApp,
     };
     use server::task_handler::EventHandler;
-    use tracing::error;
     use std::sync::Arc;
     use tokio::sync::Mutex;
+    use tower_http::trace::{
+        DefaultMakeSpan, DefaultOnFailure, DefaultOnRequest, DefaultOnResponse, TraceLayer,
+    };
+    use tracing::{Level, error};
 
     use crate::routes::api::{manifest::manifest, register::register, webhooks::webhooks};
 
     //Leptos stuff
     let conf = get_configuration(None).unwrap();
     let leptos_options = conf.leptos_options;
-    let addr = leptos_options.site_addr;
+    // let addr = leptos_options.site_addr;
     let routes = generate_route_list(App);
 
     // Saleor stuff
@@ -61,6 +63,7 @@ async fn main() -> Result<(), std::io::Error> {
         .add_permissions(vec![
             AppPermission::ManageProducts,
             AppPermission::ManageProductTypesAndAttributes,
+            AppPermission::ManageShipping,
         ])
         .add_webhook(
             WebhookManifestBuilder::new(&config)
@@ -86,7 +89,6 @@ async fn main() -> Result<(), std::io::Error> {
 
     let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
-
     let conn = surrealdb::Surreal::new::<surrealdb::engine::local::RocksDb>("./temp/db".to_owned())
         .await
         .expect("Failed creating DB connection");
@@ -96,7 +98,9 @@ async fn main() -> Result<(), std::io::Error> {
         target_channel: match dotenvy::var("CHANNEL_SLUG") {
             Ok(v) => v,
             Err(_) => {
-                error!("Missing channel slug, Saleor will soon deprecate product queries without channel specified.");
+                error!(
+                    "Missing channel slug, Saleor will soon deprecate product queries without channel specified."
+                );
                 "".to_string()
             }
         },
@@ -128,8 +132,14 @@ async fn main() -> Result<(), std::io::Error> {
         )
         .route("/api/manifest", get(manifest))
         .fallback(file_and_error_handler)
-        .with_state(app_state.clone());
-    // leptos_axum::file_and_error_handler(shell)
+        .with_state(app_state.clone())
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new())
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(DefaultOnResponse::new().level(Level::INFO))
+                .on_failure(DefaultOnFailure::new().level(Level::ERROR)),
+        );
 
     let listener = tokio::net::TcpListener::bind(
         "0.0.0.0:".to_owned()
@@ -147,43 +157,25 @@ async fn main() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-#[cfg(not(feature = "ssr"))]
-pub fn main() {
-    // use leptos::leptos_dom::logging::{console_error, console_log};
-    // console_log("starting main");
-    // use saleor_app_sdk::bridge::AppBridge;
-    // match AppBridge::new(Some(true)) {
-    //     Ok(app_bridge) => {
-    //         console_log("App Bridge connected");
-    //     }
-    //     Err(e) => console_error(e),
-    // };
-    // no client-side main function
-    // unless we want this to work with e.g., Trunk for a purely client-side app
-    // see lib.rs for hydration function instead
-}
-
 #[cfg(feature = "ssr")]
 use saleor_app_sdk::config::Config;
 #[cfg(feature = "ssr")]
 pub fn trace_to_std(config: &Config) -> Result<(), envy::Error> {
-    use tracing::level_filters::LevelFilter;
-    use tracing_subscriber::EnvFilter;
+    use tracing_subscriber::{
+        EnvFilter, fmt, layer::SubscriberExt, registry, util::SubscriberInitExt,
+    };
 
-    let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::DEBUG.into())
-        .from_env()
-        .unwrap()
-        .add_directive(
-            format!("{}={}", env!("CARGO_PKG_NAME"), config.log_level)
-                .parse()
-                .unwrap(),
-        );
-    tracing_subscriber::fmt()
-        .with_max_level(config.log_level)
-        .with_env_filter(filter)
-        .with_target(true)
-        .compact()
+    registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            format!(
+                "{}={},tower_http=debug,axum::rejection=trace",
+                env!("CARGO_CRATE_NAME"),
+                config.log_level.to_string()
+            )
+            .into()
+        }))
+        .with(fmt::layer())
         .init();
+
     Ok(())
 }

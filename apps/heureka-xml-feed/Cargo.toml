@@ -15,7 +15,7 @@ license = "MIT OR Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axum = { workspace = true, optional = true, features = ["macros"] }
+axum = { workspace = true, optional = true, features = ["macros", "tracing"] }
 log = { workspace = true }
 simple_logger = { workspace = true }
 console_error_panic_hook = { workspace = true }
@@ -27,9 +27,10 @@ leptos_router = { workspace = true, features = ["nightly"] }
 tokio = { version = "1.0", features = [
     "macros",
     "rt-multi-thread",
+    "tracing",
 ], optional = true }
 tower = { workspace = true, optional = true }
-tower-http = { workspace = true, features = ["fs"], optional = true }
+tower-http = { workspace = true, features = ["fs", "trace"], optional = true }
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures.workspace = true
 tracing = { workspace = true, optional = true }

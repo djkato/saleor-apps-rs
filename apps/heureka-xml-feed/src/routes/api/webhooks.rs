@@ -10,7 +10,7 @@ use saleor_app_sdk::{
     },
 };
 
-use tracing::{debug, info};
+use tracing::{debug, info, trace};
 
 use crate::{
     app::AppState,
@@ -30,8 +30,8 @@ pub async fn webhooks(
     data: String,
 ) -> Result<StatusCode, AxumError> {
     debug!("/api/webhooks");
-    debug!("req: {:?}", &data);
-    debug!("headers: {:?}", headers);
+    trace!("req: {:?}", &data);
+    trace!("headers: {:?}", headers);
 
     let url = headers
         .get(SALEOR_API_URL_HEADER)

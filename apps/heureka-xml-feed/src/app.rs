@@ -3,13 +3,13 @@ use crate::routes::home::Home;
 use leptos::leptos_dom::logging::{console_error, console_log, console_warn};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use leptos_meta::{provide_meta_context, MetaTags};
+use leptos_meta::{MetaTags, provide_meta_context};
 use leptos_router::components::*;
 use leptos_router::params::Params;
 use leptos_router::*;
 use saleor_app_sdk::bridge::action::{PayloadRedirect, PayloadRequestPermissions};
 use saleor_app_sdk::bridge::event::Event;
-use saleor_app_sdk::bridge::{dispatch_event, listen_to_events, AppBridge};
+use saleor_app_sdk::bridge::{AppBridge, dispatch_event, listen_to_events};
 use serde::{Deserialize, Serialize};
 
 #[derive(Params, PartialEq)]
@@ -180,11 +180,9 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 }
 
 #[cfg(feature = "ssr")]
-use surrealdb::engine::local::RocksDb;
-#[cfg(feature = "ssr")]
-use surrealdb::opt::IntoEndpoint;
-#[cfg(feature = "ssr")]
 use surrealdb::Surreal;
+#[cfg(feature = "ssr")]
+use surrealdb::engine::any::Any;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "ssr", derive(axum::extract::FromRef))]
@@ -200,8 +198,7 @@ pub struct AppState {
     #[cfg(feature = "ssr")]
     pub settings: AppSettings,
     #[cfg(feature = "ssr")]
-    pub db_handle:
-        std::sync::Arc<tokio::sync::Mutex<Surreal<<String as IntoEndpoint<RocksDb>>::Client>>>,
+    pub db_handle: Surreal<Any>,
 }
 
 #[cfg(feature = "ssr")]

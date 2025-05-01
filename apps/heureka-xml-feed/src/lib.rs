@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 pub mod app;
 pub mod error_template;
 #[cfg(feature = "ssr")]

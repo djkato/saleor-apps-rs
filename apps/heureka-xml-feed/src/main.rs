@@ -89,11 +89,30 @@ async fn main() -> Result<(), std::io::Error> {
 
     let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
-    let conn = surrealdb::Surreal::new::<surrealdb::engine::local::RocksDb>("./temp/db".to_owned())
+    let db_handle =
+        surrealdb::Surreal::new::<surrealdb::engine::local::RocksDb>("./temp/db".to_owned())
+            .await
+            .expect("Failed creating DB connection");
+
+    db_handle
+        .use_ns("saleor")
+        .use_db("saleor-app-heureka-xml-feed")
         .await
-        .expect("Failed creating DB connection");
+        .expect("Failed switching DB NS & DB");
+
+    db_handle
+        .query(
+            r"
+DEFINE TABLE IF NOT EXISTS product SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS category SCHEMALESS;
+DEFINE TABLE IF NOT EXISTS variant SCHEMALESS;
+",
+        )
+        .await
+        .expect("Failed upserting init tables for DB");
+
     let app_state = AppState {
-        db_handle: Arc::new(Mutex::new(conn)),
+        db_handle,
         task_queue_sender: sender,
         target_channel: match dotenvy::var("CHANNEL_SLUG") {
             Ok(v) => v,
@@ -112,7 +131,7 @@ async fn main() -> Result<(), std::io::Error> {
         settings: AppSettings::load().expect("Failed getting app settings from env"),
     };
 
-    EventHandler::start(app_state.settings.clone(), receiver);
+    EventHandler::start(app_state.settings.clone(), receiver, db_handle);
 
     let state_1 = app_state.clone();
     let app = Router::new()

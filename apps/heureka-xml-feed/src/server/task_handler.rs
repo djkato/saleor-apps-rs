@@ -268,13 +268,16 @@ impl EventHandler {
         /* SAVE THEM TO DB */
         let db = &mut self.db_handle;
         for product in all_products {
-            db.upsert(("product", product.id.inner()))
+            let _: Option<Product> = db
+                .upsert(("product", product.id.inner()))
                 .content(product)
                 .await?;
             for variant in product.variants.unwrap_or(vec![]) {
-                db.upsert(("variant", variant.id.inner()))
+                let _: Option<ProductVariant> = db
+                    .upsert(("variant", variant.id.inner()))
                     .content(variant)
                     .await?;
+
                 db.query(format!(
                     "RELATE variant:{}<-has<-product:{}",
                     variant.id.inner(),

@@ -8,13 +8,16 @@ use crate::{
             ShippingZoneDeleted, ShippingZoneUpdated,
         },
         query_get_all_products::{
-            GetProductsInitial, GetProductsInitialVariables, GetProductsNext,
+            Category2, GetProductsInitial, GetProductsInitialVariables, GetProductsNext,
             GetProductsNextVariables, Product,
         },
     },
+    server::{
+        category_iter_parents, clear_relations_categorises, clear_relations_parents_in,
+        clear_relations_parents_out, clear_relations_varies,
+    },
 };
 use cynic::{GraphQlError, QueryBuilder, http::SurfExt};
-use leptos::prelude::StorageAccess;
 use saleor_app_sdk::apl::AplError;
 use surrealdb::{Surreal, engine::any::Any};
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
@@ -268,25 +271,111 @@ impl EventHandler {
         /* SAVE THEM TO DB */
         let db = &mut self.db_handle;
         for product in all_products {
+            debug!(
+                "inserting product {}:{} into db",
+                &product.name,
+                &product.id.inner()
+            );
             let _: Option<Product> = db
-                .upsert(("product", product.id.inner()))
-                .content(product)
+                .upsert(("product", product.id.inner().to_owned()))
+                .content(product.clone())
                 .await?;
-            for variant in product.variants.unwrap_or(vec![]) {
-                let _: Option<ProductVariant> = db
-                    .upsert(("variant", variant.id.inner()))
-                    .content(variant)
+
+            if let Some(category) = product.category {
+                let categories = category_iter_parents(category);
+
+                // To have a loop over (category, prev category), so I can pair existing ones in
+                // parent
+                let mut passed_first_loop = false;
+                let mut shifted_catories = categories.clone();
+                shifted_catories.rotate_right(1);
+
+                for (category, prev_category) in
+                    categories.clone().into_iter().zip(shifted_catories)
+                {
+                    debug!(
+                        "inserting category {}:{} into db",
+                        &category.name,
+                        &category.id.inner()
+                    );
+                    let _: Option<Category2> = db
+                        .upsert(("category", category.id.inner()))
+                        .content(category.clone())
+                        .await?;
+
+                    clear_relations_categorises(db, category.id.inner()).await?;
+
+                    debug!(
+                        "relating category {}:{} -> categorises -> product {}:{}",
+                        &category.name,
+                        &category.id.inner(),
+                        &product.name,
+                        &product.id.inner()
+                    );
+
+                    db.query(format!(
+                        "RELATE category:{}->categorises->product:{}",
+                        category.id.inner().to_owned(),
+                        product.id.inner().to_owned()
+                    ))
                     .await?;
 
+                    if passed_first_loop {
+                        passed_first_loop = true;
+                        continue;
+                    }
+
+                    clear_relations_parents_in(db, category.id.inner()).await?;
+                    clear_relations_parents_out(db, prev_category.id.inner()).await?;
+
+                    debug!(
+                        "relating category {}:{} -> parents -> category {}:{}",
+                        &category.name,
+                        &category.id.inner(),
+                        &prev_category.name,
+                        &prev_category.id.inner()
+                    );
+
+                    db.query(format!(
+                        "RELATE category(parent):{} -> parents -> category:{}",
+                        prev_category.id.inner().to_owned(),
+                        category.id.inner().to_owned(),
+                    ))
+                    .await?;
+                }
+            }
+
+            for variant in product.variants.unwrap_or(vec![]) {
+                debug!(
+                    "inserting variant {}:{}",
+                    &variant.name,
+                    &variant.id.inner(),
+                );
+                let _: Option<ProductVariant> = db
+                    .upsert(("variant", variant.id.inner()))
+                    .content(variant.clone())
+                    .await?;
+
+                clear_relations_varies(db, variant.id.inner()).await?;
+
+                debug!(
+                    "relating variant {}:{} -> varies -> product {}:{}",
+                    &variant.name,
+                    &variant.id.inner(),
+                    &product.name,
+                    &product.id.inner()
+                );
+
                 db.query(format!(
-                    "RELATE variant:{}<-has<-product:{}",
-                    variant.id.inner(),
-                    product.id.inner()
+                    "RELATE variant:{}->varies->product:{}",
+                    variant.id.inner().to_owned(),
+                    product.id.inner().to_owned(),
                 ))
                 .await?;
             }
         }
-        todo!();
+        debug!("Database regenerated!");
+        Ok(())
     }
 
     async fn product_updated_or_created(&self, data: Product2) {

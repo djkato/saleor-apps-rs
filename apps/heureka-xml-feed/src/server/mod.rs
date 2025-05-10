@@ -3,19 +3,87 @@ use std::{
     str::FromStr,
 };
 
-use heureka_xml_feed::{Delivery, ShopItem};
+use heureka_xml_feed::{Delivery, Shop, ShopItem};
 use rust_decimal::{Decimal, prelude::FromPrimitive};
 use serde::{Serialize, de::DeserializeOwned};
+use surrealdb::{Surreal, engine::any::Any};
 use tinytemplate::TinyTemplate;
 use url::Url;
 
 use crate::{
     app::AppSettings,
-    queries::event_products_updated::{Category, Product2, ProductVariant},
+    queries::event_products_updated::{
+        Category, Category2, Product2, ProductVariant, ProductVariant2,
+    },
 };
 
 pub mod task_handler;
 
+pub async fn try_shop_from_db(
+    db: Surreal<Any>,
+    deliveries: Vec<Delivery>,
+    url_template: String,
+    settings: AppSettings,
+) -> Result<Shop, TryIntoShopError> {
+    let products: Vec<Product2> = db.select("product").await?;
+
+    let mut shopitems: Vec<ShopItem> = vec![];
+    for mut product in products {
+        let variants: Vec<ProductVariant2> = db
+            .query(format!(
+                "SELECT * FROM variant WHERE product:{}<-varies<-variant",
+                product.id.inner().to_owned()
+            ))
+            .await?
+            .take(0)?;
+
+        let categories: Vec<Category> = db
+            .query(format!(
+                "SELECT * FROM category WHERE product:{}<-categorises<-category LIMIT 1",
+                product.id.inner().to_owned()
+            ))
+            .await?
+            .take(0)?;
+
+        let mut category = categories.into_iter().nth(0);
+
+        if let Some(base_category) = &mut category {
+            let mut parent_category: Option<Category2> = db
+                .query(format!(
+                    "SELECT * FROM category WHERE category:{}<-parents<-category",
+                    base_category.id.inner().to_owned()
+                ))
+                .await?
+                .take(0)?;
+
+            while let Some(category) = parent_category {
+                parent_category = db
+                    .query(format!(
+                        "SELECT * FROM category WHERE category:{}<-parents<-category",
+                        category.id.inner().to_owned()
+                    ))
+                    .await?
+                    .take(0)?;
+            }
+        }
+        // variants and categories that are present with product in db aren't being updated, only
+        // the tables are. Just cba to strip the db of these parts
+        product.category = category;
+        product.variants = match variants.is_empty() {
+            true => None,
+            false => Some(variants),
+        };
+        shopitems.append(&mut try_shopitem_from_product(
+            product.clone(),
+            deliveries.clone(),
+            url_template.clone(),
+            &product,
+            settings.clone(),
+        )?);
+    }
+
+    todo!()
+}
 pub fn try_shopitem_from_variant<'a, T: Serialize>(
     v: ProductVariant,
     deliveries: Vec<Delivery>,
@@ -53,14 +121,6 @@ pub fn try_shopitem_from_variant<'a, T: Serialize>(
         productno: v.sku,
         //I don't care enough to parse it :)
         description: v.product.clone().description.and_then(|d| Some(d.0)),
-        categorytext: get_category_text_from_product(Product2 {
-            variants: None,
-            name: v.product.name,
-            description: None,
-            id: v.product.id,
-            category: v.product.category,
-        })
-        .unwrap_or("".to_owned()),
         accessory: vec![],
         param: vec![],
         delivery_date: None,
@@ -72,11 +132,19 @@ pub fn try_shopitem_from_variant<'a, T: Serialize>(
         heureka_cpc: None,
         isbn: None,
         item_type: None,
-        itemgroup_id: None,
+        itemgroup_id: Some(v.product.id.inner().to_owned()),
         manufacturer: None,
         product: None,
         special_service: vec![],
         video_url: None,
+        categorytext: get_category_text_from_product(Product2 {
+            variants: None,
+            name: v.product.name,
+            description: None,
+            id: v.product.id,
+            category: v.product.category,
+        })
+        .unwrap_or("".to_owned()),
     })
 }
 
@@ -145,6 +213,14 @@ pub fn try_shopitem_from_product<'a, T: Serialize>(
             Ok(shopitems)
         }
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum TryIntoShopError {
+    #[error("Failed surrealdb query: {0}")]
+    SurrealDBError(#[from] surrealdb::Error),
+    #[error("Failed converting item to shopitem, {0}")]
+    ShopItemError(#[from] TryIntoShopItemError),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -222,6 +298,63 @@ fn go_deeper<C: Serialize + DeserializeOwned>(c: C) -> Result<Option<String>, se
         },
     }
 }
+
+pub fn category_iter_parents(category: Category2) -> Vec<Category2> {
+    let maybe_parent: Option<String> = category
+        .clone()
+        .parent
+        .and_then(|c| serde_json::to_string(&c).ok());
+    let mut categories_ordered = vec![category];
+    while let Some(parent) = maybe_parent
+        .as_ref()
+        .and_then(|p| serde_json::from_str::<Category2>(p).ok())
+    {
+        categories_ordered.push(parent.clone());
+        parent.parent.and_then(|c| serde_json::to_string(&c).ok());
+    }
+    categories_ordered
+}
+
+pub async fn clear_relations_varies(
+    db: &mut Surreal<Any>,
+    var_id: &str,
+) -> Result<(), surrealdb::Error> {
+    db.query("DELETE (SELECT * FROM varies WHERE in = $var_id);")
+        .bind(("var_id", var_id.to_owned()))
+        .await?;
+    Ok(())
+}
+
+pub async fn clear_relations_categorises(
+    db: &mut Surreal<Any>,
+    cat_id: &str,
+) -> Result<(), surrealdb::Error> {
+    db.query("DELETE (SELECT * FROM categorises WHERE in = $cat_id);")
+        .bind(("cat_id", cat_id.to_owned()))
+        .await?;
+    Ok(())
+}
+
+pub async fn clear_relations_parents_in(
+    db: &mut Surreal<Any>,
+    cat_id: &str,
+) -> Result<(), surrealdb::Error> {
+    db.query("DELETE (SELECT * FROM parents WHERE in = $cat_id);")
+        .bind(("cat_id", cat_id.to_owned()))
+        .await?;
+    Ok(())
+}
+
+pub async fn clear_relations_parents_out(
+    db: &mut Surreal<Any>,
+    cat_id: &str,
+) -> Result<(), surrealdb::Error> {
+    db.query("DELETE (SELECT * FROM parents WHERE out = $cat_id);")
+        .bind(("cat_id", cat_id.to_owned()))
+        .await?;
+    Ok(())
+}
+
 // product
 //     .category
 //     .and_then(|c|

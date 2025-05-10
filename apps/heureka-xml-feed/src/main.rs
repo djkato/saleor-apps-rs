@@ -40,6 +40,7 @@ async fn main() -> Result<(), std::io::Error> {
     };
     use server::task_handler::EventHandler;
     use std::sync::Arc;
+    use surrealdb::engine::any;
     use tokio::sync::Mutex;
     use tower_http::trace::{
         DefaultMakeSpan, DefaultOnFailure, DefaultOnRequest, DefaultOnResponse, TraceLayer,
@@ -89,10 +90,9 @@ async fn main() -> Result<(), std::io::Error> {
 
     let (sender, receiver) = tokio::sync::mpsc::channel(100);
 
-    let db_handle =
-        surrealdb::Surreal::new::<surrealdb::engine::local::RocksDb>("./temp/db".to_owned())
-            .await
-            .expect("Failed creating DB connection");
+    let db_handle = any::connect(dotenvy::var("SURREALDB_URL").unwrap_or("memory".to_owned()))
+        .await
+        .expect("Failed creating DB connection");
 
     db_handle
         .use_ns("saleor")
@@ -101,18 +101,12 @@ async fn main() -> Result<(), std::io::Error> {
         .expect("Failed switching DB NS & DB");
 
     db_handle
-        .query(
-            r"
-DEFINE TABLE IF NOT EXISTS product SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS category SCHEMALESS;
-DEFINE TABLE IF NOT EXISTS variant SCHEMALESS;
-",
-        )
+        .query(include_str!("../saleor-heureka-testing-2025-05-10.surql"))
         .await
         .expect("Failed upserting init tables for DB");
 
     let app_state = AppState {
-        db_handle,
+        db_handle: db_handle.clone(),
         task_queue_sender: sender,
         target_channel: match dotenvy::var("CHANNEL_SLUG") {
             Ok(v) => v,

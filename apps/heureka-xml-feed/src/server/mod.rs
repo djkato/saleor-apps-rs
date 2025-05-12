@@ -12,12 +12,11 @@ use url::Url;
 
 use crate::{
     app::AppSettings,
-    queries::event_products_updated::{
-        Category, Category2, Product2, ProductVariant, ProductVariant2,
-    },
+    queries::products_variants_categories::{Category, Product, ProductVariant, ProductVariant2},
 };
 
-pub mod task_handler;
+pub mod event_handler;
+pub mod graphqls;
 
 pub async fn try_shop_from_db(
     db: Surreal<Any>,
@@ -25,7 +24,7 @@ pub async fn try_shop_from_db(
     url_template: String,
     settings: AppSettings,
 ) -> Result<Shop, TryIntoShopError> {
-    let products: Vec<Product2> = db.select("product").await?;
+    let products: Vec<Product> = db.select("product").await?;
 
     let mut shopitems: Vec<ShopItem> = vec![];
     for mut product in products {
@@ -48,7 +47,7 @@ pub async fn try_shop_from_db(
         let mut category = categories.into_iter().nth(0);
 
         if let Some(base_category) = &mut category {
-            let mut parent_category: Option<Category2> = db
+            let mut parent_category: Option<Category> = db
                 .query(format!(
                     "SELECT * FROM category WHERE category:{}<-parents<-category",
                     base_category.id.inner().to_owned()
@@ -137,7 +136,7 @@ pub fn try_shopitem_from_variant<'a, T: Serialize>(
         product: None,
         special_service: vec![],
         video_url: None,
-        categorytext: get_category_text_from_product(Product2 {
+        categorytext: get_category_text_from_product(Product {
             variants: None,
             name: v.product.name,
             description: None,
@@ -149,7 +148,7 @@ pub fn try_shopitem_from_variant<'a, T: Serialize>(
 }
 
 pub fn try_shopitem_from_product<'a, T: Serialize>(
-    product: Product2,
+    product: Product,
     deliveries: Vec<Delivery>,
     url_template: String,
     url_context: &T,
@@ -274,45 +273,15 @@ pub enum TryUrlFromTemplateError {
     UrlParseError(#[from] url::ParseError),
 }
 
-pub fn get_category_text_from_product<T: Serialize + DeserializeOwned>(
-    product: T,
-) -> Option<String> {
-    let product: Product2 = serde_json::from_str(&serde_json::to_string(&product).ok()?).ok()?;
-
+pub fn get_category_text_from_product(product: Product) -> Option<String> {
     if let Some(c) = product.category {
         match c.metafield {
             Some(val) => return Some(val),
-            None => return go_deeper(c).ok().flatten(),
+            //TODO: Create a while loop query for parent category till maybe one is found
+            None => return None,
         }
     }
     None
-}
-
-fn go_deeper<C: Serialize + DeserializeOwned>(c: C) -> Result<Option<String>, serde_json::Error> {
-    let c: Category = serde_json::from_str(&serde_json::to_string(&c)?)?;
-    match c.parent {
-        None => go_deeper(c),
-        Some(c) => match c.metafield {
-            Some(meta) => Ok(Some(meta)),
-            None => go_deeper(c),
-        },
-    }
-}
-
-pub fn category_iter_parents(category: Category2) -> Vec<Category2> {
-    let maybe_parent: Option<String> = category
-        .clone()
-        .parent
-        .and_then(|c| serde_json::to_string(&c).ok());
-    let mut categories_ordered = vec![category];
-    while let Some(parent) = maybe_parent
-        .as_ref()
-        .and_then(|p| serde_json::from_str::<Category2>(p).ok())
-    {
-        categories_ordered.push(parent.clone());
-        parent.parent.and_then(|c| serde_json::to_string(&c).ok());
-    }
-    categories_ordered
 }
 
 pub async fn clear_relations_varies(
@@ -354,57 +323,3 @@ pub async fn clear_relations_parents_out(
         .await?;
     Ok(())
 }
-
-// product
-//     .category
-//     .and_then(|c|
-//         c.metafield.or_else(||
-//             c.parent.and_then(|c|
-//                 c.metafield.or_else(||
-//                     c.parent.and_then(|c|
-//                         c.metafield.or_else(||
-//                             c.parent.and_then(|c|
-//                                 c.metafield.or_else(||
-//                                     c.parent.and_then(|c|
-//                                         c.metafield.or_else(||
-//                                             c.parent.and_then(|c|
-//                                                 c.metafield.or_else(||
-//                                                     c.parent.and_then(|c|
-//                                                         c.metafield.or_else(||
-//                                                             c.parent.and_then(|c|
-//                                                                 c.metafield.or_else(||
-//                                                                     c.parent.and_then(|c|
-//                                                                         c.metafield.or_else(||
-//                                                                             c.parent.and_then(|c|
-//                                                                                 c.metafield.or_else(||
-//                                                                                     c.parent.and_then(|c|
-//                                                                                         c.metafield.or_else(||
-//                                                                                             c.parent.and_then(|c|
-//                                                                                                 c.metafield.or_else(||
-//                                                                                                     c.parent.and_then(|c|
-//                                                                                                         c.metafield
-//                                                                                                     )
-//                                                                                                 )
-//                                                                                             )
-//                                                                                         )
-//                                                                                     )
-//                                                                                 )
-//                                                                             )
-//                                                                         )
-//                                                                     )
-//                                                                 )
-//                                                             )
-//                                                         )
-//                                                     )
-//                                                 )
-//                                             )
-//                                         )
-//                                     )
-//                                 )
-//                             )
-//                         )
-//                     )
-//                 )
-//             )
-//         )
-//     )

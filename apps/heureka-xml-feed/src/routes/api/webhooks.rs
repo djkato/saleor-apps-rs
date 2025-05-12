@@ -5,8 +5,8 @@ use axum::{
 use saleor_app_sdk::{
     headers::{SALEOR_API_URL_HEADER, SALEOR_EVENT_HEADER},
     webhooks::{
-        utils::{get_webhook_event_type, EitherWebhookType},
         AsyncWebhookEventType,
+        utils::{EitherWebhookType, get_webhook_event_type},
     },
 };
 
@@ -15,12 +15,12 @@ use tracing::{debug, info, trace};
 use crate::{
     app::AppState,
     error_template::AxumError,
-    queries::event_products_updated::{
+    queries::products_variants_categories::{
         CategoryCreated, CategoryDeleted, CategoryUpdated, ProductCreated, ProductDeleted,
         ProductUpdated, ProductVariantCreated, ProductVariantDeleted, ProductVariantUpdated,
         ShippingZoneCreated, ShippingZoneDeleted, ShippingZoneUpdated,
     },
-    server::task_handler::Event,
+    server::event_handler::Event,
 };
 
 pub async fn webhooks(

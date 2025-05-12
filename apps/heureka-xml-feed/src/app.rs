@@ -192,7 +192,7 @@ pub struct AppState {
     pub manifest: saleor_app_sdk::manifest::AppManifest,
     pub target_channel: String,
     #[cfg(feature = "ssr")]
-    pub task_queue_sender: tokio::sync::mpsc::Sender<crate::server::task_handler::Event>,
+    pub task_queue_sender: tokio::sync::mpsc::Sender<crate::server::event_handler::Event>,
     #[cfg(feature = "ssr")]
     pub saleor_app: std::sync::Arc<tokio::sync::Mutex<saleor_app_sdk::SaleorApp>>,
     #[cfg(feature = "ssr")]

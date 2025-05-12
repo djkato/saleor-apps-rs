@@ -1,22 +1,26 @@
 <a href='https://ko-fi.com/A0A8Q3SVZ' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi4.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
-This repo contains the following members:
+# Repo members
 
-| Crate                                                                                                     | Description                                                                                         |
-| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [**sdk**](https://crates.io/crates/saleor-app-sdk)                                                        | Types and utilities for making Saleor Apps                                                          |
-| [**app-template**](https://github.com/djkato/saleor-apps-rs/tree/master/app-template)                     | Simple template for making Saleor apps using axum                                                   |
-| [**app-template-ui**](https://github.com/djkato/saleor-apps-rs/tree/master/app-template-ui)               | Advanced template for Saleor apps that work inside the Dashboard, using Leptos (WASM)               |
-| [**sitemap-generator**](https://github.com/djkato/saleor-apps-rs/tree/master/sitemap-generator)           | Saleor App for keeping sitemap.xml uptodate                                                         |
-| [**simple-payment-gateway**](https://github.com/djkato/saleor-apps-rs/tree/master/simple-payment-gateway) | Saleor App that adds payment methods: Cash on delivery, Cash on warehouse pickup, bank tranfer etc. |
-| [**bulk-price-manipulator**](https://github.com/djkato/saleor-apps-rs/tree/master/bulk-price-manipulator) | Saleor App which Runs a user defined expression to change all variant prices                        |
+| Crate                                                                                                     | Description                                                                                              | License                    | Price | % done |
+| --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------- | ----- | ------ |
+| [**sdk**](https://crates.io/crates/saleor-app-sdk)                                                        | Types and utilities for making Saleor Apps                                                               | MIT / Apache 2.0           | FOSS  | 90 %   |
+| [**app-template**](https://github.com/djkato/saleor-apps-rs/tree/master/app-template)                     | Simple template for making Saleor apps using axum                                                        | MIT / Apache 2.0           | FOSS  | 100 %  |
+| [**app-template-ui**](https://github.com/djkato/saleor-apps-rs/tree/master/app-template-ui)               | Advanced template for Saleor apps that work inside the Dashboard, using Leptos (WASM)                    | MIT / Apache 2.0           | FOSS  | 80 %   |
+| [**sitemap-generator**](https://github.com/djkato/saleor-apps-rs/tree/master/sitemap-generator)           | Creates and keeps sitemap.txt upto date, no xml support                                                  | PolyForm-Noncommercial-1.0 | 20 €  | 100 %  |
+| [**simple-payment-gateway**](https://github.com/djkato/saleor-apps-rs/tree/master/simple-payment-gateway) | Adds payment methods: Cash on delivery, Cash on warehouse pickup, bank tranfer etc.                      | PolyForm-Noncommercial-1.0 | 5 €   | 100 %  |
+| [**bulk-price-manipulator**](https://github.com/djkato/saleor-apps-rs/tree/master/bulk-price-manipulator) | Runs a user defined expression to change all variant prices                                              | PolyForm-Noncommercial-1.0 | 10 €  | 100 %  |
+| [**heureka-xml-feed**](https://github.com/djkato/saleor-apps-rs/tree/master/heureka-xml-feed)             | Generator for XML Heureka product feed 2.0                                                               | PolyForm-Noncommercial-1.0 | 100 € | 70 %   |
+| [**order-analytics**](https://github.com/djkato/saleor-apps-rs/tree/master/order-analytics)               | App with API for order analytics: frequently bought together, best sellers, most bought alternatives etc | PolyForm-Noncommercial-1.0 | 50 €  | 20 %   |
+
+[How do I pay?]()
 
 # Using the apps
 
 To use on bare-metal, clone this repo and just run build and run the apps.
 
 To use with Docker/k8s, you can find prebuilt docker images on the right sidebar next to the code tree under "Packages".
-Simply add the package to your `docker-compose.yml`, for example check `docker-compose.yml` file in this repo. 
+Simply add the package to your `docker-compose.yml`, for example check `docker-compose.yml` file in this repo.
 
 and set all necessary env variables according to the `env.example` file.
 
@@ -55,7 +59,9 @@ Each workspace member has it's license in it's own directory, mentioned in `Carg
 ### TL;DR:
 
 - saleor-app-sdk, saleor-app-template and the root structure fall under either MIT or Apache 2.0 at your convenience.
-- Rest of the apps in this repo fall under `PolyForm-Noncommercial-1.0`. If you want to use my apps commercially, each app costs 10€ (or voluntarily more). Upon payment/donation you are allowed to use the given app commercially.
+- Rest of the apps in this repo fall under `PolyForm-Noncommercial-1.0`. If you want to use my apps commercially, each app costs at least what's written in the [repo members](#repo-members) (or voluntarily more). Upon payment/donation you are allowed to use the given app commercially.
+
+To pay, use either Kofi or github sponsors. If you want to donate / pay directly, email me :)
 
 ## Docker images
 

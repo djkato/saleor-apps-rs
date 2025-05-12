@@ -1,5 +1,5 @@
 #[cfg(feature = "ssr")]
-use crate::server::task_handler;
+use crate::server::event_handler;
 #[cfg(feature = "ssr")]
 use axum::response::{IntoResponse, Response};
 #[cfg(feature = "ssr")]
@@ -29,7 +29,7 @@ pub enum AxumError {
     #[error("Internal server error with APL, `{0}`")]
     AplError(#[from] AplError),
     #[error("Failed sending task to task handler, `{0}`")]
-    SendError(#[from] SendError<task_handler::Event>),
+    SendError(#[from] SendError<event_handler::Event>),
 }
 
 // Tell axum how to convert `AppError` into a response.

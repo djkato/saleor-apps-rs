@@ -15,16 +15,13 @@ pub mod schema;
 #[cfg(test)]
 pub mod tests;
 
-#[derive(Debug, Clone)]
-pub struct Error(String);
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum Error {
+    #[error("XML failed to validate:\n{0}")]
+    XmlValidationError(String),
+    #[error("XML failed to serialize, {0}")]
+    SerializeError(#[from] quick_xml::SeError),
 }
-
-impl std::error::Error for Error {}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
@@ -37,12 +34,20 @@ pub struct Shop {
 }
 
 impl Shop {
-    pub fn validate(&self) -> Result<(), Error> {
+    /// Serializes to XML, and validates against Heureka schema before returning
+    pub fn try_to_xml(&self) -> Result<String, Error> {
+        let xml = self.to_xml()?;
+        validate_xml(&xml)?;
+        Ok(xml)
+    }
+
+    /// Serializes to XML, doesn't verify if it follows Heureka feed 2.0 XSD schema
+    pub fn to_xml(&self) -> Result<String, Error> {
         let mut buf = String::new();
         let mut s = quick_xml::se::Serializer::new(&mut buf);
         s.indent(' ', 4);
-        self.serialize(s).unwrap();
-        Ok(validate_xml(&buf)?)
+        self.serialize(s)?;
+        Ok(buf)
     }
 }
 

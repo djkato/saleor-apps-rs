@@ -209,6 +209,16 @@ pub struct CategoryCreated {
 
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct Category {
+    pub parent: Option<Category2>,
+    pub name: String,
+    pub id: cynic::Id,
+    #[arguments(key: "heureka_categorytext")]
+    pub metafield: Option<String>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
+#[cynic(graphql_type = "Category")]
+pub struct Category2 {
     pub name: String,
     pub id: cynic::Id,
     #[arguments(key: "heureka_categorytext")]

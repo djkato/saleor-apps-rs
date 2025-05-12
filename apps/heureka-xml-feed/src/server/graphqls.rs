@@ -1,6 +1,6 @@
 use super::event_handler::EventHandlerError;
 use crate::queries::products_variants_categories::{
-    Category, GetCategoryParent, GetCategoryParentVariables, GetProductsInitial,
+    Category, Category2, GetCategoryParent, GetCategoryParentVariables, GetProductsInitial,
     GetProductsInitialVariables, GetProductsNext, GetProductsNextVariables, Product,
 };
 use cynic::{QueryBuilder, http::SurfExt};
@@ -100,20 +100,37 @@ pub async fn get_category_parents(
         &category.id.inner(),
     );
 
-    let res = surf::post(saleor_api_url)
-        .header("authorization-bearer", token)
-        .run_graphql(GetCategoryParent::build(GetCategoryParentVariables {
-            id: &category.id,
-        }))
-        .await?;
+    let mut all_parents = vec![];
+    let mut parent = Some(Category2 {
+        name: category.name.clone(),
+        id: category.id.clone(),
+        metafield: category.metafield.clone(),
+    });
 
-    if let Some(e) = res.errors {
-        for error in &e {
-            error!("Errors during graphql, {:?}", error.message);
+    while let Some(curr_category) = parent {
+        let res = surf::post(saleor_api_url)
+            .header("authorization-bearer", token)
+            .run_graphql(GetCategoryParent::build(GetCategoryParentVariables {
+                id: &curr_category.clone().id,
+            }))
+            .await?;
+
+        if let Some(e) = res.errors {
+            for error in &e {
+                error!("Errors during graphql, {:?}", error.message);
+            }
+            for error in e {
+                return Err(error.into());
+            }
         }
-        for error in e {
-            return Err(error.into());
+        if let Some(data) = res.data
+            && let Some(category) = data.category
+        {
+            all_parents.push(category.clone());
+            parent = category.parent;
+            continue;
         }
+        parent = None;
     }
-    todo!()
+    Ok(all_parents)
 }

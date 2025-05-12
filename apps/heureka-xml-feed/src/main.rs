@@ -31,14 +31,14 @@ async fn main() -> Result<(), std::io::Error> {
     use fallback::file_and_error_handler;
     use leptos::{config::get_configuration, prelude::provide_context};
     use leptos_axum::{LeptosRoutes, generate_route_list};
-    use queries::event_products_updated::EVENTS_QUERY;
+    use queries::products_variants_categories::EVENTS_QUERY;
     use saleor_app_sdk::webhooks::{AsyncWebhookEventType, WebhookManifestBuilder};
     use saleor_app_sdk::{
         SaleorApp, cargo_info,
         config::Config,
         manifest::{AppManifestBuilder, AppPermission},
     };
-    use server::task_handler::EventHandler;
+    use server::event_handler::EventHandler;
     use std::sync::Arc;
     use surrealdb::engine::any;
     use tokio::sync::Mutex;

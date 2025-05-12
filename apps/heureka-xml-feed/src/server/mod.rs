@@ -3,6 +3,7 @@ use std::{
     str::FromStr,
 };
 
+use graphqls::get_category_parents;
 use heureka_xml_feed::{Delivery, Shop, ShopItem};
 use rust_decimal::{Decimal, prelude::FromPrimitive};
 use serde::{Serialize, de::DeserializeOwned};
@@ -24,63 +25,6 @@ pub async fn try_shop_from_db(
     url_template: String,
     settings: AppSettings,
 ) -> Result<Shop, TryIntoShopError> {
-    let products: Vec<Product> = db.select("product").await?;
-
-    let mut shopitems: Vec<ShopItem> = vec![];
-    for mut product in products {
-        let variants: Vec<ProductVariant2> = db
-            .query(format!(
-                "SELECT * FROM variant WHERE product:{}<-varies<-variant",
-                product.id.inner().to_owned()
-            ))
-            .await?
-            .take(0)?;
-
-        let categories: Vec<Category> = db
-            .query(format!(
-                "SELECT * FROM category WHERE product:{}<-categorises<-category LIMIT 1",
-                product.id.inner().to_owned()
-            ))
-            .await?
-            .take(0)?;
-
-        let mut category = categories.into_iter().nth(0);
-
-        if let Some(base_category) = &mut category {
-            let mut parent_category: Option<Category> = db
-                .query(format!(
-                    "SELECT * FROM category WHERE category:{}<-parents<-category",
-                    base_category.id.inner().to_owned()
-                ))
-                .await?
-                .take(0)?;
-
-            while let Some(category) = parent_category {
-                parent_category = db
-                    .query(format!(
-                        "SELECT * FROM category WHERE category:{}<-parents<-category",
-                        category.id.inner().to_owned()
-                    ))
-                    .await?
-                    .take(0)?;
-            }
-        }
-        // variants and categories that are present with product in db aren't being updated, only
-        // the tables are. Just cba to strip the db of these parts
-        product.category = category;
-        product.variants = match variants.is_empty() {
-            true => None,
-            false => Some(variants),
-        };
-        shopitems.append(&mut try_shopitem_from_product(
-            product.clone(),
-            deliveries.clone(),
-            url_template.clone(),
-            &product,
-            settings.clone(),
-        )?);
-    }
-
     todo!()
 }
 pub fn try_shopitem_from_variant<'a, T: Serialize>(
@@ -273,12 +217,20 @@ pub enum TryUrlFromTemplateError {
     UrlParseError(#[from] url::ParseError),
 }
 
-pub fn get_category_text_from_product(product: Product) -> Option<String> {
+pub async fn get_category_text_from_product(
+    product: Product,
+    saleor_api_url: &str,
+    token: &str,
+) -> Option<String> {
     if let Some(c) = product.category {
         match c.metafield {
             Some(val) => return Some(val),
-            //TODO: Create a while loop query for parent category till maybe one is found
-            None => return None,
+            None => {
+                let all_parents = get_category_parents(&c, saleor_api_url, token).await.ok();
+                return all_parents
+                    .map(|categories| categories.into_iter().find_map(|c| c.metafield))
+                    .flatten();
+            }
         }
     }
     None

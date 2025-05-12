@@ -41,7 +41,7 @@ def validate(schema, xml):
             .extract()
             .unwrap();
         if let Some(e) = validation_result {
-            return Err(Error(e));
+            return Err(Error::XmlValidationError(e));
         }
         Ok(())
     })

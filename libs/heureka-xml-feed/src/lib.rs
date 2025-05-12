@@ -4,7 +4,7 @@ use crate::tests::UrlFaker;
 use fake::Rng;
 #[cfg(test)]
 use fake::{Dummy, Fake, faker::lorem::en::Word, faker::lorem::en::Words, faker::name::en::Name};
-use schema::{XmlSchemaValidationError, validate_xml};
+use schema::validate_xml;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use std::str::FromStr;
@@ -14,6 +14,17 @@ use url::Url;
 pub mod schema;
 #[cfg(test)]
 pub mod tests;
+
+#[derive(Debug, Clone)]
+pub struct Error(String);
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for Error {}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[cfg_attr(test, derive(Dummy))]
@@ -26,7 +37,7 @@ pub struct Shop {
 }
 
 impl Shop {
-    pub fn validate(&self) -> Result<(), XmlSchemaValidationError> {
+    pub fn validate(&self) -> Result<(), Error> {
         let mut buf = String::new();
         let mut s = quick_xml::se::Serializer::new(&mut buf);
         s.indent(' ', 4);

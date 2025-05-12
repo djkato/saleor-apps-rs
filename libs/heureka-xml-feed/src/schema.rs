@@ -1,5 +1,4 @@
-use std::{error::Error, fmt::Display};
-
+use super::Error;
 use pyo3::{
     Python,
     ffi::c_str,
@@ -8,17 +7,7 @@ use pyo3::{
 
 const HEUREKA_FEED_SCHEMA_2: &str = include_str!("../heureka-feed-2.0.xsd");
 
-#[derive(Debug, Clone)]
-pub struct XmlSchemaValidationError(String);
-
-impl Display for XmlSchemaValidationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-impl Error for XmlSchemaValidationError {}
-
-pub fn validate_xml(xml: &str) -> Result<(), XmlSchemaValidationError> {
+pub fn validate_xml(xml: &str) -> Result<(), Error> {
     Python::with_gil(|py| {
         pyo3::prepare_freethreaded_python();
         let activators = PyModule::from_code(
@@ -52,7 +41,7 @@ def validate(schema, xml):
             .extract()
             .unwrap();
         if let Some(e) = validation_result {
-            return Err(XmlSchemaValidationError(e));
+            return Err(Error(e));
         }
         Ok(())
     })

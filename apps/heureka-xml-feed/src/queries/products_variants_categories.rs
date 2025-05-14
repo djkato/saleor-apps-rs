@@ -1,7 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[cynic::schema("saleor")]
-mod schema {}
+use super::{query_shipping_details::ShippingZone, schema};
 
 #[derive(cynic::QueryVariables, Debug, Clone)]
 pub struct GetProductsNextVariables<'a> {
@@ -38,32 +37,6 @@ pub struct ShippingZoneDeleted {
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct ShippingZoneCreated {
     pub shipping_zone: Option<ShippingZone>,
-}
-
-#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
-pub struct ShippingZone {
-    pub id: cynic::Id,
-    #[arguments(key: "heureka_courierid")]
-    pub metafield: Option<String>,
-    pub shipping_methods: Option<Vec<ShippingMethodType>>,
-}
-
-#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
-pub struct ShippingMethodType {
-    pub minimum_order_weight: Option<Weight>,
-    pub maximum_order_weight: Option<Weight>,
-    pub channel_listings: Option<Vec<ShippingMethodChannelListing>>,
-}
-
-#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
-pub struct Weight {
-    pub value: f64,
-    pub unit: WeightUnitsEnum,
-}
-
-#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
-pub struct ShippingMethodChannelListing {
-    pub price: Option<Money>,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
@@ -250,18 +223,52 @@ pub enum ThumbnailFormatEnum {
     Webp,
 }
 
-#[derive(cynic::Enum, Clone, Copy, Debug)]
-pub enum WeightUnitsEnum {
-    G,
-    Lb,
-    Oz,
-    Kg,
-    Tonne,
-}
-
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "JSONString")]
-pub struct Jsonstring(pub String);
+pub struct Jsonstring(pub EditorJsJson);
+
+impl ToString for Jsonstring {
+    fn to_string(&self) -> String {
+        let mut out = String::new();
+        for block in &self.0.blocks {
+            out = out
+                + "\n"
+                + &block.data.text.clone().unwrap_or(
+                    //If block has items instead of text, it's likely a list. What kind?
+                    //I don't care :) you get dashes not numbers
+                    block
+                        .data
+                        .items
+                        .clone()
+                        .map(|mut i| {
+                            i.first_mut().and_then(|s| {
+                                *s = format!("- {s}");
+                                Some(s)
+                            });
+                            i.join("\n")
+                        })
+                        .unwrap_or("".to_string()),
+                );
+        }
+        out
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct EditorJsJson {
+    pub blocks: Vec<EditorJsBlock>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct EditorJsBlock {
+    pub data: EditorJsData,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct EditorJsData {
+    pub text: Option<String>,
+    pub items: Option<Vec<String>>,
+}
 
 pub const EVENTS_QUERY: &str = r#"
 subscription QueryProductsChanged {

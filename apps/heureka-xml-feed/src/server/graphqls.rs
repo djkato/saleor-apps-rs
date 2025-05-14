@@ -1,10 +1,47 @@
 use super::event_handler::EventHandlerError;
-use crate::queries::products_variants_categories::{
-    Category, Category2, GetCategoryParent, GetCategoryParentVariables, GetProductsInitial,
-    GetProductsInitialVariables, GetProductsNext, GetProductsNextVariables, Product,
+use crate::queries::{
+    products_variants_categories::{
+        Category, Category2, GetCategoryParent, GetCategoryParentVariables, GetProductsInitial,
+        GetProductsInitialVariables, GetProductsNext, GetProductsNextVariables, Product,
+    },
+    query_shipping_details::{DefaultShippingZone, DefaultShippingZoneVariables, ShippingZone},
 };
 use cynic::{QueryBuilder, http::SurfExt};
 use tracing::{debug, error, info};
+
+pub async fn get_shipping_zones(
+    saleor_api_url: &str,
+    token: &str,
+    channel: &str,
+    shipping_zone_ids: &Vec<cynic::Id>,
+) -> Result<Vec<ShippingZone>, EventHandlerError> {
+    let mut zones = vec![];
+    for id in shipping_zone_ids {
+        let res = surf::post(saleor_api_url)
+            .header("authorization-bearer", token)
+            .run_graphql(DefaultShippingZone::build(DefaultShippingZoneVariables {
+                channel,
+                id,
+            }))
+            .await?;
+
+        if let Some(e) = res.errors {
+            for error in &e {
+                error!("Errors during graphql, {:?}", error.message);
+            }
+            for error in e {
+                return Err(error.into());
+            }
+        }
+
+        if let Some(data) = res.data
+            && let Some(zone) = data.shipping_zone
+        {
+            zones.push(zone);
+        }
+    }
+    Ok(zones)
+}
 
 pub async fn get_all_products(
     saleor_api_url: &str,

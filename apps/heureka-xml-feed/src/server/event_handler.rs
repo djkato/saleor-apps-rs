@@ -1,25 +1,33 @@
 use crate::{
     app::{AppSettings, AppState},
-    queries::products_variants_categories::{
-        Category, CategoryCreated, CategoryDeleted, CategoryUpdated, GetCategoryParent,
-        GetCategoryParentVariables, GetProductsInitial, GetProductsInitialVariables,
-        GetProductsNext, GetProductsNextVariables, Product, ProductCreated, ProductDeleted,
-        ProductUpdated, ProductVariant, ProductVariant2, ProductVariantCreated,
-        ProductVariantDeleted, ProductVariantUpdated, ShippingZone, ShippingZoneCreated,
-        ShippingZoneDeleted, ShippingZoneUpdated,
+    queries::{
+        products_variants_categories::{
+            Category, CategoryCreated, CategoryDeleted, CategoryUpdated, GetCategoryParent,
+            GetCategoryParentVariables, GetProductsInitial, GetProductsInitialVariables,
+            GetProductsNext, GetProductsNextVariables, Product, ProductCreated, ProductDeleted,
+            ProductUpdated, ProductVariant, ProductVariant2, ProductVariantCreated,
+            ProductVariantDeleted, ProductVariantUpdated, ShippingZoneCreated, ShippingZoneDeleted,
+            ShippingZoneUpdated,
+        },
+        query_shipping_details::ShippingZone,
     },
     server::{
-        clear_relations_categorises, clear_relations_parents_in, clear_relations_parents_out,
-        clear_relations_varies,
-        graphqls::{get_all_products, get_category_parents},
+        graphqls::{get_all_products, get_category_parents, get_shipping_zones},
+        surrealdbs::{
+            get_product_related_categories, get_product_related_variants,
+            save_product_and_category_to_db, save_shipping_zone_to_db, save_variants_to_db,
+        },
+        try_shopitem_from_product,
     },
 };
 use cynic::{GraphQlError, QueryBuilder, http::SurfExt};
-use heureka_xml_feed::Shop;
+use heureka_xml_feed::{Shop, ShopItem};
 use saleor_app_sdk::{AuthData, apl::AplError};
 use surrealdb::{Surreal, engine::any::Any};
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 use tracing::{debug, error, info, warn};
+
+use super::TryIntoShopItemError;
 
 pub struct EventHandler {
     receiver: Receiver<Event>,
@@ -171,6 +179,10 @@ pub enum EventHandlerError {
     SurrealDB(#[from] surrealdb::Error),
     #[error("Failed surrealdb query: {0}")]
     HeurekaXml(#[from] heureka_xml_feed::Error),
+    #[error("Failed turning product into ShopItem, {0}")]
+    TryIntoShopItem(#[from] TryIntoShopItemError),
+    #[error("Shipping zones misconfigured, {0}")]
+    ShippingZoneMisconfigured(String),
 }
 
 impl From<surf::Error> for EventHandlerError {
@@ -200,12 +212,28 @@ impl EventHandler {
             .await
             .map_err(|e| vec![e.into()])?;
 
+        let shipping_zones = get_shipping_zones(
+            &ev.saleor_api_url,
+            &token.token,
+            &self.settings.channel_slug,
+            &self.settings.shipping_zone_ids,
+        )
+        .await
+        .map_err(|e| vec![e])?;
+
         let all_products = get_all_products(&ev.saleor_api_url, &token.token)
             .await
-            .map_err(|e| vec![e.into()])?;
+            .map_err(|e| vec![e])?;
 
         /* SAVE THEM TO DB */
         let db = &mut self.db_handle;
+
+        for zone in shipping_zones {
+            if let Err(e) = save_shipping_zone_to_db(&zone, db).await {
+                errors.push(e);
+            }
+        }
+
         for product in all_products {
             if let Err(e) = save_product_and_category_to_db(&product, &ev, &token, db).await {
                 errors.push(e);
@@ -228,15 +256,17 @@ impl EventHandler {
         debug!("Database regenerated!");
         debug!("Validating XML from DB");
 
-        let (_, mut db_to_xml_errors) = self.db_to_xml().await;
-        if !db_to_xml_errors.is_empty() {
-            error!("Errors during db_to_xml(), {:?}", &db_to_xml_errors);
-            errors.append(&mut db_to_xml_errors);
-        }
-
-        match errors.is_empty() {
-            true => Ok(()),
-            false => Err(errors),
+        let xml = self.db_to_xml().await;
+        match xml {
+            Err(mut e) => match e.is_empty() {
+                true => Ok(()),
+                false => {
+                    error!("Errors during db_to_xml(), {:?}", &e);
+                    errors.append(&mut e);
+                    Err(errors)
+                }
+            },
+            Ok(_) => Ok(()),
         }
     }
 
@@ -260,174 +290,57 @@ impl EventHandler {
         info!("called!")
     }
 
-    async fn db_to_xml(&self) -> (String, Vec<EventHandlerError>) {
+    async fn db_to_xml(&mut self) -> Result<String, Vec<EventHandlerError>> {
+        let mut errors = vec![];
+
         let db = &mut self.db_handle;
-        let products: Vec<Product> = db.select("product").await?;
+        let products: Vec<Product> = db
+            .select("product")
+            .await
+            .map_err(|e| vec![EventHandlerError::SurrealDB(e)])?;
 
         let mut shopitems: Vec<ShopItem> = vec![];
+
         for mut product in products {
-            let variants: Vec<ProductVariant2> = db
-                .query(format!(
-                    "SELECT * FROM variant WHERE product:{}<-varies<-variant",
-                    product.id.inner().to_owned()
-                ))
-                .await?
-                .take(0)?;
+            let variants: Vec<ProductVariant2> =
+                match get_product_related_variants(db, &product).await {
+                    Ok(variants) => match variants.is_empty() {
+                        false => variants,
+                        true => {
+                            errors.push(EventHandlerError::ProductMissingRelation(
+                                MissingRelation::Variant,
+                            ));
+                            continue;
+                        }
+                    },
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
+                    }
+                };
 
-            let categories: Vec<Category> = db
-                .query(format!(
-                    "SELECT * FROM category WHERE product:{}<-categorises<-category LIMIT 1",
-                    product.id.inner().to_owned()
-                ))
-                .await?
-                .take(0)?;
-
-            let mut category = categories.into_iter().nth(0);
-
-            if let Some(base_category) = &mut category {
-                let mut parent_category: Option<Category> = db
-                    .query(format!(
-                        "SELECT * FROM category WHERE category:{}<-parents<-category",
-                        base_category.id.inner().to_owned()
-                    ))
-                    .await?
-                    .take(0)?;
-
-                while let Some(category) = parent_category {
-                    parent_category = db
-                        .query(format!(
-                            "SELECT * FROM category WHERE category:{}<-parents<-category",
-                            category.id.inner().to_owned()
-                        ))
-                        .await?
-                        .take(0)?;
+            let categories = match get_product_related_categories(db, &product).await {
+                Ok(categories) => match categories.is_empty() {
+                    false => categories,
+                    true => {
+                        errors.push(EventHandlerError::ProductMissingRelation(
+                            MissingRelation::Category,
+                        ));
+                        continue;
+                    }
+                },
+                Err(e) => {
+                    errors.push(e);
+                    continue;
                 }
-            }
-            // variants and categories that are present with product in db aren't being updated, only
-            // the tables are. Just cba to strip the db of these parts
-            product.category = category;
-            product.variants = match variants.is_empty() {
-                true => None,
-                false => Some(variants),
             };
-            shopitems.append(&mut try_shopitem_from_product(
-                product.clone(),
-                deliveries.clone(),
-                url_template.clone(),
-                &product,
-                settings.clone(),
-            )?);
+
+            //should be there, was checked above
+            product.category = categories.get(0).cloned();
+            product.variants = Some(variants);
         }
+        todo!()
     }
-}
-
-async fn save_product_and_category_to_db(
-    product: &Product,
-    ev: &RegenerateEvent,
-    token: &AuthData,
-    db: &mut Surreal<Any>,
-) -> Result<(), EventHandlerError> {
-    debug!(
-        "inserting product {}:{} into db",
-        &product.name,
-        &product.id.inner()
-    );
-    let _: Option<Product> = db
-        .upsert(("product", product.id.inner().to_owned()))
-        .content(product.clone())
-        .await?;
-
-    let category = product
-        .clone()
-        .category
-        .ok_or(EventHandlerError::ProductMissingRelation(
-            MissingRelation::Category,
-        ))?;
-
-    let all_category_parents =
-        get_category_parents(&category, &ev.saleor_api_url, &token.token).await?;
-
-    for parent in all_category_parents {
-        debug!(
-            "inserting category {}:{} into db",
-            &parent.name,
-            &parent.id.inner()
-        );
-        let _: Option<Category> = db
-            .upsert(("category", category.id.inner()))
-            .content(category.clone())
-            .await?;
-
-        clear_relations_categorises(db, category.id.inner()).await?;
-
-        debug!(
-            "relating category {}:{} -> categorises -> product {}:{}",
-            &category.name,
-            &category.id.inner(),
-            &product.name,
-            &product.id.inner()
-        );
-
-        db.query(format!(
-            "RELATE category:{}->categorises->product:{}",
-            category.id.inner().to_owned(),
-            product.id.inner().to_owned()
-        ))
-        .await?;
-
-        clear_relations_parents_in(db, category.id.inner()).await?;
-        clear_relations_parents_out(db, parent.id.inner()).await?;
-
-        debug!(
-            "relating category {}:{} -> parents -> category {}:{}",
-            &category.name,
-            &category.id.inner(),
-            &parent.name,
-            &parent.id.inner()
-        );
-
-        db.query(format!(
-            "RELATE category(parent):{} -> parents -> category:{}",
-            parent.id.inner().to_owned(),
-            category.id.inner().to_owned(),
-        ))
-        .await?;
-    }
-    Ok(())
-}
-
-async fn save_variants_to_db(
-    variant: &ProductVariant2,
-    db: &mut Surreal<Any>,
-    product: &Product,
-) -> Result<(), EventHandlerError> {
-    debug!(
-        "inserting variant {}:{}",
-        &variant.name,
-        &variant.id.inner(),
-    );
-    let _: Option<ProductVariant> = db
-        .upsert(("variant", variant.id.inner()))
-        .content(variant.clone())
-        .await?;
-
-    clear_relations_varies(db, variant.id.inner()).await?;
-
-    debug!(
-        "relating variant {}:{} -> varies -> product {}:{}",
-        &variant.name,
-        &variant.id.inner(),
-        &product.name,
-        &product.id.inner()
-    );
-
-    db.query(format!(
-        "RELATE variant:{}->varies->product:{}",
-        variant.id.inner().to_owned(),
-        product.id.inner().to_owned(),
-    ))
-    .await?;
-    Ok(())
 }
 
 enum AnyDeletedType {

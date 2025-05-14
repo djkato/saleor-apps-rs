@@ -18,84 +18,14 @@ use crate::{
 
 pub mod event_handler;
 pub mod graphqls;
-
-pub async fn try_shop_from_db(
-    db: Surreal<Any>,
-    deliveries: Vec<Delivery>,
-    url_template: String,
-    settings: AppSettings,
-) -> Result<Shop, TryIntoShopError> {
-    todo!()
-}
-pub fn try_shopitem_from_variant<'a, T: Serialize>(
-    v: ProductVariant,
-    deliveries: Vec<Delivery>,
-    url_template: String,
-    url_context: &T,
-    settings: AppSettings,
-) -> Result<ShopItem, TryIntoShopItemError> {
-    let media = v
-        .media
-        .clone()
-        .and_then(|m| Some(m.into_iter().map(|u| u.url).collect::<Vec<_>>()))
-        .ok_or(TryIntoShopItemError::MissingVariants)?;
-    let media = media
-        .split_first()
-        .ok_or(TryIntoShopItemError::MissingVariants)?;
-    Ok(ShopItem {
-        item_id: v.id.into_inner(),
-        url: Some(VariantUrl::from_template(url_template.clone(), url_context)?.0),
-        productname: v.name,
-        price_vat: v
-            .pricing
-            .and_then(|p| {
-                p.price
-                    .and_then(|p| Decimal::from_f32(p.gross.amount as f32))
-            })
-            .ok_or(TryIntoShopItemError::PricingMissingOrFailed)?,
-        vat: Some(settings.clone().tax_rate),
-        imgurl: Url::from_str(media.0)?,
-        imgurl_alternative: media
-            .1
-            .into_iter()
-            .map(|m| Url::from_str(m))
-            .collect::<Result<Vec<_>, _>>()?,
-        delivery: deliveries.clone(),
-        productno: v.sku,
-        //I don't care enough to parse it :)
-        description: v.product.clone().description.and_then(|d| Some(d.0)),
-        accessory: vec![],
-        param: vec![],
-        delivery_date: None,
-        dues: None,
-        ean: None,
-        extended_warranty: None,
-        gift: None,
-        gift_id: None,
-        heureka_cpc: None,
-        isbn: None,
-        item_type: None,
-        itemgroup_id: Some(v.product.id.inner().to_owned()),
-        manufacturer: None,
-        product: None,
-        special_service: vec![],
-        video_url: None,
-        categorytext: get_category_text_from_product(Product {
-            variants: None,
-            name: v.product.name,
-            description: None,
-            id: v.product.id,
-            category: v.product.category,
-        })
-        .unwrap_or("".to_owned()),
-    })
-}
+pub mod surrealdbs;
 
 pub fn try_shopitem_from_product<'a, T: Serialize>(
     product: Product,
+    variants: Vec<ProductVariant>,
     deliveries: Vec<Delivery>,
-    url_template: String,
-    url_context: &T,
+    heureka_categorytext: String,
+    variant_url: Url,
     settings: AppSettings,
 ) -> Result<Vec<ShopItem>, TryIntoShopItemError> {
     match product.clone().variants {
@@ -103,17 +33,19 @@ pub fn try_shopitem_from_product<'a, T: Serialize>(
         Some(variants) => {
             let mut shopitems: Vec<ShopItem> = vec![];
             for v in variants.into_iter() {
+                //I need firmt imgurl to be single, then rest in imgurl_alternative
                 let media = v
                     .media
                     .clone()
                     .and_then(|m| Some(m.into_iter().map(|u| u.url).collect::<Vec<_>>()))
-                    .ok_or(TryIntoShopItemError::MissingVariants)?;
+                    .ok_or(TryIntoShopItemError::MissingMedia)?;
                 let media = media
                     .split_first()
-                    .ok_or(TryIntoShopItemError::MissingVariants)?;
+                    .ok_or(TryIntoShopItemError::MissingMedia)?;
+
                 shopitems.push(ShopItem {
                     item_id: v.id.into_inner(),
-                    url: Some(VariantUrl::from_template(url_template.clone(), url_context)?.0),
+                    url: Some(variant_url.clone()),
                     productname: v.name,
                     price_vat: v
                         .pricing
@@ -131,10 +63,14 @@ pub fn try_shopitem_from_product<'a, T: Serialize>(
                         .collect::<Result<Vec<_>, _>>()?,
                     delivery: deliveries.clone(),
                     productno: v.sku,
-                    //I don't care enough to parse it :)
-                    description: product.clone().description.and_then(|d| Some(d.0)),
-                    categorytext: get_category_text_from_product(product.clone())
-                        .unwrap_or("".to_owned()),
+                    //TODO: please parse it somehow...
+                    description: product
+                        .clone()
+                        .description
+                        .and_then(|d| Some(d.to_string())),
+                    categorytext: heureka_categorytext.clone(),
+                    /*get_category_text_from_product(product.clone())
+                    .unwrap_or("".to_owned()),*/
                     accessory: vec![],
                     delivery_date: None,
                     dues: None,
@@ -234,44 +170,4 @@ pub async fn get_category_text_from_product(
         }
     }
     None
-}
-
-pub async fn clear_relations_varies(
-    db: &mut Surreal<Any>,
-    var_id: &str,
-) -> Result<(), surrealdb::Error> {
-    db.query("DELETE (SELECT * FROM varies WHERE in = $var_id);")
-        .bind(("var_id", var_id.to_owned()))
-        .await?;
-    Ok(())
-}
-
-pub async fn clear_relations_categorises(
-    db: &mut Surreal<Any>,
-    cat_id: &str,
-) -> Result<(), surrealdb::Error> {
-    db.query("DELETE (SELECT * FROM categorises WHERE in = $cat_id);")
-        .bind(("cat_id", cat_id.to_owned()))
-        .await?;
-    Ok(())
-}
-
-pub async fn clear_relations_parents_in(
-    db: &mut Surreal<Any>,
-    cat_id: &str,
-) -> Result<(), surrealdb::Error> {
-    db.query("DELETE (SELECT * FROM parents WHERE in = $cat_id);")
-        .bind(("cat_id", cat_id.to_owned()))
-        .await?;
-    Ok(())
-}
-
-pub async fn clear_relations_parents_out(
-    db: &mut Surreal<Any>,
-    cat_id: &str,
-) -> Result<(), surrealdb::Error> {
-    db.query("DELETE (SELECT * FROM parents WHERE out = $cat_id);")
-        .bind(("cat_id", cat_id.to_owned()))
-        .await?;
-    Ok(())
 }

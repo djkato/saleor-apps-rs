@@ -63,4 +63,14 @@ DEFINE FIELD in ON varies TYPE record<variant> ASSERT IF (SELECT * FROM varies W
 DEFINE FIELD out ON varies TYPE record<product> PERMISSIONS FULL;
 
 
+-- -----------------------------
+-- TABLE: shipping_zone
+-- -----------------------------
 
+DEFINE TABLE shipping_zone TYPE NORMAL SCHEMALESS PERMISSIONS NONE;
+
+-- -----------------------------
+-- TABLE: issues 
+-- -----------------------------
+
+DEFINE TABLE issues TYPE NORMAL SCHEMALESS PERMISSIONS NONE;

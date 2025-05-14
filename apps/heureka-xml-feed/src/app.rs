@@ -7,6 +7,7 @@ use leptos_meta::{MetaTags, provide_meta_context};
 use leptos_router::components::*;
 use leptos_router::params::Params;
 use leptos_router::*;
+use rust_decimal::Decimal;
 use saleor_app_sdk::bridge::action::{PayloadRedirect, PayloadRequestPermissions};
 use saleor_app_sdk::bridge::event::Event;
 use saleor_app_sdk::bridge::{AppBridge, dispatch_event, listen_to_events};
@@ -213,6 +214,12 @@ pub struct AppSettings {
     //eg. 23%
     #[serde(rename = "heureka_tax_rate")]
     pub tax_rate: String,
+    //TODO: Make sure it's comma separated
+    #[serde(rename = "heureka_saleor_shipping_zone_ids")]
+    pub shipping_zone_ids: Vec<cynic::Id>,
+    #[serde(rename = "heureka_shipping_zone_cod_price")]
+    pub shipping_price_cod: Option<Decimal>,
+    pub channel_slug: String,
 }
 
 #[cfg(feature = "ssr")]

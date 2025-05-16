@@ -12,6 +12,10 @@ use crate::{
 
 use super::event_handler::{EventHandlerError, RegenerateEvent};
 
+pub fn into_surreal_id(str: String) -> String {
+    str.chars().filter(|c| c.is_alphanumeric()).collect()
+}
+
 pub async fn save_issues(
     db: &mut Surreal<Any>,
     e: Vec<EventHandlerError>,
@@ -34,7 +38,7 @@ pub async fn get_product_related_variants(
     let variants: Vec<ProductVariant2> = db
         .query(format!(
             "SELECT * FROM variant WHERE product:{}<-varies<-variant",
-            product.id.inner().to_owned()
+            into_surreal_id(product.id.inner().to_owned())
         ))
         .await?
         .take(0)?;
@@ -48,7 +52,7 @@ pub async fn get_product_related_categories(
     let base_category: Option<Category> = db
         .query(format!(
             "SELECT * FROM category WHERE product:{}<-categorises<-category LIMIT 1",
-            product.id.inner().to_owned()
+            into_surreal_id(product.id.inner().to_owned())
         ))
         .await?
         .take(0)?;
@@ -62,7 +66,7 @@ pub async fn get_product_related_categories(
     let mut parent_category: Option<Category> = db
         .query(format!(
             "SELECT * FROM category WHERE category:{}<-parents<-category",
-            base_category.id.inner().to_owned()
+            into_surreal_id(base_category.id.inner().to_owned())
         ))
         .await?
         .take(0)?;
@@ -73,7 +77,7 @@ pub async fn get_product_related_categories(
         parent_category = db
             .query(format!(
                 "SELECT * FROM category WHERE category:{}<-parents<-category",
-                category.id.inner().to_owned()
+                into_surreal_id(category.id.inner().to_owned())
             ))
             .await?
             .take(0)?;
@@ -100,7 +104,10 @@ pub async fn save_shipping_zone_to_db(
     }
 
     let _: Option<ShippingZone> = db
-        .upsert(("shipping_zone", shipping_zone.id.inner().to_owned()))
+        .upsert((
+            "shipping_zone",
+            into_surreal_id(shipping_zone.id.inner().to_owned()),
+        ))
         .content(shipping_zone.clone())
         .await?;
 
@@ -119,7 +126,7 @@ pub async fn save_product_and_category_to_db(
         &product.id.inner()
     );
     let _: Option<Product> = db
-        .upsert(("product", product.id.inner().to_owned()))
+        .upsert(("product", into_surreal_id(product.id.inner().to_owned())))
         .content(product.clone())
         .await?;
 
@@ -140,7 +147,7 @@ pub async fn save_product_and_category_to_db(
             &parent.id.inner()
         );
         let _: Option<Category> = db
-            .upsert(("category", category.id.inner()))
+            .upsert(("category", into_surreal_id(category.id.inner().to_owned())))
             .content(category.clone())
             .await?;
 
@@ -156,8 +163,8 @@ pub async fn save_product_and_category_to_db(
 
         db.query(format!(
             "RELATE category:{}->categorises->product:{}",
-            category.id.inner().to_owned(),
-            product.id.inner().to_owned()
+            into_surreal_id(category.id.inner().to_owned()),
+            into_surreal_id(product.id.inner().to_owned())
         ))
         .await?;
 
@@ -174,8 +181,8 @@ pub async fn save_product_and_category_to_db(
 
         db.query(format!(
             "RELATE category(parent):{} -> parents -> category:{}",
-            parent.id.inner().to_owned(),
-            category.id.inner().to_owned(),
+            into_surreal_id(parent.id.inner().to_owned()),
+            into_surreal_id(category.id.inner().to_owned()),
         ))
         .await?;
     }
@@ -193,7 +200,7 @@ pub async fn save_variants_to_db(
         &variant.id.inner(),
     );
     let _: Option<ProductVariant> = db
-        .upsert(("variant", variant.id.inner()))
+        .upsert(("variant", into_surreal_id(variant.id.inner().to_owned())))
         .content(variant.clone())
         .await?;
 
@@ -209,8 +216,8 @@ pub async fn save_variants_to_db(
 
     db.query(format!(
         "RELATE variant:{}->varies->product:{}",
-        variant.id.inner().to_owned(),
-        product.id.inner().to_owned(),
+        into_surreal_id(variant.id.inner().to_owned()),
+        into_surreal_id(product.id.inner().to_owned()),
     ))
     .await?;
     Ok(())
@@ -221,7 +228,7 @@ pub async fn clear_relations_varies(
     var_id: &str,
 ) -> Result<(), surrealdb::Error> {
     db.query("DELETE (SELECT * FROM varies WHERE in = $var_id);")
-        .bind(("var_id", var_id.to_owned()))
+        .bind(("var_id", into_surreal_id(var_id.to_owned())))
         .await?;
     Ok(())
 }
@@ -231,7 +238,7 @@ pub async fn clear_relations_categorises(
     cat_id: &str,
 ) -> Result<(), surrealdb::Error> {
     db.query("DELETE (SELECT * FROM categorises WHERE in = $cat_id);")
-        .bind(("cat_id", cat_id.to_owned()))
+        .bind(("cat_id", into_surreal_id(cat_id.to_owned())))
         .await?;
     Ok(())
 }
@@ -241,7 +248,7 @@ pub async fn clear_relations_parents_in(
     cat_id: &str,
 ) -> Result<(), surrealdb::Error> {
     db.query("DELETE (SELECT * FROM parents WHERE in = $cat_id);")
-        .bind(("cat_id", cat_id.to_owned()))
+        .bind(("cat_id", into_surreal_id(cat_id.to_owned())))
         .await?;
     Ok(())
 }
@@ -251,7 +258,7 @@ pub async fn clear_relations_parents_out(
     cat_id: &str,
 ) -> Result<(), surrealdb::Error> {
     db.query("DELETE (SELECT * FROM parents WHERE out = $cat_id);")
-        .bind(("cat_id", cat_id.to_owned()))
+        .bind(("cat_id", into_surreal_id(cat_id.to_owned())))
         .await?;
     Ok(())
 }

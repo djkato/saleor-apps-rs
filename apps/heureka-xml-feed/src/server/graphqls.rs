@@ -13,7 +13,7 @@ pub async fn get_shipping_zones(
     saleor_api_url: &str,
     token: &str,
     channel: &str,
-    shipping_zone_ids: &Vec<cynic::Id>,
+    shipping_zone_ids: &Vec<String>,
 ) -> Result<Vec<ShippingZone>, EventHandlerError> {
     let mut zones = vec![];
     for id in shipping_zone_ids {
@@ -21,7 +21,7 @@ pub async fn get_shipping_zones(
             .header("authorization-bearer", token)
             .run_graphql(DefaultShippingZone::build(DefaultShippingZoneVariables {
                 channel,
-                id,
+                id: &cynic::Id::new(id.clone()),
             }))
             .await?;
 
@@ -45,13 +45,14 @@ pub async fn get_shipping_zones(
 
 pub async fn get_all_products(
     saleor_api_url: &str,
+    channel: &str,
     token: &str,
 ) -> Result<Vec<Product>, EventHandlerError> {
     let mut all_products = vec![];
     let res = surf::post(saleor_api_url)
         .header("authorization-bearer", token)
         .run_graphql(GetProductsInitial::build(GetProductsInitialVariables {
-            channel: "",
+            channel,
         }))
         .await?;
 
@@ -76,7 +77,9 @@ pub async fn get_all_products(
                 .map(|p| p.node)
                 .collect::<Vec<_>>(),
         );
-        next_cursor = products.page_info.end_cursor;
+        if products.page_info.has_next_page {
+            next_cursor = products.page_info.end_cursor;
+        }
     }
 
     debug!(
@@ -90,7 +93,7 @@ pub async fn get_all_products(
             .header("authorization-bearer", token)
             .run_graphql(GetProductsNext::build(GetProductsNextVariables {
                 after: cursor,
-                channel: "",
+                channel,
             }))
             .await?;
 

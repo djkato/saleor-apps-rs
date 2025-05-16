@@ -7,11 +7,9 @@ use leptos_meta::{MetaTags, provide_meta_context};
 use leptos_router::components::*;
 use leptos_router::params::Params;
 use leptos_router::*;
-use rust_decimal::Decimal;
 use saleor_app_sdk::bridge::action::{PayloadRedirect, PayloadRequestPermissions};
 use saleor_app_sdk::bridge::event::Event;
 use saleor_app_sdk::bridge::{AppBridge, dispatch_event, listen_to_events};
-use serde::{Deserialize, Serialize};
 
 #[derive(Params, PartialEq)]
 pub struct UrlAppParams {
@@ -181,6 +179,10 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 }
 
 #[cfg(feature = "ssr")]
+use rust_decimal::Decimal;
+#[cfg(feature = "ssr")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "ssr")]
 use surrealdb::Surreal;
 #[cfg(feature = "ssr")]
 use surrealdb::engine::any::Any;
@@ -210,7 +212,7 @@ pub struct AppSettings {
     //eg. 23%
     pub tax_rate: String,
     //TODO: Make sure it's comma separated
-    pub shipping_zone_ids: Vec<cynic::Id>,
+    pub shipping_zone_ids: Vec<String>,
     pub shipping_price_cod_extra: Option<Decimal>,
     pub is_shipping_cod: bool,
     pub channel_slug: String,

@@ -28,6 +28,11 @@ pub fn try_create_shopitem(
     variant_url: Url,
     tax_rate: String,
 ) -> Result<ShopItem, TryIntoShopItemError> {
+    let mut description = None;
+    if let Some(d) = product.description {
+        description = Some(d.to_string()?);
+    }
+
     //I need firmt imgurl to be single, then rest in imgurl_alternative
     let media = variant
         .media
@@ -58,10 +63,7 @@ pub fn try_create_shopitem(
             .collect::<Result<Vec<_>, _>>()?,
         delivery: deliveries.clone(),
         productno: variant.sku,
-        description: product
-            .clone()
-            .description
-            .and_then(|d| Some(d.to_string())),
+        description,
         categorytext: heureka_categorytext.clone(),
         /*get_category_text_from_product(product.clone())
         .unwrap_or("".to_owned()),*/
@@ -104,6 +106,8 @@ pub enum TryIntoShopItemError {
     MissingMedia,
     #[error("Failed converting media url from string, {0}")]
     UrlFromStrError(#[from] url::ParseError),
+    #[error("failed converting description from json to string, {0}")]
+    SerdeJson(#[from] serde_json::Error),
 }
 
 pub fn variant_url_from_template<'a, T: Serialize>(

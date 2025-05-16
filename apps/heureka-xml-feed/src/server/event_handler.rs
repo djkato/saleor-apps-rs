@@ -84,7 +84,7 @@ impl EventHandler {
 
     async fn listen(mut self) {
         while let Some(message) = self.receiver.recv().await {
-            debug!("received Event: {:?}", &message);
+            // debug!("received Event: {:?}", &message);
             match message {
                 Event::ProductCreated(product_created) => {
                     if let Some(product) = product_created.clone().product {
@@ -176,7 +176,7 @@ impl EventHandler {
                 }
                 Event::Unknown => (),
             }
-            debug!("Event succesfully handled");
+            info!("Event handled");
         }
     }
 }
@@ -205,6 +205,9 @@ pub enum EventHandlerError {
         "Product doesn't have a categorytext (products category and all it's parent categories have missing 'heureka_categorytext' metadata field), {0}"
     )]
     ProductMissingCategoryText(String),
+
+    #[error("failed converting description from json to string, {0}")]
+    SerdeJson(#[from] serde_json::Error),
 }
 
 impl From<surf::Error> for EventHandlerError {
@@ -243,9 +246,22 @@ impl EventHandler {
         .await
         .map_err(|e| vec![e])?;
 
-        let all_products = get_all_products(&ev.saleor_api_url, &token.token)
-            .await
-            .map_err(|e| vec![e])?;
+        debug!("collected {} shipping zones", shipping_zones.len());
+
+        if shipping_zones.is_empty() {
+            error!("No shipping zones collected, misconfigured env?");
+            return Err(vec![EventHandlerError::ShippingZoneMisconfigured(
+                "No shipping zones collected from graphql".to_owned(),
+            )]);
+        }
+
+        let all_products = get_all_products(
+            &ev.saleor_api_url,
+            &self.settings.channel_slug,
+            &token.token,
+        )
+        .await
+        .map_err(|e| vec![e])?;
 
         /* SAVE THEM TO DB */
         let db = &mut self.db_handle;

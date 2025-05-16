@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::server::TryIntoShopItemError;
+
 use super::{
     query_shipping_details::{ShippingZone, Weight},
     schema,
@@ -243,7 +245,7 @@ pub enum ThumbnailFormatEnum {
 
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "JSONString")]
-pub struct Jsonstring(pub EditorJsJson);
+pub struct Jsonstring(pub String);
 
 impl ProductVariant2 {
     pub fn get_weight(self, product: Product) -> Weight {
@@ -258,10 +260,13 @@ impl ProductVariant2 {
     }
 }
 
-impl ToString for Jsonstring {
-    fn to_string(&self) -> String {
+impl Jsonstring {
+    pub fn to_string(&self) -> Result<String, TryIntoShopItemError> {
         let mut out = String::new();
-        for block in &self.0.blocks {
+
+        let editorjs: EditorJsJson = serde_json::from_str(&self.0)?;
+
+        for block in editorjs.blocks {
             out = out
                 + "\n"
                 + &block.data.text.clone().unwrap_or(
@@ -281,22 +286,22 @@ impl ToString for Jsonstring {
                         .unwrap_or("".to_string()),
                 );
         }
-        out
+        Ok(out)
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct EditorJsJson {
+pub struct EditorJsJson {
     pub blocks: Vec<EditorJsBlock>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct EditorJsBlock {
+pub struct EditorJsBlock {
     pub data: EditorJsData,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct EditorJsData {
+pub struct EditorJsData {
     pub text: Option<String>,
     pub items: Option<Vec<String>>,
 }

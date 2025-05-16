@@ -12,6 +12,21 @@ use crate::{
 
 use super::event_handler::{EventHandlerError, RegenerateEvent};
 
+pub async fn save_issues(
+    db: &mut Surreal<Any>,
+    e: Vec<EventHandlerError>,
+) -> Result<(), EventHandlerError> {
+    let issues = e.into_iter().map(|e| e.to_string()).collect::<Vec<_>>();
+    let _: Vec<String> = db.insert("issue").content(issues).await?;
+    Ok(())
+}
+
+pub async fn get_shipping_zones(
+    db: &mut Surreal<Any>,
+) -> Result<Vec<ShippingZone>, EventHandlerError> {
+    Ok(db.select("shipping_zone").await?)
+}
+
 pub async fn get_product_related_variants(
     db: &mut Surreal<Any>,
     product: &Product,

@@ -2,29 +2,31 @@ use crate::{
     app::{AppSettings, AppState},
     queries::{
         products_variants_categories::{
-            Category, CategoryCreated, CategoryDeleted, CategoryUpdated, GetCategoryParent,
-            GetCategoryParentVariables, GetProductsInitial, GetProductsInitialVariables,
-            GetProductsNext, GetProductsNextVariables, Product, ProductCreated, ProductDeleted,
-            ProductUpdated, ProductVariant, ProductVariant2, ProductVariantCreated,
+            Category, CategoryCreated, CategoryDeleted, CategoryUpdated, Product, ProductCreated,
+            ProductDeleted, ProductUpdated, ProductVariant, ProductVariant2, ProductVariantCreated,
             ProductVariantDeleted, ProductVariantUpdated, ShippingZoneCreated, ShippingZoneDeleted,
             ShippingZoneUpdated,
         },
         query_shipping_details::ShippingZone,
     },
     server::{
-        graphqls::{get_all_products, get_category_parents, get_shipping_zones},
+        VariantUrlTemplateContext, find_category_text,
+        graphqls::{get_all_products, get_shipping_zones},
         surrealdbs::{
             get_product_related_categories, get_product_related_variants,
             save_product_and_category_to_db, save_shipping_zone_to_db, save_variants_to_db,
         },
-        try_shopitem_from_product,
+        try_create_shopitem, variant_url_from_template,
     },
 };
-use cynic::{GraphQlError, QueryBuilder, http::SurfExt};
+use cynic::GraphQlError;
 use heureka_xml_feed::{Shop, ShopItem};
-use saleor_app_sdk::{AuthData, apl::AplError};
+use saleor_app_sdk::apl::AplError;
 use surrealdb::{Surreal, engine::any::Any};
-use tokio::{sync::mpsc::Receiver, task::JoinHandle};
+use tokio::{
+    sync::mpsc::{Receiver, Sender},
+    task::JoinHandle,
+};
 use tracing::{debug, error, info, warn};
 
 use super::TryIntoShopItemError;
@@ -50,7 +52,14 @@ pub enum Event {
     ShippingZoneUpdated(ShippingZoneUpdated),
     ShippingZoneDeleted(ShippingZoneDeleted),
     Regenerate(RegenerateEvent),
+    CreateXML(CreateXMLEvent),
     Unknown,
+}
+
+#[derive(Debug, Clone)]
+pub struct CreateXMLEvent {
+    pub state: AppState,
+    pub sender: Sender<Option<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -156,6 +165,15 @@ impl EventHandler {
                         error!("{:?}", e);
                     };
                 }
+                Event::CreateXML(ev) => {
+                    _ = match self.db_to_xml().await {
+                        Ok(xml) => ev.sender.send(Some(xml)).await,
+                        Err(e) => {
+                            error!("{:?}", e);
+                            ev.sender.send(None).await
+                        }
+                    }
+                }
                 Event::Unknown => (),
             }
             debug!("Event succesfully handled");
@@ -183,6 +201,10 @@ pub enum EventHandlerError {
     TryIntoShopItem(#[from] TryIntoShopItemError),
     #[error("Shipping zones misconfigured, {0}")]
     ShippingZoneMisconfigured(String),
+    #[error(
+        "Product doesn't have a categorytext (products category and all it's parent categories have missing 'heureka_categorytext' metadata field), {0}"
+    )]
+    ProductMissingCategoryText(String),
 }
 
 impl From<surf::Error> for EventHandlerError {
@@ -291,9 +313,11 @@ impl EventHandler {
     }
 
     async fn db_to_xml(&mut self) -> Result<String, Vec<EventHandlerError>> {
+        debug!("Creating XML from DB data");
         let mut errors = vec![];
 
         let db = &mut self.db_handle;
+        debug!("Collecting DB products");
         let products: Vec<Product> = db
             .select("product")
             .await
@@ -301,7 +325,23 @@ impl EventHandler {
 
         let mut shopitems: Vec<ShopItem> = vec![];
 
-        for mut product in products {
+        debug!("Collecting DB shipping zones");
+        let shipping_zones = super::surrealdbs::get_shipping_zones(db)
+            .await
+            .map_err(|e| vec![e])?;
+
+        if shipping_zones.is_empty() {
+            return Err(vec![EventHandlerError::ShippingZoneMisconfigured(
+                "No shipping zones present in db".to_owned(),
+            )]);
+        }
+
+        for product in products {
+            debug!(
+                "Collecting DB variants for product {}:{}",
+                &product.name,
+                &product.id.inner()
+            );
             let variants: Vec<ProductVariant2> =
                 match get_product_related_variants(db, &product).await {
                     Ok(variants) => match variants.is_empty() {
@@ -314,6 +354,11 @@ impl EventHandler {
                         }
                     },
                     Err(e) => {
+                        warn!(
+                            "failed getting variants related to product {}:{}, skipping it.\n {e}",
+                            &product.name,
+                            &product.id.inner()
+                        );
                         errors.push(e);
                         continue;
                     }
@@ -330,16 +375,117 @@ impl EventHandler {
                     }
                 },
                 Err(e) => {
+                    warn!(
+                        "failed getting categories related to product {}:{}, skipping it.\n {e}",
+                        &product.name,
+                        &product.id.inner()
+                    );
                     errors.push(e);
                     continue;
                 }
             };
 
-            //should be there, was checked above
-            product.category = categories.get(0).cloned();
-            product.variants = Some(variants);
+            let categorytext = match find_category_text(&categories) {
+                Some(c) => c,
+                None => {
+                    warn!(
+                        "failed finding heureka category text for product {}:{}, skipping it",
+                        &product.name,
+                        &product.id.inner()
+                    );
+                    errors.push(EventHandlerError::ProductMissingCategoryText(
+                        product.id.inner().to_string(),
+                    ));
+                    continue;
+                }
+            };
+            for variant in variants {
+                let mut deliveries = vec![];
+
+                for zone in shipping_zones.clone() {
+                    match zone.into_deliveries(
+                        variant.clone().get_weight(product.clone()),
+                        self.settings.is_shipping_cod,
+                        self.settings.shipping_price_cod_extra,
+                    ) {
+                        Ok(d) => deliveries.push(d),
+                        Err(e) => errors.push(e),
+                    };
+                }
+
+                if deliveries.is_empty() {
+                    error!("no shipping zones/deliveries are configured",);
+                    errors.push(EventHandlerError::ShippingZoneMisconfigured("Not a single delivery zone configured, please configure your shipping settings".to_string()));
+                    return Err(errors);
+                }
+
+                let variant_url_ctx = VariantUrlTemplateContext {
+                    product: &product,
+                    variant: &variant,
+                    category: categories
+                        .first()
+                        .expect("Caetgory was checked to have at least one, how did this happen?"),
+                };
+
+                let variant_url = match variant_url_from_template(
+                    self.settings.variant_url_template.clone(),
+                    &variant_url_ctx,
+                ) {
+                    Ok(u) => u,
+                    Err(e) => {
+                        warn!(
+                            "failed creating for variant {}:{} url from template {} with context {:?}, skipping variant",
+                            &variant.name,
+                            variant.id.inner(),
+                            self.settings.variant_url_template.clone(),
+                            &variant_url_ctx
+                        );
+                        let e1: TryIntoShopItemError = e.into();
+                        errors.push(e1.into());
+                        continue;
+                    }
+                };
+
+                let shopitem = match try_create_shopitem(
+                    product.clone(),
+                    variant.clone(),
+                    deliveries,
+                    categorytext.clone(),
+                    variant_url,
+                    self.settings.tax_rate.clone(),
+                ) {
+                    Ok(i) => i,
+                    Err(e) => {
+                        warn!(
+                            "failed turning variant {}:{} into heureka shopitem, skipping variant",
+                            &variant.name,
+                            &variant.id.inner()
+                        );
+                        errors.push(e.into());
+                        continue;
+                    }
+                };
+
+                shopitems.push(shopitem);
+            }
         }
-        todo!()
+
+        let shop = Shop {
+            shop_item: shopitems,
+        };
+
+        let xml = match shop.try_to_xml() {
+            Err(e) => {
+                errors.push(e.into());
+                String::new()
+            }
+            Ok(xml) => xml,
+        };
+
+        match errors.is_empty() {
+            true => Ok(xml),
+            false => Err(errors),
+        }
     }
 }
 

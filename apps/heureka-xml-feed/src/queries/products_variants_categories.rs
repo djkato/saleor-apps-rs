@@ -1,6 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use super::{query_shipping_details::ShippingZone, schema};
+use super::{
+    query_shipping_details::{ShippingZone, Weight},
+    schema,
+};
+
+const DEFAULT_WEIGHT: Weight = Weight {
+    value: 0.1,
+    unit: super::query_shipping_details::WeightUnitsEnum::Kg,
+};
 
 #[derive(cynic::QueryVariables, Debug, Clone)]
 pub struct GetProductsNextVariables<'a> {
@@ -83,6 +91,7 @@ pub struct ProductVariant {
     pub media: Option<Vec<ProductMedia>>,
     pub pricing: Option<VariantPricingInfo>,
     pub product: Product,
+    pub weight: Option<Weight>,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
@@ -118,12 +127,21 @@ pub struct Product {
     pub name: String,
     pub description: Option<Jsonstring>,
     pub category: Option<Category>,
+    pub weight: Option<Weight>,
+    pub product_type: Option<ProductType>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
+#[cynic(graphql_type = "ProductType")]
+pub struct ProductType {
+    pub weight: Option<Weight>,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 #[cynic(graphql_type = "ProductVariant")]
 pub struct ProductVariant2 {
     pub sku: Option<String>,
+    pub weight: Option<Weight>,
     pub id: cynic::Id,
     pub name: String,
     pub media: Option<Vec<ProductMedia>>,
@@ -226,6 +244,19 @@ pub enum ThumbnailFormatEnum {
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "JSONString")]
 pub struct Jsonstring(pub EditorJsJson);
+
+impl ProductVariant2 {
+    pub fn get_weight(self, product: Product) -> Weight {
+        self.weight.unwrap_or(
+            product.weight.unwrap_or(
+                product
+                    .product_type
+                    .and_then(|t| t.weight)
+                    .unwrap_or(DEFAULT_WEIGHT),
+            ),
+        )
+    }
+}
 
 impl ToString for Jsonstring {
     fn to_string(&self) -> String {
@@ -415,6 +446,9 @@ fragment ProductVariant on ProductVariant {
 
 fragment ProductVariantDetails on ProductVariant {
   sku
+  weight {
+    ...Weight
+  }
   id
   name
   media {
@@ -437,6 +471,14 @@ fragment ProductData on Product {
   }
   name
   description
+  weight {
+    ...Weight
+  }
+  productType {
+    weight {
+        ...Weight
+    }
+  }
   category {
     ...CategoryData
   }

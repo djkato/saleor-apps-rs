@@ -205,21 +205,23 @@ pub struct AppState {
 #[cfg(feature = "ssr")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
-    #[serde(rename = "heureka_target_folder")]
-    pub target_folder: String,
-    #[serde(rename = "heureka_allowed_host")]
     pub allowed_host: String,
-    #[serde(rename = "heureka_variant_url_template")]
     pub variant_url_template: String,
     //eg. 23%
-    #[serde(rename = "heureka_tax_rate")]
     pub tax_rate: String,
     //TODO: Make sure it's comma separated
-    #[serde(rename = "heureka_saleor_shipping_zone_ids")]
     pub shipping_zone_ids: Vec<cynic::Id>,
-    #[serde(rename = "heureka_shipping_zone_cod_price")]
-    pub shipping_price_cod: Option<Decimal>,
+    pub shipping_price_cod_extra: Option<Decimal>,
+    pub is_shipping_cod: bool,
     pub channel_slug: String,
+}
+
+#[cfg(feature = "ssr")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ShippingPriceCod {
+    SameAsRegularShipping,
+    Different(Decimal),
+    NotShipping,
 }
 
 #[cfg(feature = "ssr")]

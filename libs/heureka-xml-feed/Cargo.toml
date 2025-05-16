@@ -40,6 +40,8 @@ serde_with = { version = "3.12.0", features = ["chrono"] }
 thiserror.workspace = true
 url = { workspace = true, features = ["serde"] }
 chrono = { version = "0.4.39", features = ["serde"] }
+strum.workspace = true
+strum_macros.workspace = true
 
 [dev-dependencies]
 rand.workspace = true

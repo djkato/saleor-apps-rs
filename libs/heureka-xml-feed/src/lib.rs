@@ -8,6 +8,7 @@ use schema::validate_xml;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use std::str::FromStr;
+use strum_macros::EnumString;
 #[cfg(test)]
 use url::Url;
 
@@ -192,11 +193,13 @@ pub struct Delivery {
     pub delivery_id: DeliveryCourierId,
     /// Incl. TAX/DPH
     pub delivery_price: rust_decimal::Decimal,
-    /// Incl. TAX/DPH of delivery price and COD tax
-    pub delivery_price_cod: rust_decimal::Decimal,
+    /// Incl. TAX/DPH of delivery price and COD tax. If COD doesn't cost extra, use regular
+    /// delivery price. If COD delivery isn't possible, exclude this tag
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delivery_price_cod: Option<rust_decimal::Decimal>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, EnumString)]
 #[cfg_attr(test, derive(Dummy))]
 #[serde(rename_all(serialize = "SCREAMING_SNAKE_CASE"))]
 pub enum DeliveryCourierId {

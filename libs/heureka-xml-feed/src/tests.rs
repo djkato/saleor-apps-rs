@@ -1,6 +1,6 @@
 use super::*;
-use rust_decimal::prelude::FromPrimitive;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
 
 pub struct UrlFaker;
 
@@ -127,12 +127,12 @@ fn heureka_example_serializes_and_validates() {
             delivery: vec![
                 Delivery {
                     delivery_id: DeliveryCourierId::SlovenskaPosta,
-                    delivery_price_cod: Decimal::from_u8(5).unwrap(),
+                    delivery_price_cod: Some(Decimal::from_u8(5).unwrap()),
                     delivery_price: Decimal::from_u8(3).unwrap(),
                 },
                 Delivery {
                     delivery_id: DeliveryCourierId::PPL,
-                    delivery_price_cod: Decimal::from_u8(5).unwrap(),
+                    delivery_price_cod: Some(Decimal::from_u8(5).unwrap()),
                     delivery_price: Decimal::from_u8(3).unwrap(),
                 },
             ],

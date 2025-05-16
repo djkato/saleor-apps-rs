@@ -1,4 +1,10 @@
+use std::str::FromStr;
+
+use heureka_xml_feed::{Delivery, DeliveryCourierId};
+use rust_decimal::Decimal;
 use serde::Serialize;
+
+use crate::server::event_handler::EventHandlerError;
 
 use super::schema;
 
@@ -54,6 +60,79 @@ pub enum WeightUnitsEnum {
     Oz,
     Kg,
     Tonne,
+}
+
+impl ShippingZone {
+    pub fn into_deliveries(
+        self,
+        variant_weight: Weight,
+        is_shipping_cod: bool,
+        shipping_price_cod_extra: Option<Decimal>,
+    ) -> Result<Delivery, EventHandlerError> {
+        let methods = self
+            .shipping_methods
+            .ok_or(EventHandlerError::ShippingZoneMisconfigured(
+                "Missing shipping methods".to_string(),
+            ))?;
+
+        let mut delivery_price = None;
+
+        for method in methods {
+            let min =
+                method
+                    .minimum_order_weight
+                    .ok_or(EventHandlerError::ShippingZoneMisconfigured(
+                        "Missing max weight in shipping method".to_string(),
+                    ))?;
+
+            let max =
+                method
+                    .maximum_order_weight
+                    .ok_or(EventHandlerError::ShippingZoneMisconfigured(
+                        "Missing max weight in shipping method".to_string(),
+                    ))?;
+
+            let price = method
+                .channel_listings
+                .and_then(|c| c[0].price.clone())
+                .and_then(|c| rust_decimal::Decimal::from_f64_retain(c.amount))
+                .ok_or(EventHandlerError::ShippingZoneMisconfigured(
+                    "Missing price in shipping method".to_string(),
+                ))?;
+
+            if min.value > variant_weight.value && variant_weight.value > max.value {
+                delivery_price = Some(price);
+            }
+        }
+
+        let delivery_price = delivery_price.ok_or(EventHandlerError::ShippingZoneMisconfigured(
+            "Missing price in shipping method".to_string(),
+        ))?;
+
+        let courier_id = self
+            .metafield
+            .ok_or(EventHandlerError::ShippingZoneMisconfigured(
+                "Missing courier id in metadata".to_string(),
+            ))?;
+
+        let delivery_id = DeliveryCourierId::from_str(&courier_id).map_err(|e| {
+            EventHandlerError::ShippingZoneMisconfigured(format!(
+                "Courier ID doesn't match heureka delivery courier ID, {}",
+                e.to_string()
+            ))
+        })?;
+
+        Ok(Delivery {
+            delivery_price_cod: match is_shipping_cod {
+                true => Some(
+                    shipping_price_cod_extra.map_or_else(|| delivery_price, |e| delivery_price + e),
+                ),
+                false => None,
+            },
+            delivery_price,
+            delivery_id,
+        })
+    }
 }
 
 /*

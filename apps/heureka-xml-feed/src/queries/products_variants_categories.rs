@@ -203,6 +203,40 @@ pub struct CategoryCreated {
     pub category: Option<Category>,
 }
 
+#[derive(cynic::QueryVariables, Debug, Clone)]
+pub struct GetCategoryChildrenVariables<'a> {
+    pub after: Option<&'a str>,
+    pub id: &'a cynic::Id,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
+#[cynic(graphql_type = "Query", variables = "GetCategoryChildrenVariables")]
+pub struct GetCategoryChildren {
+    #[arguments(id: $id)]
+    pub category: Option<GetChildrenCategory>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
+#[cynic(variables = "GetCategoryChildrenVariables")]
+#[cynic(graphql_type = "Category")]
+pub struct GetChildrenCategory {
+    #[arguments(first: 100, after: $after)]
+    pub children: Option<GetChildrenCategoryCountableConnection>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
+#[cynic(graphql_type = "CategoryCountableConnection")]
+pub struct GetChildrenCategoryCountableConnection {
+    pub page_info: PageInfo,
+    pub edges: Vec<GetChildrenCategoryCountableEdge>,
+}
+
+#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
+#[cynic(graphql_type = "CategoryCountableEdge")]
+pub struct GetChildrenCategoryCountableEdge {
+    pub node: Category,
+}
+
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct Category {
     pub parent: Option<Category2>,
@@ -407,6 +441,21 @@ query getCategoryParent($id: ID!) {
   }
 }
 
+query getCategoryChildren($id:ID!, $after:String) {
+	category(id: $id) {
+    children(first:100, after:$after) {
+      pageInfo{
+        ...PageInfo
+      }
+      edges{
+        node{
+          ...CategoryData
+        }
+      }
+    }
+  }
+}
+
 fragment PageInfo on PageInfo {
   hasNextPage
   endCursor
@@ -416,6 +465,11 @@ fragment CategoryData on Category {
   name
   id
   metafield(key: "heureka_categorytext")
+  parent {
+    name
+    id
+    metafield(key: "heureka_categorytext")
+  }
 }
 
 fragment ShippingZoneData on ShippingZone {

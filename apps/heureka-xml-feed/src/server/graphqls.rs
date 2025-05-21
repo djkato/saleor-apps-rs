@@ -1,8 +1,9 @@
 use super::event_handler::EventHandlerError;
 use crate::queries::{
     products_variants_categories::{
-        Category, Category2, GetCategoryParent, GetCategoryParentVariables, GetProductsInitial,
-        GetProductsInitialVariables, GetProductsNext, GetProductsNextVariables, Product,
+        Category, Category2, GetCategoryChildren, GetCategoryChildrenVariables, GetCategoryParent,
+        GetCategoryParentVariables, GetProductsInitial, GetProductsInitialVariables,
+        GetProductsNext, GetProductsNextVariables, Product,
     },
     query_shipping_details::{DefaultShippingZone, DefaultShippingZoneVariables, ShippingZone},
 };
@@ -172,5 +173,105 @@ pub async fn get_category_parents(
         }
         parent = None;
     }
+    debug!("Collected {} parent categories", all_parents.len());
     Ok(all_parents)
+}
+
+pub async fn get_category_children(
+    category: &Category,
+    saleor_api_url: &str,
+    token: &str,
+) -> Result<Vec<Category>, EventHandlerError> {
+    debug!(
+        "Collecting all child categories of category {}:{}",
+        category.name,
+        &category.id.inner(),
+    );
+
+    let mut all_children = vec![];
+    let res = surf::post(saleor_api_url)
+        .header("authorization-bearer", token)
+        .run_graphql(GetCategoryChildren::build(GetCategoryChildrenVariables {
+            id: &category.clone().id,
+            after: None,
+        }))
+        .await?;
+    if let Some(e) = res.errors {
+        for error in &e {
+            error!("Errors during graphql, {:?}", error.message);
+        }
+        for error in e {
+            return Err(error.into());
+        }
+    }
+
+    let mut after_cursor = None;
+
+    if let Some(data) = res.data
+        && let Some(category) = data.category
+        && let Some(children) = category.children
+    {
+        if children.page_info.has_next_page {
+            after_cursor = children.page_info.end_cursor;
+        }
+        all_children.append(
+            &mut children
+                .edges
+                .iter()
+                .map(|c| c.node.clone())
+                .collect::<Vec<_>>(),
+        );
+    }
+
+    debug!(
+        "collected first {} child categories, is there more? {}",
+        all_children.len(),
+        after_cursor.is_some()
+    );
+
+    while let Some(after) = after_cursor {
+        let res = surf::post(saleor_api_url)
+            .header("authorization-bearer", token)
+            .run_graphql(GetCategoryChildren::build(GetCategoryChildrenVariables {
+                id: &category.clone().id,
+                after: Some(&after),
+            }))
+            .await?;
+
+        if let Some(e) = res.errors {
+            for error in &e {
+                error!("Errors during graphql, {:?}", error.message);
+            }
+            for error in e {
+                return Err(error.into());
+            }
+        }
+
+        after_cursor = None;
+
+        if let Some(data) = res.data
+            && let Some(category) = data.category
+            && let Some(children) = category.children
+        {
+            if children.page_info.has_next_page {
+                after_cursor = children.page_info.end_cursor;
+            }
+            all_children.append(
+                &mut children
+                    .edges
+                    .iter()
+                    .map(|c| c.node.clone())
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        debug!(
+            "collected more {} child categories, is there more? {}",
+            all_children.len(),
+            after_cursor.is_some()
+        );
+    }
+
+    debug!("Collected {} child categories", all_children.len());
+    Ok(all_children)
 }

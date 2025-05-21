@@ -90,7 +90,8 @@ pub struct ProductVariant {
     pub sku: Option<String>,
     pub id: cynic::Id,
     pub name: String,
-    pub media: Option<Vec<ProductMedia>>,
+    #[cynic(flatten)]
+    pub media: Vec<ProductMedia>,
     pub pricing: Option<VariantPricingInfo>,
     pub product: Product,
     pub weight: Option<Weight>,
@@ -125,7 +126,8 @@ pub struct ProductCountableEdge {
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct Product {
     pub id: cynic::Id,
-    pub variants: Option<Vec<ProductVariant2>>,
+    #[cynic(flatten)]
+    pub variants: Vec<ProductVariant2>,
     pub name: String,
     pub description: Option<Jsonstring>,
     pub category: Option<Category>,
@@ -146,7 +148,8 @@ pub struct ProductVariant2 {
     pub weight: Option<Weight>,
     pub id: cynic::Id,
     pub name: String,
-    pub media: Option<Vec<ProductMedia>>,
+    #[cynic(flatten)]
+    pub media: Vec<ProductMedia>,
     pub pricing: Option<VariantPricingInfo>,
 }
 

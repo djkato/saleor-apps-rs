@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use saleor_app_sdk::AuthData;
-use surrealdb::{Surreal, engine::any::Any};
+use serde::{Serialize, de::DeserializeOwned};
+use surrealdb::{Surreal, engine::any::Any, opt::Resource};
 use tracing::debug;
 
 use crate::{
@@ -21,66 +24,113 @@ pub async fn save_issues(
     e: Vec<EventHandlerError>,
 ) -> Result<(), EventHandlerError> {
     let issues = e.into_iter().map(|e| e.to_string()).collect::<Vec<_>>();
-    let _: Vec<String> = db.insert("issue").content(issues).await?;
+    //TODO: add date to issues, make a proper table
+    db.insert(Resource::from("issue")).content(issues).await?;
     Ok(())
+}
+
+fn fix_surreal_ids(id: &str) -> String {
+    let mut new_id = id.replace("⟩", "").replace("⟨", "");
+    let i = new_id.find(":");
+    if let Some(i) = i {
+        new_id.drain(..(i + 1));
+    }
+    new_id
+}
+
+pub fn surreal_value_to_types<T: DeserializeOwned>(
+    data: surrealdb::Value,
+) -> Result<Vec<T>, serde_json::Error> {
+    let json = data.into_inner().into_json();
+    let mut result: Vec<T> = vec![];
+    if let Some(array) = json.as_array() {
+        for mut val in array.to_owned() {
+            if let Some(id) = val.get_mut("id")
+                && let Some(str) = id.as_str()
+            {
+                let new_id = serde_json::to_value(fix_surreal_ids(str))?;
+                *id = new_id;
+            }
+
+            result.push(serde_json::from_value(val)?);
+        }
+    } else {
+        let mut new_json = json.clone();
+        if let Some(id) = new_json.get_mut("id")
+            && let Some(str) = id.as_str()
+        {
+            let new_id = serde_json::to_value(fix_surreal_ids(str))?;
+            *id = new_id;
+        }
+
+        result.push(serde_json::from_value(new_json)?);
+    }
+    Ok(result)
 }
 
 pub async fn get_shipping_zones(
     db: &mut Surreal<Any>,
 ) -> Result<Vec<ShippingZone>, EventHandlerError> {
-    Ok(db.select("shipping_zone").await?)
+    Ok(surreal_value_to_types(
+        db.query("SELECT * FROM shipping_zone").await?.take(0)?,
+    )?)
 }
 
 pub async fn get_product_related_variants(
     db: &mut Surreal<Any>,
     product: &Product,
 ) -> Result<Vec<ProductVariant2>, EventHandlerError> {
-    let variants: Vec<ProductVariant2> = db
-        .query(format!(
+    Ok(surreal_value_to_types(
+        db.query(format!(
             "SELECT * FROM variant WHERE product:{}<-varies<-variant",
-            into_surreal_id(product.id.inner().to_owned())
+            product.id.inner().to_owned()
         ))
         .await?
-        .take(0)?;
-    Ok(variants)
+        .take(0)?,
+    )?)
 }
 
 pub async fn get_product_related_categories(
     db: &mut Surreal<Any>,
     product: &Product,
 ) -> Result<Vec<Category>, EventHandlerError> {
-    let base_category: Option<Category> = db
-        .query(format!(
-            "SELECT * FROM category WHERE product:{}<-categorises<-category LIMIT 1",
-            into_surreal_id(product.id.inner().to_owned())
+    let base_category: Vec<Category> = surreal_value_to_types(
+        db.query(format!(
+            "SELECT * FROM category WHERE product:{}<-categorises<-category",
+            product.id.inner().to_owned()
         ))
         .await?
-        .take(0)?;
+        .take(0)?,
+    )?;
 
-    let base_category = base_category.ok_or(EventHandlerError::ProductMissingRelation(
-        MissingRelation::Category,
-    ))?;
+    let base_category = base_category
+        .get(0)
+        .ok_or(EventHandlerError::ProductMissingRelation(
+            MissingRelation::Category,
+        ))?;
 
     let mut all_categories = vec![base_category.clone()];
 
-    let mut parent_category: Option<Category> = db
-        .query(format!(
+    let mut parent_category: Vec<Category> = surreal_value_to_types(
+        db.query(format!(
             "SELECT * FROM category WHERE category:{}<-parents<-category",
-            into_surreal_id(base_category.id.inner().to_owned())
+            base_category.id.inner().to_owned()
         ))
         .await?
-        .take(0)?;
+        .take(0)?,
+    )?;
 
-    while let Some(category) = parent_category {
+    while let Some(category) = parent_category.get(0) {
         all_categories.push(category.clone());
 
-        parent_category = db
-            .query(format!(
+        parent_category = surreal_value_to_types(
+            db.query(format!(
                 "SELECT * FROM category WHERE category:{}<-parents<-category",
-                into_surreal_id(category.id.inner().to_owned())
+                category.id.inner().to_owned()
             ))
             .await?
-            .take(0)?;
+            .take(0)?,
+        )?;
     }
 
     Ok(all_categories)
@@ -99,16 +149,12 @@ pub async fn save_shipping_zone_to_db(
     if shipping_zone.metafield.is_none() {
         return Err(EventHandlerError::ShippingZoneMisconfigured(format!(
             "Shipping zone {} is missing metadata 'heureka_courierid'",
-            shipping_zone.id.inner()
+            shipping_zone.id.inner().to_owned()
         )));
     }
 
-    let _: Option<ShippingZone> = db
-        .upsert((
-            "shipping_zone",
-            into_surreal_id(shipping_zone.id.inner().to_owned()),
-        ))
-        .content(shipping_zone.clone())
+    db.upsert(Resource::from("shipping_zone"))
+        .content(serde_json::to_value(shipping_zone.clone())?)
         .await?;
 
     Ok(())
@@ -125,9 +171,8 @@ pub async fn save_product_and_category_to_db(
         &product.name,
         &product.id.inner()
     );
-    let _: Option<Product> = db
-        .upsert(("product", into_surreal_id(product.id.inner().to_owned())))
-        .content(product.clone())
+    db.upsert(Resource::from("product"))
+        .content(serde_json::to_value(product.clone())?)
         .await?;
 
     let category = product
@@ -146,9 +191,8 @@ pub async fn save_product_and_category_to_db(
             &parent.name,
             &parent.id.inner()
         );
-        let _: Option<Category> = db
-            .upsert(("category", into_surreal_id(category.id.inner().to_owned())))
-            .content(category.clone())
+        db.upsert(Resource::from("category"))
+            .content(serde_json::to_value(category.clone())?)
             .await?;
 
         clear_relations_categorises(db, category.id.inner()).await?;
@@ -163,8 +207,8 @@ pub async fn save_product_and_category_to_db(
 
         db.query(format!(
             "RELATE category:{}->categorises->product:{}",
-            into_surreal_id(category.id.inner().to_owned()),
-            into_surreal_id(product.id.inner().to_owned())
+            category.id.inner().to_owned(),
+            product.id.inner().to_owned()
         ))
         .await?;
 
@@ -180,9 +224,9 @@ pub async fn save_product_and_category_to_db(
         );
 
         db.query(format!(
-            "RELATE category(parent):{} -> parents -> category:{}",
-            into_surreal_id(parent.id.inner().to_owned()),
-            into_surreal_id(category.id.inner().to_owned()),
+            "RELATE category:{} -> parents -> category:{}",
+            parent.id.inner().to_owned(),
+            category.id.inner().to_owned(),
         ))
         .await?;
     }
@@ -199,9 +243,8 @@ pub async fn save_variants_to_db(
         &variant.name,
         &variant.id.inner(),
     );
-    let _: Option<ProductVariant> = db
-        .upsert(("variant", into_surreal_id(variant.id.inner().to_owned())))
-        .content(variant.clone())
+    db.upsert(Resource::from("variant"))
+        .content(serde_json::to_value(variant.clone())?)
         .await?;
 
     clear_relations_varies(db, variant.id.inner()).await?;
@@ -216,8 +259,8 @@ pub async fn save_variants_to_db(
 
     db.query(format!(
         "RELATE variant:{}->varies->product:{}",
-        into_surreal_id(variant.id.inner().to_owned()),
-        into_surreal_id(product.id.inner().to_owned()),
+        variant.id.inner().to_owned(),
+        product.id.inner().to_owned()
     ))
     .await?;
     Ok(())
@@ -228,7 +271,7 @@ pub async fn clear_relations_varies(
     var_id: &str,
 ) -> Result<(), surrealdb::Error> {
     db.query("DELETE (SELECT * FROM varies WHERE in = $var_id);")
-        .bind(("var_id", into_surreal_id(var_id.to_owned())))
+        .bind(("var_id", var_id.to_owned()))
         .await?;
     Ok(())
 }
@@ -238,7 +281,7 @@ pub async fn clear_relations_categorises(
     cat_id: &str,
 ) -> Result<(), surrealdb::Error> {
     db.query("DELETE (SELECT * FROM categorises WHERE in = $cat_id);")
-        .bind(("cat_id", into_surreal_id(cat_id.to_owned())))
+        .bind(("cat_id", cat_id.to_owned()))
         .await?;
     Ok(())
 }
@@ -248,7 +291,7 @@ pub async fn clear_relations_parents_in(
     cat_id: &str,
 ) -> Result<(), surrealdb::Error> {
     db.query("DELETE (SELECT * FROM parents WHERE in = $cat_id);")
-        .bind(("cat_id", into_surreal_id(cat_id.to_owned())))
+        .bind(("cat_id", cat_id.to_owned()))
         .await?;
     Ok(())
 }
@@ -258,7 +301,7 @@ pub async fn clear_relations_parents_out(
     cat_id: &str,
 ) -> Result<(), surrealdb::Error> {
     db.query("DELETE (SELECT * FROM parents WHERE out = $cat_id);")
-        .bind(("cat_id", into_surreal_id(cat_id.to_owned())))
+        .bind(("cat_id", cat_id.to_owned()))
         .await?;
     Ok(())
 }

@@ -25,7 +25,8 @@ pub struct DefaultShippingZone {
 pub struct ShippingZone {
     #[arguments(key: "heureka_courierid")]
     pub metafield: Option<String>,
-    pub shipping_methods: Option<Vec<ShippingMethodType>>,
+    #[cynic(flatten)]
+    pub shipping_methods: Vec<ShippingMethodType>,
     pub id: cynic::Id,
 }
 
@@ -33,7 +34,8 @@ pub struct ShippingZone {
 pub struct ShippingMethodType {
     pub minimum_order_weight: Option<Weight>,
     pub maximum_order_weight: Option<Weight>,
-    pub channel_listings: Option<Vec<ShippingMethodChannelListing>>,
+    #[cynic(flatten)]
+    pub channel_listings: Vec<ShippingMethodChannelListing>,
 }
 
 #[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
@@ -69,15 +71,9 @@ impl ShippingZone {
         is_shipping_cod: bool,
         shipping_price_cod_extra: Option<Decimal>,
     ) -> Result<Delivery, EventHandlerError> {
-        let methods = self
-            .shipping_methods
-            .ok_or(EventHandlerError::ShippingZoneMisconfigured(
-                "Missing shipping methods".to_string(),
-            ))?;
-
         let mut delivery_price = None;
 
-        for method in methods {
+        for method in self.shipping_methods {
             let min =
                 method
                     .minimum_order_weight
@@ -94,7 +90,8 @@ impl ShippingZone {
 
             let price = method
                 .channel_listings
-                .and_then(|c| c[0].price.clone())
+                .get(0)
+                .and_then(|c| c.price.clone())
                 .and_then(|c| rust_decimal::Decimal::from_f64_retain(c.amount))
                 .ok_or(EventHandlerError::ShippingZoneMisconfigured(
                     "Missing price in shipping method".to_string(),

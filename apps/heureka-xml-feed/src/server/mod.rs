@@ -37,8 +37,9 @@ pub fn try_create_shopitem(
     let media = variant
         .media
         .clone()
-        .and_then(|m| Some(m.into_iter().map(|u| u.url).collect::<Vec<_>>()))
-        .ok_or(TryIntoShopItemError::MissingMedia)?;
+        .into_iter()
+        .map(|u| u.url)
+        .collect::<Vec<_>>();
     let media = media
         .split_first()
         .ok_or(TryIntoShopItemError::MissingMedia)?;

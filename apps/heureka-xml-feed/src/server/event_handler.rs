@@ -267,27 +267,25 @@ impl EventHandler {
         let db = &mut self.db_handle;
 
         for zone in shipping_zones {
-            if let Err(e) = save_shipping_zone_to_db(&zone, db).await {
-                errors.push(e);
-            }
+            save_shipping_zone_to_db(&zone, db).await.unwrap();
+            // if let Err(e) = save_shipping_zone_to_db(&zone, db).await {
+            //     errors.push(e);
+            // }
         }
 
         for product in all_products {
-            if let Err(e) = save_product_and_category_to_db(&product, &ev, &token, db).await {
-                errors.push(e);
-            }
+            save_product_and_category_to_db(&product, &ev, &token, db)
+                .await
+                .unwrap();
+            // if let Err(e) = save_product_and_category_to_db(&product, &ev, &token, db).await {
+            //     errors.push(e);
+            // }
 
-            for variant in
-                product
-                    .clone()
-                    .variants
-                    .ok_or(vec![EventHandlerError::ProductMissingRelation(
-                        MissingRelation::Variant,
-                    )])?
-            {
-                if let Err(e) = save_variants_to_db(&variant, db, &product).await {
-                    errors.push(e);
-                }
+            for variant in product.clone().variants {
+                save_variants_to_db(&variant, db, &product).await.unwrap();
+                // if let Err(e) = save_variants_to_db(&variant, db, &product).await {
+                //     errors.push(e);
+                // }
             }
         }
 

@@ -4,11 +4,11 @@ services:
     restart: unless-stopped
     stdin_open: true
     env_file:
-    - docker-bulk-price-manipulator.env
+      - docker-bulk-price-manipulator.env
     networks:
-    - saleor-app-tier
+      - saleor-app-tier
     depends_on:
-    - redis-apl
+      - redis-apl
     ports:
       - 30003:3000
 

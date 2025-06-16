@@ -130,6 +130,7 @@ pub async fn get_all_products(
     Ok(all_products)
 }
 
+///Returns parent.parent.parent.... in order, excluding first product.category
 pub async fn get_category_parents(
     category: &Category,
     saleor_api_url: &str,

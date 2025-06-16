@@ -13,8 +13,8 @@ use crate::{
         VariantUrlTemplateContext, find_category_text,
         graphqls::{get_all_products, get_shipping_zones},
         surrealdbs::{
-            get_product_related_categories, get_product_related_variants,
-            save_product_and_category_to_db, save_shipping_zone_to_db, save_variants_to_db,
+            get_product_related_categories, get_product_related_variants, get_products,
+            save_product_categories_on_regenerate, save_shipping_zone_to_db, save_variants_to_db,
         },
         try_create_shopitem, variant_url_from_template,
     },
@@ -274,7 +274,7 @@ impl EventHandler {
         }
 
         for product in all_products {
-            save_product_and_category_to_db(&product, &ev, &token, db)
+            save_product_categories_on_regenerate(&product, &ev, &token, db)
                 .await
                 .unwrap();
             // if let Err(e) = save_product_and_category_to_db(&product, &ev, &token, db).await {
@@ -332,10 +332,7 @@ impl EventHandler {
 
         let db = &mut self.db_handle;
         debug!("Collecting DB products");
-        let products: Vec<Product> = db
-            .select("product")
-            .await
-            .map_err(|e| vec![EventHandlerError::SurrealDB(e)])?;
+        let products: Vec<Product> = get_products(db).await.map_err(|e| vec![e])?;
 
         let mut shopitems: Vec<ShopItem> = vec![];
 
@@ -413,6 +410,7 @@ impl EventHandler {
                     continue;
                 }
             };
+
             for variant in variants {
                 let mut deliveries = vec![];
 

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Write};
 
 use saleor_app_sdk::AuthData;
 use serde::{Serialize, de::DeserializeOwned};
@@ -41,9 +41,12 @@ fn fix_surreal_ids(id: &str) -> String {
     new_id
 }
 
-pub fn surreal_value_to_types<T: DeserializeOwned>(
+pub fn surreal_value_to_types<T: DeserializeOwned + Serialize>(
     data: surrealdb::Value,
 ) -> Result<Vec<T>, serde_json::Error> {
+    let mut file = std::fs::File::create("whole_json.json").unwrap();
+    file.write_all(&serde_json::to_string(&data).unwrap().into_bytes())
+        .unwrap();
     let json = data.into_inner().into_json();
     let mut result: Vec<T> = vec![];
     if let Some(array) = json.as_array() {
@@ -79,13 +82,31 @@ pub async fn get_shipping_zones(
     )?)
 }
 
+pub async fn get_products(db: &mut Surreal<Any>) -> Result<Vec<Product>, EventHandlerError> {
+    Ok(surreal_value_to_types(
+        db.query("SELECT * FROM product").await?.take(0)?,
+    )?)
+}
+
+pub async fn get_categories(db: &mut Surreal<Any>) -> Result<Vec<Category>, EventHandlerError> {
+    Ok(surreal_value_to_types(
+        db.query("SELECT * FROM category").await?.take(0)?,
+    )?)
+}
+
+pub async fn get_variants(db: &mut Surreal<Any>) -> Result<Vec<ProductVariant>, EventHandlerError> {
+    Ok(surreal_value_to_types(
+        db.query("SELECT * FROM variant").await?.take(0)?,
+    )?)
+}
+
 pub async fn get_product_related_variants(
     db: &mut Surreal<Any>,
     product: &Product,
 ) -> Result<Vec<ProductVariant2>, EventHandlerError> {
     Ok(surreal_value_to_types(
         db.query(format!(
-            "SELECT * FROM variant WHERE product:{}<-varies<-variant",
+            "SELECT * FROM variant WHERE product:`{}`<-varies<-variant",
             product.id.inner().to_owned()
         ))
         .await?
@@ -93,13 +114,14 @@ pub async fn get_product_related_variants(
     )?)
 }
 
+/// Gets category and all it's parents, so one can find metafields
 pub async fn get_product_related_categories(
     db: &mut Surreal<Any>,
     product: &Product,
 ) -> Result<Vec<Category>, EventHandlerError> {
     let base_category: Vec<Category> = surreal_value_to_types(
         db.query(format!(
-            "SELECT * FROM category WHERE product:{}<-categorises<-category",
+            "SELECT * FROM category WHERE product:`{}`<-categorises<-category",
             product.id.inner().to_owned()
         ))
         .await?
@@ -116,7 +138,7 @@ pub async fn get_product_related_categories(
 
     let mut parent_category: Vec<Category> = surreal_value_to_types(
         db.query(format!(
-            "SELECT * FROM category WHERE category:{}<-parents<-category",
+            "SELECT * FROM category WHERE category:`{}`<-parents<-category",
             base_category.id.inner().to_owned()
         ))
         .await?
@@ -163,7 +185,7 @@ pub async fn save_shipping_zone_to_db(
     Ok(())
 }
 
-pub async fn save_product_and_category_to_db(
+pub async fn save_product_categories_on_regenerate(
     product: &Product,
     ev: &RegenerateEvent,
     token: &AuthData,
@@ -185,9 +207,11 @@ pub async fn save_product_and_category_to_db(
             MissingRelation::Category,
         ))?;
 
+    // category.parent.parent.parent.parent....
     let all_category_parents =
         get_category_parents(&category, &ev.saleor_api_url, &token.token).await?;
 
+    //category.children(all)
     let all_category_children =
         get_category_children(&category, &ev.saleor_api_url, &token.token).await?;
 
@@ -199,9 +223,6 @@ pub async fn save_product_and_category_to_db(
     db.upsert(Resource::from("category"))
         .content(serde_json::to_value(category.clone())?)
         .await?;
-
-    clear_relations_categorises(db, category.id.inner()).await?;
-    clear_relations_parents_in(db, category.id.inner()).await?;
 
     debug!(
         "relating category {}:{} -> categorises -> product {}:{}",
@@ -218,37 +239,65 @@ pub async fn save_product_and_category_to_db(
     ))
     .await?;
 
+    let mut maybe_prev_parent = None;
+    let mut is_first_run = true;
+
+    /* --- UPLOAD ALL PARENTS --- */
+    // first loop: upload first parent, relate parent -> parents -> product.category
+    // second loop: upload parent, relate parent -> parents -> prev_parent
     for parent in all_category_parents {
         debug!(
             "inserting category {}:{} into db",
             &parent.name,
             &parent.id.inner()
         );
+
         db.upsert(Resource::from("category"))
-            .content(serde_json::to_value(category.clone())?)
+            .content(serde_json::to_value(parent.clone())?)
             .await?;
 
-        clear_relations_categorises(db, category.id.inner()).await?;
+        if is_first_run {
+            debug!(
+                "relating category {}:{} -> parents -> category {}:{}",
+                &parent.name,
+                &parent.id.inner(),
+                &category.name,
+                &category.id.inner(),
+            );
 
-        clear_relations_parents_in(db, category.id.inner()).await?;
-        clear_relations_parents_out(db, parent.id.inner()).await?;
+            db.query(format!(
+                "RELATE category:`{}` -> parents -> category:`{}`",
+                parent.id.inner().to_owned(),
+                category.id.inner().to_owned(),
+            ))
+            .await?;
 
-        debug!(
-            "relating category {}:{} -> parents -> category {}:{}",
-            &category.name,
-            &category.id.inner(),
-            &parent.name,
-            &parent.id.inner()
-        );
+            maybe_prev_parent = Some(parent.clone());
+            is_first_run = false;
+        } else {
+            let Some(prev_parent) = &maybe_prev_parent else {
+                break;
+            };
 
-        db.query(format!(
-            "RELATE category:`{}` -> parents -> category:`{}`",
-            parent.id.inner().to_owned(),
-            category.id.inner().to_owned(),
-        ))
-        .await?;
+            debug!(
+                "relating category {}:{} -> parents -> category {}:{}",
+                &parent.name,
+                &parent.id.inner(),
+                prev_parent.name,
+                prev_parent.id.inner(),
+            );
+
+            db.query(format!(
+                "RELATE category:`{}` -> parents -> category:`{}`",
+                parent.id.inner().to_owned(),
+                prev_parent.id.inner().to_owned(),
+            ))
+            .await?;
+            maybe_prev_parent = Some(parent.clone());
+        }
     }
 
+    /* --- UPLOAD ALL CHILDREN --- */
     for child in all_category_children {
         debug!(
             "inserting category {}:{} into db",
@@ -256,31 +305,11 @@ pub async fn save_product_and_category_to_db(
             &child.id.inner()
         );
         db.upsert(Resource::from("category"))
-            .content(serde_json::to_value(category.clone())?)
+            .content(serde_json::to_value(child.clone())?)
             .await?;
 
-        clear_relations_categorises(db, category.id.inner()).await?;
-
         debug!(
-            "relating category {}:{} -> categorises -> product {}:{}",
-            &category.name,
-            &category.id.inner(),
-            &product.name,
-            &product.id.inner()
-        );
-
-        db.query(format!(
-            "RELATE category:`{}` -> categorises -> product:`{}`",
-            category.id.inner().to_owned(),
-            product.id.inner().to_owned()
-        ))
-        .await?;
-
-        clear_relations_parents_in(db, category.id.inner()).await?;
-        clear_relations_parents_out(db, child.id.inner()).await?;
-
-        debug!(
-            "relating category {}:{} -> childs -> category {}:{}",
+            "relating category {}:{} -> parents -> category {}:{}",
             &category.name,
             &category.id.inner(),
             &child.name,
@@ -288,9 +317,9 @@ pub async fn save_product_and_category_to_db(
         );
 
         db.query(format!(
-            "RELATE category:`{}` -> childs -> category:`{}`",
-            child.id.inner().to_owned(),
+            "RELATE category:`{}` -> parents -> category:`{}`",
             category.id.inner().to_owned(),
+            child.id.inner().to_owned(),
         ))
         .await?;
     }

@@ -44,10 +44,9 @@ fn fix_surreal_ids(id: &str) -> String {
 pub fn surreal_value_to_types<T: DeserializeOwned + Serialize>(
     data: surrealdb::Value,
 ) -> Result<Vec<T>, serde_json::Error> {
-    let mut file = std::fs::File::create("whole_json.json").unwrap();
-    file.write_all(&serde_json::to_string(&data).unwrap().into_bytes())
-        .unwrap();
     let json = data.into_inner().into_json();
+    let mut file = std::fs::File::create("whole_json.json").unwrap();
+    file.write_all(&json.to_string().into_bytes()).unwrap();
     let mut result: Vec<T> = vec![];
     if let Some(array) = json.as_array() {
         for mut val in array.to_owned() {
@@ -191,14 +190,13 @@ pub async fn save_product_categories_on_regenerate(
     token: &AuthData,
     db: &mut Surreal<Any>,
 ) -> Result<(), EventHandlerError> {
+    let mut product = product.clone();
+
     debug!(
         "inserting product {}:{} into db",
         &product.name,
         &product.id.inner()
     );
-    db.upsert(Resource::from("product"))
-        .content(serde_json::to_value(product.clone())?)
-        .await?;
 
     let category = product
         .clone()
@@ -206,6 +204,15 @@ pub async fn save_product_categories_on_regenerate(
         .ok_or(EventHandlerError::ProductMissingRelation(
             MissingRelation::Category,
         ))?;
+
+    //Remove any unnecessary fields from DB entry
+    product.category = None;
+    product.variants = vec![];
+    product.product_type = None;
+
+    db.upsert(Resource::from("product"))
+        .content(serde_json::to_value(product.clone())?)
+        .await?;
 
     // category.parent.parent.parent.parent....
     let all_category_parents =

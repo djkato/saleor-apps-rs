@@ -268,24 +268,21 @@ impl EventHandler {
 
         for zone in shipping_zones {
             save_shipping_zone_to_db(&zone, db).await.unwrap();
-            // if let Err(e) = save_shipping_zone_to_db(&zone, db).await {
-            //     errors.push(e);
-            // }
+            if let Err(e) = save_shipping_zone_to_db(&zone, db).await {
+                errors.push(e);
+            }
         }
 
         for product in all_products {
-            save_product_categories_on_regenerate(&product, &ev, &token, db)
-                .await
-                .unwrap();
-            // if let Err(e) = save_product_and_category_to_db(&product, &ev, &token, db).await {
-            //     errors.push(e);
-            // }
+            if let Err(e) = save_product_categories_on_regenerate(&product, &ev, &token, db).await {
+                errors.push(e);
+            }
 
             for variant in product.clone().variants {
                 save_variants_to_db(&variant, db, &product).await.unwrap();
-                // if let Err(e) = save_variants_to_db(&variant, db, &product).await {
-                //     errors.push(e);
-                // }
+                if let Err(e) = save_variants_to_db(&variant, db, &product).await {
+                    errors.push(e);
+                }
             }
         }
 

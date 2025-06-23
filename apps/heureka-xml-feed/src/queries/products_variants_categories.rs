@@ -129,9 +129,13 @@ pub struct Product {
     #[cynic(flatten)]
     pub variants: Vec<ProductVariant2>,
     pub name: String,
+    #[serde(default)]
     pub description: Option<Jsonstring>,
+    #[serde(default)]
     pub category: Option<Category>,
+    #[serde(default)]
     pub weight: Option<Weight>,
+    #[serde(default)]
     pub product_type: Option<ProductType>,
 }
 

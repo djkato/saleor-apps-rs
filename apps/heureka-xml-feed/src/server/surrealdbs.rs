@@ -9,6 +9,7 @@ use crate::{
     queries::{
         products_variants_categories::{Category, Product, ProductVariant, ProductVariant2},
         query_shipping_details::ShippingZone,
+        surreal_types,
     },
     server::{
         event_handler::MissingRelation,
@@ -41,6 +42,7 @@ fn fix_surreal_ids(id: &str) -> String {
     new_id
 }
 
+/*
 pub fn surreal_value_to_types<T: DeserializeOwned + Serialize>(
     data: surrealdb::Value,
 ) -> Result<Vec<T>, serde_json::Error> {
@@ -72,60 +74,53 @@ pub fn surreal_value_to_types<T: DeserializeOwned + Serialize>(
     }
     Ok(result)
 }
+*/
 
 pub async fn get_shipping_zones(
     db: &mut Surreal<Any>,
-) -> Result<Vec<ShippingZone>, EventHandlerError> {
-    Ok(surreal_value_to_types(
-        db.query("SELECT * FROM shipping_zone").await?.take(0)?,
-    )?)
+) -> Result<Vec<surreal_types::ShippingZone>, EventHandlerError> {
+    Ok(db.query("SELECT * FROM shipping_zone").await?.take(0)?)
 }
 
-pub async fn get_products(db: &mut Surreal<Any>) -> Result<Vec<Product>, EventHandlerError> {
-    Ok(surreal_value_to_types(
-        db.query("SELECT * FROM product").await?.take(0)?,
-    )?)
+pub async fn get_products(
+    db: &mut Surreal<Any>,
+) -> Result<Vec<surreal_types::Product>, EventHandlerError> {
+    Ok(db.query("SELECT * FROM product").await?.take(0)?)
 }
 
-pub async fn get_categories(db: &mut Surreal<Any>) -> Result<Vec<Category>, EventHandlerError> {
-    Ok(surreal_value_to_types(
-        db.query("SELECT * FROM category").await?.take(0)?,
-    )?)
+pub async fn get_categories(
+    db: &mut Surreal<Any>,
+) -> Result<Vec<surreal_types::Category>, EventHandlerError> {
+    Ok(db.query("SELECT * FROM category").await?.take(0)?)
 }
 
-pub async fn get_variants(db: &mut Surreal<Any>) -> Result<Vec<ProductVariant>, EventHandlerError> {
-    Ok(surreal_value_to_types(
-        db.query("SELECT * FROM variant").await?.take(0)?,
-    )?)
+pub async fn get_variants(
+    db: &mut Surreal<Any>,
+) -> Result<Vec<surreal_types::ProductVariant>, EventHandlerError> {
+    Ok(db.query("SELECT * FROM variant").await?.take(0)?)
 }
 
 pub async fn get_product_related_variants(
     db: &mut Surreal<Any>,
-    product: &Product,
-) -> Result<Vec<ProductVariant2>, EventHandlerError> {
-    Ok(surreal_value_to_types(
-        db.query(format!(
-            "SELECT * FROM variant WHERE product:`{}`<-varies<-variant",
-            product.id.inner().to_owned()
-        ))
+    product: &surreal_types::Product,
+) -> Result<Vec<surreal_types::ProductVariant>, EventHandlerError> {
+    Ok(db
+        .query("SELECT * FROM variant WHERE $id<-varies<-variant")
+        .bind(("id", product.id.clone()))
         .await?
-        .take(0)?,
-    )?)
+        .take(0)?)
 }
 
 /// Gets category and all it's parents, so one can find metafields
 pub async fn get_product_related_categories(
     db: &mut Surreal<Any>,
-    product: &Product,
-) -> Result<Vec<Category>, EventHandlerError> {
-    let base_category: Vec<Category> = surreal_value_to_types(
-        db.query(format!(
-            "SELECT * FROM category WHERE product:`{}`<-categorises<-category",
-            product.id.inner().to_owned()
-        ))
+    product: &surreal_types::Product,
+) -> Result<Vec<surreal_types::Category>, EventHandlerError> {
+    let base_category: Vec<surreal_types::Category> = db
+        .query("SELECT * FROM category WHERE $id<-categorises<-category")
+        .bind(("id", product.id.clone()))
         .await?
-        .take(0)?,
-    )?;
+        .take(0)?;
 
     let base_category = base_category
         .get(0)
@@ -135,26 +130,20 @@ pub async fn get_product_related_categories(
 
     let mut all_categories = vec![base_category.clone()];
 
-    let mut parent_category: Vec<Category> = surreal_value_to_types(
-        db.query(format!(
-            "SELECT * FROM category WHERE category:`{}`<-parents<-category",
-            base_category.id.inner().to_owned()
-        ))
+    let mut parent_category: Vec<surreal_types::Category> = db
+        .query("SELECT * FROM category WHERE $id<-parents<-category")
+        .bind(("id", base_category.id.clone()))
         .await?
-        .take(0)?,
-    )?;
+        .take(0)?;
 
     while let Some(category) = parent_category.get(0) {
         all_categories.push(category.clone());
 
-        parent_category = surreal_value_to_types(
-            db.query(format!(
-                "SELECT * FROM category WHERE category:{}<-parents<-category",
-                category.id.inner().to_owned()
-            ))
+        parent_category = db
+            .query("SELECT * FROM category WHERE $id<-parents<-category")
+            .bind(("id", category.id.clone()))
             .await?
-            .take(0)?,
-        )?;
+            .take(0)?;
     }
 
     Ok(all_categories)

@@ -13,7 +13,10 @@ use url::Url;
 
 use crate::{
     app::AppSettings,
-    queries::products_variants_categories::{Category, Product, ProductVariant, ProductVariant2},
+    queries::{
+        products_variants_categories::{Category, Product, ProductVariant, ProductVariant2},
+        surreal_types,
+    },
 };
 
 pub mod event_handler;
@@ -21,8 +24,8 @@ pub mod graphqls;
 pub mod surrealdbs;
 
 pub fn try_create_shopitem(
-    product: Product,
-    variant: ProductVariant2,
+    product: surreal_types::Product,
+    variant: surreal_types::ProductVariant,
     deliveries: Vec<Delivery>,
     heureka_categorytext: String,
     variant_url: Url,
@@ -30,7 +33,7 @@ pub fn try_create_shopitem(
 ) -> Result<ShopItem, TryIntoShopItemError> {
     let mut description = None;
     if let Some(d) = product.description {
-        description = Some(d.to_string()?);
+        description = Some(d);
     }
 
     //I need firmt imgurl to be single, then rest in imgurl_alternative
@@ -124,9 +127,9 @@ pub fn variant_url_from_template<'a, T: Serialize>(
 
 #[derive(Debug, Clone, Serialize)]
 pub struct VariantUrlTemplateContext<'a> {
-    product: &'a Product,
-    variant: &'a ProductVariant2,
-    category: &'a Category,
+    product: &'a surreal_types::Product,
+    variant: &'a surreal_types::ProductVariant,
+    category: &'a surreal_types::Category,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -137,7 +140,7 @@ pub enum TryUrlFromTemplateError {
     UrlParseError(#[from] url::ParseError),
 }
 
-pub fn find_category_text(categories: &Vec<Category>) -> Option<String> {
+pub fn find_category_text(categories: &Vec<surreal_types::Category>) -> Option<String> {
     for c in categories {
         if let Some(m) = c.metafield.clone() {
             return Some(m);

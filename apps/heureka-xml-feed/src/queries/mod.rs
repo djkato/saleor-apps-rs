@@ -3,3 +3,4 @@ mod schema {}
 
 pub mod products_variants_categories;
 pub mod query_shipping_details;
+pub mod surreal_types;

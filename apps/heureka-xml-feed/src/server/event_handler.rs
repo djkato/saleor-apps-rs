@@ -8,6 +8,7 @@ use crate::{
             ShippingZoneUpdated,
         },
         query_shipping_details::ShippingZone,
+        surreal_types,
     },
     server::{
         VariantUrlTemplateContext, find_category_text,
@@ -329,7 +330,7 @@ impl EventHandler {
 
         let db = &mut self.db_handle;
         debug!("Collecting DB products");
-        let products: Vec<Product> = get_products(db).await.map_err(|e| vec![e])?;
+        let products: Vec<surreal_types::Product> = get_products(db).await.map_err(|e| vec![e])?;
 
         let mut shopitems: Vec<ShopItem> = vec![];
 
@@ -348,9 +349,9 @@ impl EventHandler {
             debug!(
                 "Collecting DB variants for product {}:{}",
                 &product.name,
-                &product.id.inner()
+                &product.id.to_string()
             );
-            let variants: Vec<ProductVariant2> =
+            let variants: Vec<surreal_types::ProductVariant> =
                 match get_product_related_variants(db, &product).await {
                     Ok(variants) => match variants.is_empty() {
                         false => variants,
@@ -365,7 +366,7 @@ impl EventHandler {
                         warn!(
                             "failed getting variants related to product {}:{}, skipping it.\n {e}",
                             &product.name,
-                            &product.id.inner()
+                            &product.id.to_string()
                         );
                         errors.push(e);
                         continue;
@@ -386,7 +387,7 @@ impl EventHandler {
                     warn!(
                         "failed getting categories related to product {}:{}, skipping it.\n {e}",
                         &product.name,
-                        &product.id.inner()
+                        &product.id.to_string()
                     );
                     errors.push(e);
                     continue;
@@ -399,10 +400,10 @@ impl EventHandler {
                     warn!(
                         "failed finding heureka category text for product {}:{}, skipping it",
                         &product.name,
-                        &product.id.inner()
+                        &product.id.to_string()
                     );
                     errors.push(EventHandlerError::ProductMissingCategoryText(
-                        product.id.inner().to_string(),
+                        product.id.to_string().to_string(),
                     ));
                     continue;
                 }
@@ -445,7 +446,7 @@ impl EventHandler {
                         warn!(
                             "failed creating for variant {}:{} url from template {} with context {:?}, skipping variant",
                             &variant.name,
-                            variant.id.inner(),
+                            variant.id.inner().to_string(),
                             self.settings.variant_url_template.clone(),
                             &variant_url_ctx
                         );
@@ -468,7 +469,7 @@ impl EventHandler {
                         warn!(
                             "failed turning variant {}:{} into heureka shopitem, skipping variant",
                             &variant.name,
-                            &variant.id.inner()
+                            &variant.id.inner().to_string()
                         );
                         errors.push(e.into());
                         continue;

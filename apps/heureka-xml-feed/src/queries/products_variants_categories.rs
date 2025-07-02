@@ -7,11 +7,6 @@ use super::{
     schema,
 };
 
-const DEFAULT_WEIGHT: Weight = Weight {
-    value: 0.1,
-    unit: super::query_shipping_details::WeightUnitsEnum::Kg,
-};
-
 #[derive(cynic::QueryVariables, Debug, Clone)]
 pub struct GetProductsNextVariables<'a> {
     pub after: &'a str,
@@ -287,19 +282,6 @@ pub enum ThumbnailFormatEnum {
 #[derive(cynic::Scalar, Debug, Clone)]
 #[cynic(graphql_type = "JSONString")]
 pub struct Jsonstring(pub String);
-
-impl ProductVariant2 {
-    pub fn get_weight(self, product: Product) -> Weight {
-        self.weight.unwrap_or(
-            product.weight.unwrap_or(
-                product
-                    .product_type
-                    .and_then(|t| t.weight)
-                    .unwrap_or(DEFAULT_WEIGHT),
-            ),
-        )
-    }
-}
 
 impl Jsonstring {
     pub fn to_string(&self) -> Result<String, TryIntoShopItemError> {

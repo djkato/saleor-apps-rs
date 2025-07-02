@@ -154,17 +154,9 @@ pub async fn save_shipping_zone_to_db(
     db: &mut Surreal<Any>,
 ) -> Result<(), EventHandlerError> {
     debug!(
-        "inserting shipping zone {}:{:?} into db",
+        "inserting shipping zone {} into db",
         shipping_zone.id.inner(),
-        shipping_zone.metafield
     );
-
-    if shipping_zone.metafield.is_none() {
-        return Err(EventHandlerError::ShippingZoneMisconfigured(format!(
-            "Shipping zone {} is missing metadata 'heureka_courierid'",
-            shipping_zone.id.inner().to_owned()
-        )));
-    }
 
     db.upsert(Resource::from("shipping_zone"))
         .content(serde_json::to_value(shipping_zone.clone())?)

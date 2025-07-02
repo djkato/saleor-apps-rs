@@ -1,4 +1,5 @@
-use axum::extract::State;
+use axum::{extract::State, response::IntoResponse};
+use http::HeaderMap;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -7,7 +8,9 @@ use crate::{
     server::event_handler::{CreateXMLEvent, Event},
 };
 
-pub async fn heureka_xml_feed_xml(State(state): State<AppState>) -> Result<String, AxumError> {
+pub async fn heureka_feed_xml(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, AxumError> {
     let (tx, mut rx) = mpsc::channel(10);
     state
         .task_queue_sender
@@ -24,5 +27,8 @@ pub async fn heureka_xml_feed_xml(State(state): State<AppState>) -> Result<Strin
         .ok_or(AxumError::InternalServerError(
             "Failed getting xml".to_owned(),
         ))?;
-    Ok(xml)
+
+    let mut headers = HeaderMap::new();
+    headers.insert("Content-Type", "application/xml".parse().unwrap());
+    Ok((headers, xml))
 }

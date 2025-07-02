@@ -146,6 +146,7 @@ pub async fn get_category_parents(
     let mut parent = Some(Category2 {
         name: category.name.clone(),
         id: category.id.clone(),
+        slug: category.slug.clone(),
         metafield: category.metafield.clone(),
     });
 

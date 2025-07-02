@@ -121,6 +121,7 @@ pub struct ProductCountableEdge {
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct Product {
     pub id: cynic::Id,
+    pub slug: String,
     #[cynic(flatten)]
     pub variants: Vec<ProductVariant2>,
     pub name: String,
@@ -159,7 +160,7 @@ pub struct VariantPricingInfo {
 
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct TaxedMoney {
-    pub gross: Money2,
+    pub gross: Money,
 }
 
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
@@ -178,12 +179,6 @@ pub struct PageInfo {
 #[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
 pub struct Money {
     pub currency: String,
-    pub amount: f64,
-}
-
-#[derive(cynic::QueryFragment, Debug, Clone, Serialize)]
-#[cynic(graphql_type = "Money")]
-pub struct Money2 {
     pub amount: f64,
 }
 
@@ -240,6 +235,7 @@ pub struct GetChildrenCategoryCountableEdge {
 pub struct Category {
     pub parent: Option<Category2>,
     pub name: String,
+    pub slug: String,
     pub id: cynic::Id,
     #[arguments(key: "heureka_categorytext")]
     pub metafield: Option<String>,
@@ -249,6 +245,7 @@ pub struct Category {
 #[cynic(graphql_type = "Category")]
 pub struct Category2 {
     pub name: String,
+    pub slug: String,
     pub id: cynic::Id,
     #[arguments(key: "heureka_categorytext")]
     pub metafield: Option<String>,

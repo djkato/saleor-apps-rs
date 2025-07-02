@@ -23,8 +23,6 @@ pub struct DefaultShippingZone {
 
 #[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct ShippingZone {
-    #[arguments(key: "heureka_courierid")]
-    pub metafield: Option<String>,
     #[cynic(flatten)]
     pub shipping_methods: Vec<ShippingMethodType>,
     pub id: cynic::Id,
@@ -32,6 +30,8 @@ pub struct ShippingZone {
 
 #[derive(cynic::QueryFragment, Debug, Serialize, Clone)]
 pub struct ShippingMethodType {
+    #[arguments(key: "heureka_courierid")]
+    pub metafield: Option<String>,
     pub minimum_order_weight: Option<Weight>,
     pub maximum_order_weight: Option<Weight>,
     #[cynic(flatten)]

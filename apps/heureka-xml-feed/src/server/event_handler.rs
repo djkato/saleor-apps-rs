@@ -418,7 +418,7 @@ impl EventHandler {
                         self.settings.is_shipping_cod,
                         self.settings.shipping_price_cod_extra,
                     ) {
-                        Ok(d) => deliveries.push(d),
+                        Ok(mut d) => deliveries.append(&mut d),
                         Err(e) => errors.push(e),
                     };
                 }
@@ -446,7 +446,7 @@ impl EventHandler {
                         warn!(
                             "failed creating for variant {}:{} url from template {} with context {:?}, skipping variant",
                             &variant.name,
-                            variant.id.inner().to_string(),
+                            variant.id.to_string(),
                             self.settings.variant_url_template.clone(),
                             &variant_url_ctx
                         );
@@ -469,7 +469,7 @@ impl EventHandler {
                         warn!(
                             "failed turning variant {}:{} into heureka shopitem, skipping variant",
                             &variant.name,
-                            &variant.id.inner().to_string()
+                            &variant.id.to_string()
                         );
                         errors.push(e.into());
                         continue;

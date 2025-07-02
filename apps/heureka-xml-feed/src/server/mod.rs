@@ -48,7 +48,7 @@ pub fn try_create_shopitem(
         .ok_or(TryIntoShopItemError::MissingMedia)?;
 
     Ok(ShopItem {
-        item_id: variant.id.into_inner(),
+        item_id: variant.id.key().to_string(),
         url: Some(variant_url.clone()),
         productname: variant.name,
         price_vat: variant

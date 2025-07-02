@@ -47,7 +47,10 @@ async fn main() -> Result<(), std::io::Error> {
     };
     use tracing::{Level, error};
 
-    use crate::routes::api::{manifest::manifest, register::register, webhooks::webhooks};
+    use crate::routes::{
+        api::{manifest::manifest, register::register, webhooks::webhooks},
+        heureka_xml_feed::heureka_feed_xml,
+    };
 
     //Leptos stuff
     let conf = get_configuration(None).unwrap();
@@ -144,6 +147,7 @@ async fn main() -> Result<(), std::io::Error> {
             post(register), //.route_layer(middleware::from_fn(webhook_signature_verifier)),
         )
         .route("/api/manifest", get(manifest))
+        .route("/heureka_feed.xml", get(heureka_feed_xml))
         .fallback(file_and_error_handler)
         .with_state(app_state.clone())
         .layer(

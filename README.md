@@ -1,5 +1,9 @@
 <a href='https://ko-fi.com/A0A8Q3SVZ' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi4.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
+# ⚠️ MOVED TO https://forgejo.djkato.net/djkato/saleor-apps-rs ⚠️
+
+for product support, contact me at me@djkato.net
+
 # Repo members
 
 | Crate                                                                                                     | Description                                                                                              | License                    | Price | % done |
